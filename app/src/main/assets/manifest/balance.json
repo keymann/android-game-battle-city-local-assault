@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "comment": "게임 규칙과 밸런스 값. 코드에 하드코딩하지 않는다 (계획서 §7 중요 구현 원칙, §41-19).",
 
   "rules": {
@@ -80,6 +80,66 @@
     "ATTACK": 35,
     "DEFENSE": 30,
     "SPEED": 35
+  },
+
+  "ai": {
+    "comment": "COM AI (계획서 §10, §11). 거리는 블록 단위 = 탱크 한 대 크기.",
+
+    "decisionIntervalSeconds": 0.25,
+    "repathIntervalSeconds": 1.2,
+    "stuckSeconds": 0.5,
+    "turnTolerancePx": 6.0,
+    "maxPathNodes": 64,
+    "fireAlignTolerancePx": 20.0,
+    "concealedRevealBlocks": 2.0,
+    "baseDefendRadiusBlocks": 6.0,
+
+    "comment_spawn": "COM 생성 지점 검사 (계획서 §11)",
+    "spawn": {
+      "minPlayerDistanceBlocks": 5.0,
+      "minBaseDistanceBlocks": 3.0,
+      "clearanceBlocks": 1.25
+    },
+
+    "comment_types": "계획서 §8 의 타입별 성향. 능력치는 enemyTanks 가, 행동은 여기가 정한다.",
+    "types": {
+      "ATTACK": {
+        "label": "공격형 AI",
+        "comment": "가장 가까운 상대를 밀어붙인다. 벽도 부수고 간다.",
+        "sightRangeBlocks": 9.0,
+        "fireRangeBlocks": 8.0,
+        "baseFocus": 0.15,
+        "holdRadiusBlocks": 2.5,
+        "retreatHpRatio": 0.0,
+        "breakWalls": true,
+        "reactionSeconds": 0.15,
+        "patrolIntervalSeconds": 2.0
+      },
+      "DEFENSE": {
+        "label": "방어형 AI",
+        "comment": "본진 앞마당을 차지한다 (계획서 §8.2). 불리하면 물러난다.",
+        "sightRangeBlocks": 6.0,
+        "fireRangeBlocks": 7.0,
+        "baseFocus": 0.5,
+        "holdRadiusBlocks": 3.0,
+        "retreatHpRatio": 0.25,
+        "breakWalls": true,
+        "reactionSeconds": 0.3,
+        "patrolIntervalSeconds": 2.5
+      },
+      "SPEED": {
+        "label": "스피드형 AI",
+        "comment": "멀리서부터 플레이어를 쫓는다 (계획서 §8.3). 사격은 어수룩하다.",
+        "sightRangeBlocks": 12.0,
+        "fireRangeBlocks": 6.0,
+        "baseFocus": 0.05,
+        "holdRadiusBlocks": 2.0,
+        "retreatHpRatio": 0.35,
+        "breakWalls": false,
+        "reactionSeconds": 0.45,
+        "patrolIntervalSeconds": 1.5
+      }
+    }
   },
 
   "tieBreak": {
