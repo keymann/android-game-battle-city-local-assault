@@ -1,5 +1,6 @@
 package com.kophas.battlecity.render
 
+import com.kophas.battlecity.core.Direction
 import com.kophas.battlecity.gameplay.Explosion
 import com.kophas.battlecity.gameplay.Tank
 
@@ -8,170 +9,171 @@ import com.kophas.battlecity.gameplay.Tank
  *
  * 렌더 루프에서 문자열 조회가 일어나지 않도록 시작할 때 전부 해석한다.
  * 리소스를 바꿔도 여기만 다시 읽으면 되고 그리는 코드는 그대로다.
+ *
+ * 탱크와 포탄은 **방향별 그림이 따로** 있다. 그래서 회전값이 없다.
+ * 픽셀아트를 돌리면 가장자리가 뭉개지는데 그 문제가 통째로 사라진다.
  */
 class SpriteCatalog(private val assets: GameAssets) {
 
     private val manifest = assets.manifest
 
-    // --- 타일 -------------------------------------------------------------
-
-    /** 물결 프레임. 3장이라 프레임 교대만으로 넘실거린다. */
-    val waterFrames: List<TextureRegion> =
-        manifest.tileFrames("WATER").ifEmpty { listOf("env_water_0") }.map { assets[it] }
-
-    val waterAnimFps: Float = manifest.tile("WATER")?.get("animFps")?.asFloat ?: 3f
-
-    val ice: TextureRegion = assets[manifest.tileSprite("ICE") ?: "env_water_0"]
-
-    val iceTint: Int = parseColor(manifest.tile("ICE")?.get("tint")?.asString, 0xDFF6FFCC.toInt())
-
-    // 본진 건물. 파괴 애니메이션 프레임을 함께 들고 있다.
-    val baseIntact: TextureRegion = assets[manifest.tile("BASE")?.get("intact")?.asString ?: "base_0"]
-
-    val baseDestroyFrames: List<TextureRegion> =
-        (manifest.tile("BASE")?.get("destroyFrames")?.asStringList ?: emptyList())
-            .map { assets[it] }
-            .ifEmpty { listOf(baseIntact) }
-
-    val baseDestroyFps: Float = manifest.tile("BASE")?.get("destroyFps")?.asFloat ?: 5f
-
-    /** 폭발이 끝난 뒤 남는 잔해. */
-    val baseWreck: TextureRegion = assets[manifest.tile("BASE")?.get("wreck")?.asString ?: "base_2"]
-
-    // --- 탱크 -------------------------------------------------------------
-    //
-    // 몸체와 포신을 분리해 그린다. 4방향 게임이라 둘의 방향은 늘 같지만,
-    // 포신 굵기 1->2->3 이 스피드/방어/공격 서열을 그대로 보여 준다.
-
-    /** 유닛 스프라이트가 위를 향해 그려져 있으면 0 이다. */
-    val tankRotationOffset: Float =
-        (manifest.root["tanks"]?.get("spriteRotationOffsetDegrees")?.asFloat ?: 0f) *
-            (Math.PI.toFloat() / 180f)
-
-    /** 탱크 뒤에 까는 어두운 실루엣. 어떤 지형 위에서도 형태가 읽히게 한다. */
-    val silhouetteColor: Int =
-        parseColor(manifest.root["tanks"]?.get("silhouette")?.get("tint")?.asString, 0x0D0D12)
-
-    val silhouetteScale: Float =
-        manifest.root["tanks"]?.get("silhouette")?.get("scale")?.asFloat ?: 1.05f
-
-    val silhouetteAlpha: Float =
-        manifest.root["tanks"]?.get("silhouette")?.get("alpha")?.asFloat ?: 0.45f
-
-    private val barrelByType: Map<String, Int> =
-        (manifest.root["tanks"]?.get("barrelByType")?.asObject ?: emptyMap())
-            .mapNotNull { (key, value) -> value.asInt?.let { key to it } }
-            .toMap()
-
-    private val bulletByType: Map<String, Int> =
-        (manifest.root["tanks"]?.get("bulletByType")?.asObject ?: emptyMap())
-            .mapNotNull { (key, value) -> value.asInt?.let { key to it } }
-            .toMap()
-
-    private class TankArt(
-        val body: TextureRegion,
-        val outline: TextureRegion?,
-        val barrels: Map<Tank.Type, TextureRegion>,
-        val bullets: Map<Tank.Type, TextureRegion>,
-        val flag: TextureRegion?,
-    )
-
-    private val playerArt: List<TankArt> =
-        (manifest.root["tanks"]?.get("playerSlots")?.asArray ?: emptyList()).map { slot ->
-            val barrelPrefix = slot["barrelPrefix"]?.asString ?: "tankBlue_barrel"
-            val bulletPrefix = slot["bulletPrefix"]?.asString ?: "bulletBlue"
-            TankArt(
-                body = assets[slot["body"]?.asString ?: "tankBody_blue"],
-                outline = slot["outline"]?.asString?.let { assets.find(it) },
-                barrels = Tank.Type.entries.associateWith { type ->
-                    assets["$barrelPrefix${barrelByType[type.name] ?: 2}"]
-                },
-                bullets = Tank.Type.entries.associateWith { type ->
-                    assets["$bulletPrefix${bulletByType[type.name] ?: 2}"]
-                },
-                flag = slot["flag"]?.asString?.let { assets.find(it) },
-            )
-        }
-
-    private val enemyArt: Map<Tank.Type, TankArt> =
-        Tank.Type.entries.associateWith { type ->
-            val node = manifest.root["tanks"]?.get("enemy")?.get(type.name)
-            val barrel = assets[node?.get("barrel")?.asString ?: "tankDark_barrel1"]
-            val bullet = assets[node?.get("bullet")?.asString ?: "bulletDark1"]
-            TankArt(
-                body = assets[node?.get("body")?.asString ?: "tankBody_dark"],
-                outline = node?.get("outline")?.asString?.let { assets.find(it) },
-                barrels = Tank.Type.entries.associateWith { barrel },
-                bullets = Tank.Type.entries.associateWith { bullet },
-                flag = null,
-            )
-        }
-
-    private fun artOf(tank: Tank): TankArt = when (tank.faction) {
-        Tank.Faction.PLAYER -> playerArt[tank.colorSlot.coerceIn(0, playerArt.lastIndex)]
-        Tank.Faction.ENEMY -> enemyArt.getValue(tank.type)
+    private fun node(vararg path: String) = path.fold(manifest.root as com.kophas.battlecity.util.JsonValue?) { acc, key ->
+        acc?.get(key)
     }
 
-    fun bodyOf(tank: Tank): TextureRegion = artOf(tank).body
+    private fun regions(vararg path: String): List<TextureRegion> =
+        (node(*path)?.asStringList ?: emptyList()).map { assets[it] }
 
-    fun outlineOf(tank: Tank): TextureRegion? = artOf(tank).outline
+    // --- 타일 -------------------------------------------------------------
 
-    fun barrelOf(tank: Tank): TextureRegion =
-        artOf(tank).barrels[tank.type] ?: artOf(tank).body
+    /** 물결 프레임. 전용 그림이 4장이라 프레임 교대만으로 넘실거린다. */
+    val waterFrames: List<TextureRegion> =
+        manifest.tileFrames("WATER").map { assets[it] }.ifEmpty { listOf(assets["water_frame_1"]) }
 
-    fun bulletOf(tank: Tank): TextureRegion =
-        artOf(tank).bullets[tank.type] ?: piercingBullet
+    val waterAnimFps: Float = manifest.tile("WATER")?.get("animFps")?.asFloat ?: 4f
 
-    fun playerFlag(slot: Int): TextureRegion =
-        playerArt[slot.coerceIn(0, playerArt.lastIndex)].flag ?: heart
+    /** 얼음. 전용 타일이 있어 물을 물들여 쓰지 않는다. */
+    val iceTiles: List<TextureRegion> =
+        manifest.tileSprites("ICE").map { assets[it] }.ifEmpty { listOf(assets["ice_clean_a"]) }
 
-    val piercingBullet: TextureRegion =
-        assets[manifest.root["projectiles"]?.get("piercing")?.get("sprite")?.asString ?: "shotLarge"]
+    // --- 본진 -------------------------------------------------------------
+
+    private val base = node("tiles", "BASE")
+
+    val baseIntact: TextureRegion = assets[base?.get("intact")?.asString ?: "base_intact"]
+
+    /** 파괴 애니메이션. 손상 -> 심한 손상 -> 파괴 순으로 재생한다. */
+    val baseDestroyFrames: List<TextureRegion> =
+        regions("tiles", "BASE", "destroyFrames").ifEmpty { listOf(baseIntact) }
+
+    val baseDestroyFps: Float = base?.get("destroyFps")?.asFloat ?: 6f
+
+    /** 폭발이 끝난 뒤 남는 잔해. */
+    val baseWreck: TextureRegion = assets[base?.get("wreck")?.asString ?: "base_rubble"]
+
+    // --- 탱크 -------------------------------------------------------------
+
+    /** 스프라이트 캔버스가 차체보다 넓다. 포신이 밖으로 뻗기 때문이다. */
+    val tankSpritePx: Float = node("world", "tankSpritePx")?.asFloat ?: 96f
+
+    private val directionSuffix: List<String> =
+        node("tanks", "directions")?.asStringList ?: listOf("up", "right", "down", "left")
+
+    /** [faction]/[type] 별 4방향 그림. Direction.ordinal 로 바로 찾는다. */
+    private val tankArt: Map<Pair<Tank.Faction, Tank.Type>, Array<TextureRegion>> =
+        Tank.Faction.entries.flatMap { faction ->
+            val section = if (faction == Tank.Faction.PLAYER) "player" else "enemy"
+            Tank.Type.entries.map { type ->
+                val prefix = node("tanks", section, type.name, "prefix")?.asString
+                    ?: "${section}_${type.name.lowercase()}"
+                (faction to type) to Array(Direction.VALUES.size) { i ->
+                    assets["${prefix}_${directionSuffix.getOrElse(i) { "up" }}"]
+                }
+            }
+        }.toMap()
+
+    fun tankSprite(tank: Tank): TextureRegion =
+        tankArt.getValue(tank.faction to tank.type)[tank.direction.ordinal]
+
+    /** HUD 에 쓰는 정면 초상. 어떤 탱크를 골랐는지 한눈에 보인다. */
+    fun playerPortrait(type: Tank.Type): TextureRegion =
+        tankArt.getValue(Tank.Faction.PLAYER to type)[Direction.UP.ordinal]
+
+    /**
+     * 플레이어 머리 위 표식.
+     *
+     * 탱크 색은 **종류**가 정하므로 같은 종류를 고른 두 사람이 구별되지 않는다.
+     * 슬롯 색 표식을 띄워 누가 누구인지 알 수 있게 한다.
+     */
+    class SlotMarker(
+        val region: TextureRegion,
+        val colors: IntArray,
+        val sizeRatio: Float,
+        val offsetRatio: Float,
+    ) {
+        fun colorOf(slot: Int): Int =
+            if (colors.isEmpty()) 0xFFFFFF else colors[slot.coerceIn(0, colors.lastIndex)]
+    }
+
+    val slotMarker = SlotMarker(
+        region = assets[node("tanks", "slotMarker", "sprite")?.asString ?: "hud_heart_full"],
+        colors = (node("tanks", "slotMarker", "colors")?.asStringList ?: emptyList())
+            .map { parseColor(it, 0xFFFFFF) }.toIntArray(),
+        sizeRatio = node("tanks", "slotMarker", "sizeRatio")?.asFloat ?: 0.34f,
+        offsetRatio = node("tanks", "slotMarker", "offsetRatio")?.asFloat ?: -0.62f,
+    )
+
+    // --- 포탄 -------------------------------------------------------------
+
+    private fun directional(prefix: String): Array<TextureRegion> =
+        Array(Direction.VALUES.size) { i ->
+            assets["${prefix}_${directionSuffix.getOrElse(i) { "up" }}"]
+        }
+
+    private val normalShell = directional(
+        node("projectiles", "normal", "prefix")?.asString ?: "shell_normal",
+    )
+
+    private val piercingShell = directional(
+        node("projectiles", "piercing", "prefix")?.asString ?: "shell_piercing",
+    )
+
+    private val muzzleFlash = directional(
+        node("projectiles", "muzzleFlash", "prefix")?.asString ?: "muzzle_flash",
+    )
+
+    fun shellSprite(direction: Direction, piercing: Boolean): TextureRegion =
+        (if (piercing) piercingShell else normalShell)[direction.ordinal]
+
+    fun muzzleFlash(direction: Direction): TextureRegion = muzzleFlash[direction.ordinal]
 
     // --- 특수기 연출 (계획서 §6) ------------------------------------------
 
-    /** 방어막. 탱크 외곽선을 키우고 청색으로 물들여 맥동시킨다. */
-    class ShieldFx(val tint: Int, val alpha: Float, val scale: Float, val pulseHz: Float)
+    class FrameArt(val frames: List<TextureRegion>, val fps: Float) {
+        fun at(timeSeconds: Float): TextureRegion =
+            frames[((timeSeconds * fps).toInt().coerceAtLeast(0)) % frames.size]
 
-    /** 대시. 진행 반대 방향으로 잔상을 남긴다. */
-    class DashFx(val tint: Int, val alpha: Float, val afterImages: Int, val spacingPx: Float)
+        /** 0~1 진행도에 맞춰 한 번만 재생한다. */
+        fun atProgress(progress: Float): TextureRegion =
+            frames[(progress.coerceIn(0f, 1f) * (frames.size - 1)).toInt()]
+    }
 
-    private val specialFx = manifest.root["tanks"]?.get("specialFx")
+    private fun frameArt(id: String, fallback: String): FrameArt {
+        val names = (node("effects", id, "frames")?.asStringList ?: emptyList())
+            .ifEmpty { listOf(fallback) }
+        return FrameArt(names.map { assets[it] }, node("effects", id, "fps")?.asFloat ?: 12f)
+    }
 
-    val shieldFx = ShieldFx(
-        tint = parseColor(specialFx?.get("shield")?.get("tint")?.asString, 0x66CCFF),
-        alpha = specialFx?.get("shield")?.get("alpha")?.asFloat ?: 0.55f,
-        scale = specialFx?.get("shield")?.get("scale")?.asFloat ?: 1.28f,
-        pulseHz = specialFx?.get("shield")?.get("pulseHz")?.asFloat ?: 3f,
-    )
+    /** 방어막. 지속되는 동안 프레임을 돌린다. */
+    val shieldFx: FrameArt = frameArt("shield", "shield_2")
 
-    val dashFx = DashFx(
-        tint = parseColor(specialFx?.get("dash")?.get("tint")?.asString, 0xFFFFFF),
-        alpha = specialFx?.get("dash")?.get("alpha")?.asFloat ?: 0.30f,
-        afterImages = specialFx?.get("dash")?.get("afterImages")?.asInt ?: 3,
-        spacingPx = specialFx?.get("dash")?.get("spacingPx")?.asFloat ?: 13f,
-    )
+    /** 대시. 진행 반대쪽에 잔상을 남긴다. */
+    val dashFx: FrameArt = frameArt("dash", "dash_trail_2")
 
-    val piercingTrail: TextureRegion =
-        assets[specialFx?.get("piercing")?.get("sprite")?.asString ?: "shotRed"]
-
-    val piercingTint: Int = parseColor(specialFx?.get("piercing")?.get("tint")?.asString, 0xFFD24A)
-
-    val piercingTrailAlpha: Float = specialFx?.get("piercing")?.get("alpha")?.asFloat ?: 0.7f
-
-    val trackDecals: List<TextureRegion> =
-        (manifest.root["tanks"]?.get("trackDecal")?.get("sprites")?.asStringList ?: emptyList())
-            .map { assets[it] }
+    val baseWarningFx: FrameArt = frameArt("baseWarning", "base_warning_pulse")
 
     // --- HUD --------------------------------------------------------------
 
-    val heart: TextureRegion = assets[manifest.hudLifeSprite]
+    val heart: TextureRegion = assets[manifest.hud("life") ?: "hud_heart_full"]
 
-    val skull: TextureRegion = assets[manifest.hud("skull") ?: "ui_054"]
+    val heartEmpty: TextureRegion = assets[manifest.hud("lifeEmpty") ?: "hud_heart_empty"]
 
-    val ammo: TextureRegion = assets[manifest.hud("ammo") ?: "ui_060"]
+    val skull: TextureRegion = assets[manifest.hud("skull") ?: "hud_enemy_counter"]
 
-    val locked: TextureRegion = assets[manifest.hud("locked") ?: "ui_076"]
+    val killIcon: TextureRegion = assets[manifest.hud("kill") ?: "hud_kill_explosion"]
+
+    val panel: TextureRegion = assets[manifest.hud("panel") ?: "hud_status_panel"]
+
+    val deadIcon: TextureRegion = assets[manifest.hud("dead") ?: "hud_player_dead"]
+
+    /**
+     * 특수기 쿨타임 고리.
+     *
+     * 남은 양에 따라 그림을 바꿔 끼우지 않는다. 한 장을 어둡게 깔고 차오른 만큼만
+     * 밝게 덧그린다. 그림을 바꾸면 반쯤 찼을 때 아이콘이 툭 바뀌어 눈에 거슬린다.
+     */
+    val cooldownRing: TextureRegion =
+        assets[node("hud", "cooldown", "ring")?.asString ?: "hud_cooldown_75"]
 
     private val digits: List<TextureRegion> =
         (0..9).map { assets["${manifest.hudDigitPrefix}$it"] }
@@ -180,16 +182,6 @@ class SpriteCatalog(private val assets: GameAssets) {
         ('A'..'Z').associateWith { assets["${manifest.hudCharPrefix}$it"] }
 
     fun digit(value: Int): TextureRegion = digits[value.coerceIn(0, 9)]
-
-    /** 특수기 쿨타임 게이지. 가운데 조각을 가로로 늘여 쓴다. */
-    val gaugeFill: TextureRegion =
-        assets[manifest.root["hud"]?.get("gauge")?.get("fill")?.asString ?: "ui_140"]
-
-    val gaugeTrack: TextureRegion =
-        assets[manifest.root["hud"]?.get("gauge")?.get("track")?.asString ?: "ui_158"]
-
-    val gaugeHeightRatio: Float =
-        manifest.root["hud"]?.get("gauge")?.get("heightRatio")?.asFloat ?: 0.34f
 
     /** 비트맵 폰트 글리프. 지원하지 않는 문자는 null 이라 공백으로 넘어간다. */
     fun glyph(char: Char): TextureRegion? = when (char) {
@@ -201,26 +193,14 @@ class SpriteCatalog(private val assets: GameAssets) {
 
     // --- 이펙트 -----------------------------------------------------------
 
-    class EffectArt(val frames: List<TextureRegion>, val fps: Float)
-
-    private val effects: Map<Explosion.Kind, EffectArt> = mapOf(
-        Explosion.Kind.TANK to effect("tankExplosion", "explosion"),
-        Explosion.Kind.BULLET_HIT to effect("bulletHit", "explosionSmoke"),
-        Explosion.Kind.BRICK_BREAK to effect("brickBreak", "explosionSmoke"),
-        Explosion.Kind.SPAWN to effect("spawnPuff", "explosionSmoke"),
+    private val effects: Map<Explosion.Kind, FrameArt> = mapOf(
+        Explosion.Kind.TANK to frameArt("tankExplosion", "explosion_4"),
+        Explosion.Kind.BULLET_HIT to frameArt("bulletHit", "impact_small"),
+        Explosion.Kind.BRICK_BREAK to frameArt("brickBreak", "debris_brick"),
+        Explosion.Kind.SPAWN to frameArt("spawn", "spawn_glow"),
     )
 
-    fun effectOf(kind: Explosion.Kind): EffectArt = effects.getValue(kind)
-
-    private fun effect(id: String, fallbackPrefix: String): EffectArt {
-        val node = manifest.root["effects"]?.get(id)
-        val names = node?.get("frames")?.asStringList.orEmpty()
-            .ifEmpty { (1..3).map { "$fallbackPrefix$it" } }
-        return EffectArt(
-            frames = names.map { assets[it] },
-            fps = node?.get("fps")?.asFloat ?: 18f,
-        )
-    }
+    fun effectOf(kind: Explosion.Kind): FrameArt = effects.getValue(kind)
 
     // --- 스테이지 스프라이트 ----------------------------------------------
 

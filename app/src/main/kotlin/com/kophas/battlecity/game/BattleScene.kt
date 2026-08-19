@@ -85,7 +85,7 @@ class BattleScene(
 
         Log.i(
             TAG,
-            "스테이지 #$stageIndex: ${stage.blocksX}x${stage.blocksY} 블록(4:3), " +
+            "스테이지 #$stageIndex: ${stage.blocksX}x${stage.blocksY} 블록(16:9), " +
                 "바이옴=${stage.theme.biome} 도로=${stage.theme.roadStyle} " +
                 "COM ${match.totalEnemies}기(동시 ${match.maxActiveEnemies}) 해시=${stage.gridHash}",
         )

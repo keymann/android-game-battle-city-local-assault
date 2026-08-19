@@ -1,482 +1,202 @@
 {
-  "version": 2,
-  "credits": "환경 오브젝트는 프로젝트 자체 리소스(assets/renewal.png), 유닛은 Kenney Top-down Tanks Redux (CC0), HUD 폰트는 Kenney Desert Shooter Pack (CC0)",
-  "comment": "지형과 환경 오브젝트는 renewal.png 에서 잘라 낸 env_* 를 쓴다. 회전하는 유닛(탱크·포탄·폭발)만 Top-down Tanks Redux, HUD 폰트와 게이지는 Desert Shooter 를 유지한다. 아틀라스는 tools/build_tile_atlas.sh 가 만든다.",
+  "version": 3,
+  "credits": "Battle City: Local Assault UI Asset Pack (프로젝트 자체 제작). HUD 비트맵 폰트만 Kenney Desert Shooter Pack (CC0).",
+  "comment": "지형·탱크·이펙트·HUD 가 모두 한 팩에서 나오고 화풍이 같다. 그래서 아틀라스도 한 장이고 필터도 하나다. tools/build_atlas.py 가 만든다.",
+
   "atlases": {
-    "tiles": {
-      "image": "atlas/tiles.png",
-      "descriptor": "atlas/tiles.xml",
+    "game": {
+      "image": "atlas/game.png",
+      "descriptor": "atlas/game.xml",
       "type": "xml_subtexture",
-      "sourceTile": 16,
-      "comment": "16px 타일 660장 + 24px 이펙트 40장. 텍스처 1장으로 draw call 을 최소화한다.",
-      "filter": "nearest"
-    },
-    "units": {
-      "image": "atlas/units.png",
-      "descriptor": "atlas/units.xml",
-      "type": "xml_subtexture",
-      "filter": "linear",
-      "comment": "Top-down Tanks Redux(Retina). 회전하므로 LINEAR 로 샘플링한다."
+      "filter": "nearest",
+      "comment": "전부 픽셀아트다. 탱크는 4방향이 미리 그려져 있어 런타임 회전이 없다. 회전이 없으니 NEAREST 로 도트를 그대로 살린다."
     }
   },
+
   "world": {
     "blockPx": 64,
     "cellPx": 32,
     "cellsPerBlock": 2,
-    "tankSizePx": 60,
-    "comment": "block = 지형 타일 1장 = 탱크 1대. cell = BRICK/STEEL 파괴 최소 단위."
+    "tankSizePx": 64,
+    "tankSpritePx": 96,
+    "comment": "block = 지형 타일 1장 = 탱크 차체 1대. 탱크 스프라이트는 포신이 밖으로 뻗어 차체보다 넓다."
   },
+
   "terrain": {
-    "comment": "지형은 충돌에 관여하지 않는 배경 레이어다. 도로는 직선만 중앙선을 넣고 모서리·분기는 민무늬 아스팔트로 둔다. 새 시트에 16-mask 오토타일 세트가 없다.",
-    "grass": {
-      "base": [
-        "env_ground_grass"
-      ]
-    },
-    "dirt": {
-      "base": [
-        "env_ground_dirt"
-      ]
-    },
-    "gravel": {
-      "base": [
-        "env_ground_sand"
-      ]
-    },
+    "comment": "지형은 충돌에 관여하지 않는 배경이다. 이어 붙어야 하므로 스티커 테두리를 깎아 넣었다.",
+    "grass": { "base": ["ground_lush_grass", "ground_dry_grass"] },
+    "dirt": { "base": ["ground_dirt_clean_a", "ground_dirt_stones_b"] },
+    "gravel": { "base": ["ground_scorched_a", "ground_scorched_b"] },
     "road": {
-      "straightVertical": "env_road_line",
-      "straightHorizontal": "env_road_line_h",
-      "plain": [
-        "env_road_0",
-        "env_road_1"
-      ]
+      "comment": "전용 도로 타일은 없다. 자갈길 무늬를 길로 쓴다. 그을린 바닥으로 깔았더니 검은 격자가 화면을 갈라 놓아 길이 아니라 흉터처럼 보였다.",
+      "straightVertical": "ground_cracked_b",
+      "straightHorizontal": "ground_cracked_b",
+      "plain": ["ground_cracked_a", "ground_cracked_b"]
     }
   },
+
   "tiles": {
-    "EMPTY": {
-      "collision": "none",
-      "bulletPass": true,
-      "renderLayer": "ground"
-    },
+    "EMPTY": { "collision": "none", "bulletPass": true, "renderLayer": "ground" },
+
     "BRICK": {
       "collision": "block",
       "bulletPass": false,
       "destructible": true,
       "hp": 1,
       "renderLayer": "object",
-      "sprites": [
-        "env_brick_0",
-        "env_brick_1",
-        "env_brick_2"
-      ],
-      "comment": "붉은 벽돌 벽 3종. 셀 단위로 부서진다."
+      "sprites": ["brick_intact_a", "brick_intact_b", "brick_damage_1a", "brick_damage_1b"],
+      "rubble": ["brick_rubble_a", "brick_rubble_b"],
+      "comment": "셀 단위로 부서진다. 멀쩡한 벽 2종과 금 간 벽 2종을 섞어 벽면이 단조롭지 않게 한다."
     },
+
     "STEEL": {
       "collision": "block",
       "bulletPass": false,
       "destructible": "piercingOnly",
-      "hp": 3,
       "renderLayer": "object",
-      "sprites": [
-        "env_steel_0",
-        "env_steel_1",
-        "env_steel_2",
-        "env_steel_3"
-      ],
-      "comment": "석재/철판 벽 4종. 관통탄으로만 부술 수 있다."
+      "sprites": ["steel_clean_a", "steel_riveted_b", "steel_reinforced_a", "steel_reinforced_b"],
+      "comment": "관통탄으로만 부술 수 있다."
     },
+
     "WATER": {
       "collision": "block",
       "bulletPass": true,
       "destructible": false,
       "renderLayer": "ground",
-      "frames": [
-        "env_water_0",
-        "env_water_1",
-        "env_water_2"
-      ],
-      "animFps": 3.0,
-      "comment": "물결 프레임이 3장이라 밝기 보정 없이 프레임 교대로 넘실거린다."
+      "frames": ["water_frame_1", "water_frame_2", "water_frame_3", "water_frame_4"],
+      "animFps": 4.0,
+      "comment": "전용 프레임 4장이라 밝기 보정 없이 프레임 교대만으로 넘실거린다."
     },
+
     "FOREST": {
       "collision": "none",
       "bulletPass": true,
       "conceal": true,
       "renderLayer": "canopy",
-      "sprites": [
-        "env_tree_0",
-        "env_tree_1",
-        "env_bush"
-      ],
-      "litter": [
-        "env_stump_0",
-        "env_stump_1",
-        "env_flower",
-        "env_bush"
-      ],
-      "comment": "나무 26종. 탱크 위 캐노피로 그려 원작의 숲 은폐를 재현한다."
+      "sprites": ["forest_canopy_a", "forest_canopy_b", "forest_dense_a", "forest_dense_b"],
+      "litter": ["bush_cluster", "rock_cluster"],
+      "comment": "탱크 위 캐노피로 그려 원작의 숲 은폐를 재현한다."
     },
+
     "ICE": {
       "collision": "none",
       "bulletPass": true,
       "friction": 0.12,
       "renderLayer": "ground",
-      "sprite": "env_water_0",
-      "tint": "#DFF6FFCC",
-      "comment": "새 시트에 얼음 타일이 없어 물 타일을 밝게 물들여 쓴다."
+      "sprites": ["ice_clean_a", "ice_clean_b", "ice_cracked_a", "ice_cracked_b"],
+      "comment": "전용 얼음 타일 4종. 물들이지 않고 그대로 쓴다."
     },
+
     "BASE": {
       "collision": "block",
       "bulletPass": false,
       "renderLayer": "object",
-      "intact": "base_0",
-      "destroyFrames": [
-        "base_1",
-        "base_2",
-        "base_3"
-      ],
-      "destroyFps": 5,
-      "wreck": "base_2",
+      "intact": "base_intact",
+      "shielded": "base_shielded",
+      "warnFrames": ["base_warning_1", "base_warning_2"],
+      "warnFps": 4,
+      "destroyFrames": ["base_damage_1", "base_damage_2", "base_destroyed"],
+      "destroyFps": 6,
+      "wreck": "base_rubble",
       "wallTile": "BRICK",
       "wallShape": "U",
-      "comment": "본진 건물 4프레임. 파괴되면 손상 -> 심한 손상 -> 폭발 순으로 재생하고 잔해(base_2) 상태로 남는다. 스프라이트가 블록보다 세로로 길어 바닥을 블록 하단에 맞추고 깃발이 위로 삐져나오게 그린다."
+      "comment": "정상 -> 손상 -> 심한 손상 -> 파괴 -> 잔해. 스프라이트가 블록보다 조금 커서 바닥을 블록 하단에 맞추고 위로 삐져나오게 그린다."
     },
-    "SPAWN": {
-      "collision": "none",
-      "bulletPass": true,
-      "renderLayer": "ground",
-      "effect": "spawnPuff"
-    }
+
+    "SPAWN": { "collision": "none", "bulletPass": true, "renderLayer": "ground", "effect": "spawn" }
   },
+
   "tanks": {
-    "atlas": "units",
-    "comment": "몸체와 포신을 분리 렌더한다. 포신 굵기 1->2->3 이 스피드/방어/공격 서열로 읽힌다.",
-    "spriteRotationOffsetDegrees": 0,
-    "barrelByType": {
-      "SPEED": 1,
-      "DEFENSE": 2,
-      "ATTACK": 3
+    "atlas": "game",
+    "comment": "위/오른쪽/아래/왼쪽이 미리 그려져 있다. 게임에서 회전시키지 않는다. 픽셀아트를 돌리면 가장자리가 뭉개지는데 그 문제가 통째로 사라진다.",
+    "directions": ["up", "right", "down", "left"],
+    "player": {
+      "ATTACK": { "prefix": "player_attack", "color": "#F28A2E" },
+      "DEFENSE": { "prefix": "player_defense", "color": "#35B9E6" },
+      "SPEED": { "prefix": "player_speed", "color": "#9ACB2E" }
     },
-    "bulletByType": {
-      "SPEED": 1,
-      "DEFENSE": 2,
-      "ATTACK": 3
-    },
-    "playerSlots": [
-      {
-        "slot": 0,
-        "color": "blue",
-        "flag": "battle_052",
-        "body": "tankBody_blue",
-        "outline": "tankBody_blue_outline",
-        "barrelPrefix": "tankBlue_barrel",
-        "bulletPrefix": "bulletBlue",
-        "preview": "tank_blue"
-      },
-      {
-        "slot": 1,
-        "color": "green",
-        "flag": "battle_034",
-        "body": "tankBody_green",
-        "outline": "tankBody_green_outline",
-        "barrelPrefix": "tankGreen_barrel",
-        "bulletPrefix": "bulletGreen",
-        "preview": "tank_green"
-      },
-      {
-        "slot": 2,
-        "color": "red",
-        "flag": "battle_070",
-        "body": "tankBody_red",
-        "outline": "tankBody_red_outline",
-        "barrelPrefix": "tankRed_barrel",
-        "bulletPrefix": "bulletRed",
-        "preview": "tank_red"
-      },
-      {
-        "slot": 3,
-        "color": "sand",
-        "flag": "battle_088",
-        "body": "tankBody_sand",
-        "outline": "tankBody_sand_outline",
-        "barrelPrefix": "tankSand_barrel",
-        "bulletPrefix": "bulletSand",
-        "preview": "tank_sand"
-      }
-    ],
     "enemy": {
-      "ATTACK": {
-        "body": "tankBody_bigRed",
-        "outline": "tankBody_bigRed_outline",
-        "barrel": "tankRed_barrel3",
-        "bullet": "bulletDark3",
-        "preview": "tank_bigRed"
-      },
-      "DEFENSE": {
-        "body": "tankBody_darkLarge",
-        "outline": "tankBody_darkLarge_outline",
-        "barrel": "tankDark_barrel2",
-        "bullet": "bulletDark2",
-        "preview": "tank_darkLarge"
-      },
-      "SPEED": {
-        "body": "tankBody_dark",
-        "outline": "tankBody_dark_outline",
-        "barrel": "tankDark_barrel1",
-        "bullet": "bulletDark1",
-        "preview": "tank_dark"
-      },
-      "ELITE": {
-        "body": "tankBody_huge",
-        "outline": "tankBody_huge_outline",
-        "barrel": "tankDark_barrel3",
-        "bullet": "bulletDark3",
-        "preview": "tank_huge"
-      }
+      "ATTACK": { "prefix": "enemy_attack", "color": "#C8362C" },
+      "DEFENSE": { "prefix": "enemy_defense", "color": "#4A6E90" },
+      "SPEED": { "prefix": "enemy_speed", "color": "#7E8A3A" }
     },
-    "silhouette": {
-      "tint": "#101018",
-      "scale": 1.05,
-      "comment": "탱크 뒤에 얇은 어두운 테두리를 깔아 지형과 분리한다. 원본 스프라이트에 이미 외곽선이 있어 과하면 검은 덩어리로 보인다.",
-      "alpha": 0.45
-    },
-    "trackDecal": {
-      "atlas": "units",
-      "sprites": [
-        "tracksLarge",
-        "tracksDouble",
-        "tracksSmall"
-      ],
-      "spawnIntervalPx": 28,
-      "lifetimeMs": 5000,
-      "alpha": 0.35
-    },
-    "wreck": {
-      "atlas": "units",
-      "sprites": [
-        "oilSpill_small",
-        "oilSpill_large"
-      ]
-    },
-    "specialFx": {
-      "comment": "특수기 연출. 스프라이트를 새로 만들지 않고 기존 외곽선/포탄을 색과 크기로 변형한다.",
-      "shield": {
-        "tint": "#66CCFF",
-        "alpha": 0.55,
-        "scale": 1.28,
-        "pulseHz": 3.0
-      },
-      "dash": {
-        "tint": "#FFFFFF",
-        "alpha": 0.3,
-        "afterImages": 3,
-        "spacingPx": 13.0
-      },
-      "piercing": {
-        "sprite": "shotRed",
-        "tint": "#FFD24A",
-        "alpha": 0.7
-      }
+    "slotMarker": {
+      "sprite": "hud_heart_full",
+      "sizeRatio": 0.34,
+      "offsetRatio": -0.62,
+      "colors": ["#35D2F0", "#F2922E", "#A6D62E", "#B45CE8"],
+      "comment": "탱크 색은 종류가 정하므로 같은 종류를 고른 두 사람이 구별되지 않는다. 머리 위에 슬롯 색 표식을 띄운다. (P1 cyan / P2 orange / P3 lime / P4 violet)"
     }
   },
+
   "projectiles": {
-    "atlas": "units",
-    "normal": {
-      "fromTankColor": true,
-      "comment": "탱크 색상 계열 포탄을 그대로 쓴다."
-    },
-    "piercing": {
-      "sprite": "shotLarge",
-      "trail": "shotRed"
-    },
-    "muzzleFlash": {
-      "sprites": [
-        "shotOrange",
-        "shotThin"
-      ],
-      "lifetimeMs": 70
-    }
+    "atlas": "game",
+    "normal": { "prefix": "shell_normal" },
+    "piercing": { "prefix": "shell_piercing" },
+    "muzzleFlash": { "prefix": "muzzle_flash", "lifetimeMs": 70 },
+    "comment": "포탄도 방향별로 그려져 있다. 접미사는 탱크와 같은 up/right/down/left 다."
   },
+
   "effects": {
-    "atlas": "units",
-    "comment": "유닛과 같은 계열이라 폭발도 Top-down Tanks Redux 를 쓴다.",
+    "atlas": "game",
     "tankExplosion": {
-      "frames": [
-        "explosion1",
-        "explosion2",
-        "explosion3",
-        "explosion4",
-        "explosion5"
-      ],
-      "fps": 18
-    },
-    "bulletHit": {
-      "frames": [
-        "explosionSmoke1",
-        "explosionSmoke2",
-        "explosionSmoke3"
-      ],
-      "fps": 24
-    },
-    "brickBreak": {
-      "frames": [
-        "explosionSmoke1",
-        "explosionSmoke3",
-        "explosionSmoke5"
-      ],
+      "frames": ["explosion_1", "explosion_2", "explosion_3", "explosion_4",
+                 "explosion_5", "explosion_6", "explosion_7", "explosion_8"],
       "fps": 20
     },
-    "spawnPuff": {
-      "frames": [
-        "explosionSmoke5",
-        "explosionSmoke4",
-        "explosionSmoke3",
-        "explosionSmoke2",
-        "explosionSmoke1"
-      ],
-      "fps": 14
-    }
+    "bulletHit": { "frames": ["impact_small"], "fps": 24 },
+    "brickBreak": { "frames": ["debris_brick"], "fps": 20 },
+    "steelHit": { "frames": ["ricochet_steel"], "fps": 24 },
+    "shieldHit": { "frames": ["shield_hit"], "fps": 24 },
+    "spawn": { "frames": ["spawn_glow"], "fps": 10 },
+    "shield": { "frames": ["shield_1", "shield_2", "shield_3"], "fps": 8 },
+    "dash": { "frames": ["dash_trail_1", "dash_trail_2", "dash_trail_3"], "fps": 14 },
+    "baseWarning": { "frames": ["base_warning_pulse"], "fps": 4 }
   },
+
   "props": {
-    "comment": "EMPTY 블록에 확률 배치. kind=explosive 파괴 시 연쇄 폭발 / solid 충돌 / decor 충돌 없음. layout=line 은 선형 배치, block 은 블록(2x2 셀) 전체를 차지한다.",
+    "comment": "EMPTY 블록에 확률 배치. kind=explosive 파괴 시 연쇄 폭발 / solid 충돌 / decor 충돌 없음.",
     "groups": {
-      "fuelBarrel": {
-        "kind": "explosive",
-        "blastCells": 3,
-        "sprites": [
-          "env_barrel_red",
-          "env_barrel_yellow",
-          "env_barrel_fuel"
-        ]
-      },
-      "supplyBarrel": {
-        "kind": "explosive",
-        "blastCells": 2,
-        "sprites": [
-          "env_barrel_blue",
-          "env_barrel_green",
-          "env_barrel_wood"
-        ]
-      },
+      "fuelBarrel": { "kind": "explosive", "blastCells": 3, "sprites": ["barrel_hazard"] },
+      "steelBarrel": { "kind": "explosive", "blastCells": 2, "sprites": ["barrel_steel"] },
       "supplyCrate": {
-        "kind": "solid",
-        "destructible": true,
-        "hp": 1,
-        "sprites": [
-          "env_crate_0",
-          "env_crate_1",
-          "env_crate_broken",
-          "env_supply_blue",
-          "env_supply_medic"
-        ]
+        "kind": "solid", "destructible": true, "hp": 1,
+        "sprites": ["crate_intact", "crate_broken"]
       },
       "sandbagLine": {
-        "kind": "solid",
-        "destructible": true,
-        "hp": 1,
-        "layout": "line",
-        "sprites": [
-          "env_sandbag_0",
-          "env_sandbag_1"
-        ]
+        "kind": "solid", "destructible": true, "hp": 1, "layout": "line",
+        "sprites": ["sandbag_straight", "sandbag_corner"]
       },
-      "barricadeLine": {
-        "kind": "solid",
-        "destructible": true,
-        "hp": 1,
-        "layout": "line",
-        "sprites": [
-          "env_barricade_0",
-          "env_barricade_1"
-        ]
-      },
-      "fenceLine": {
-        "kind": "solid",
-        "destructible": false,
-        "layout": "line",
-        "sprites": [
-          "env_fence_0",
-          "env_fence_1"
-        ]
-      },
-      "roadBarrier": {
-        "kind": "solid",
-        "destructible": true,
-        "hp": 2,
-        "layout": "line",
-        "sprites": [
-          "env_barrier_yellow",
-          "env_barrier_red"
-        ]
-      },
-      "building": {
-        "kind": "solid",
-        "destructible": false,
-        "layout": "block",
-        "sprites": [
-          "env_building_house",
-          "env_building_blue",
-          "env_building_office",
-          "env_building_radar"
-        ]
-      },
-      "watchtower": {
-        "kind": "solid",
-        "destructible": false,
-        "layout": "block",
-        "sprites": [
-          "env_tower_wood",
-          "env_tower_green",
-          "env_tower_light"
-        ]
-      },
-      "rubble": {
-        "kind": "decor",
-        "sprites": [
-          "env_brick_rubble_0",
-          "env_brick_rubble_1",
-          "env_steel_rubble",
-          "env_crater"
-        ]
-      },
-      "streetProp": {
-        "kind": "decor",
-        "sprites": [
-          "env_lamp",
-          "env_sign",
-          "env_flag_red",
-          "env_flag_blue"
-        ]
-      },
-      "junk": {
-        "kind": "decor",
-        "sprites": [
-          "env_tire",
-          "env_tire_stack",
-          "env_well",
-          "env_crops"
-        ]
-      }
+      "rubble": { "kind": "decor", "sprites": ["brick_rubble_a", "brick_rubble_b"] },
+      "scrub": { "kind": "decor", "sprites": ["rock_cluster", "bush_cluster"] }
     }
   },
+
   "hud": {
-    "comment": "Desert Shooter Interface 의 비트맵 폰트로 숫자뿐 아니라 문자도 찍을 수 있다.",
-    "life": "battle_195",
-    "lifeLostTint": "#000000A0",
+    "comment": "아이콘은 새 팩, 글자는 Kenney Desert Shooter 비트맵 폰트를 그대로 옮겨 왔다. 새 팩에 글자가 없다.",
+    "life": "hud_heart_full",
+    "lifeEmpty": "hud_heart_empty",
+    "skull": "hud_enemy_counter",
+    "kill": "hud_kill_explosion",
+    "panel": "hud_status_panel",
+    "dead": "hud_player_dead",
     "digitPrefix": "ui_digit_",
     "charPrefix": "ui_char_",
     "altDigitPrefix": "ui_alt_digit_",
     "altCharPrefix": "ui_alt_char_",
-    "skull": "ui_054",
-    "ammo": "ui_060",
-    "locked": "ui_076",
-    "baseDown": "battle_194",
-    "cursor": "ui_077",
-    "gauge": {
-      "comment": "특수기 쿨타임 게이지. 가운데 조각을 가로로 늘여 쓴다.",
-      "fill": "ui_140",
-      "track": "ui_158",
-      "heightRatio": 0.34
+    "cooldown": {
+      "comment": "특수기 쿨타임 고리. 한 장을 어둡게 깔고 차오른 만큼만 밝게 덧그린다.",
+      "ring": "hud_cooldown_75"
+    },
+    "network": { "online": "hud_network_strong", "offline": "hud_network_disconnected" },
+    "controls": {
+      "comment": "Phase 7 에서 쓴다. 지금은 그리지 않는다.",
+      "joystickBase": "hud_joystick_base",
+      "joystickKnob": "hud_joystick_knob",
+      "fire": "hud_fire_button_normal",
+      "firePressed": "hud_fire_button_pressed",
+      "special": "hud_special_button_normal",
+      "specialPressed": "hud_special_button_pressed"
     }
   }
 }

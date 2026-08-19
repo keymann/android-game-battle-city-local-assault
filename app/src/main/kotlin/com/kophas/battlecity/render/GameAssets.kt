@@ -9,41 +9,33 @@ import java.nio.ByteOrder
 /**
  * 인게임 아트를 디코드해 네이티브에 올린다. (docs/ASSET_SELECTION.md)
  *
- * 텍스처는 두 장이고 샘플링 방식이 다르다.
- *  - `tiles`  16px 픽셀아트(지형·구조물·환경·HUD). **NEAREST** 로 도트를 살린다.
- *  - `units`  Top-down Tanks Redux(탱크·포탄·폭발). 회전하므로 **LINEAR**.
+ * 텍스처는 **한 장**이다. 지형·탱크·이펙트·HUD 가 모두 같은 팩에서 나오고 화풍이
+ * 같아서 나눌 이유가 없다. 한 장이면 프레임 안에서 텍스처 교체가 한 번도 없다.
  *
- * 스프라이트는 이름으로 조회하고, 이름 앞자리가 출처를 알려 준다.
- *   `battle_` `town_` `dungeon_` `ui_` `fx_` = 픽셀 아틀라스, 그 외 = 유닛 아틀라스
+ * 탱크는 4방향이 미리 그려져 있어 런타임 회전이 없다. 회전이 없으니 전부 NEAREST 로
+ * 뽑아 도트를 그대로 살린다.
  *
  * 반드시 렌더 스레드에서 호출해야 한다. EGL 컨텍스트가 스레드에 묶여 있기 때문이다.
  */
 class GameAssets private constructor(
     val manifest: AssetManifest,
-    val tiles: TextureAtlas,
-    val units: TextureAtlas,
+    val atlas: TextureAtlas,
 ) {
-    /** 이름이 어느 아틀라스 것인지 몰라도 찾아 준다. */
     operator fun get(name: String): TextureRegion =
-        tiles.find(name) ?: units.find(name)
-            ?: error("어느 아틀라스에도 '$name' 스프라이트가 없다")
+        atlas.find(name) ?: error("아틀라스에 '$name' 스프라이트가 없다")
 
-    fun find(name: String): TextureRegion? = tiles.find(name) ?: units.find(name)
+    fun find(name: String): TextureRegion? = atlas.find(name)
 
     companion object {
         private const val TAG = "BattleCity"
 
-        const val TEXTURE_TILES = 1
-        const val TEXTURE_UNITS = 2
+        const val TEXTURE_GAME = 1
 
         fun load(source: AssetSource, renderer: NativeRenderer): GameAssets {
             val manifest = AssetManifest.load(source)
-
-            val tiles = loadAtlas(source, renderer, manifest, "tiles", TEXTURE_TILES)
-            val units = loadAtlas(source, renderer, manifest, "units", TEXTURE_UNITS)
-
-            Log.i(TAG, "에셋 로드 완료: tiles ${tiles.size} / units ${units.size} 스프라이트")
-            return GameAssets(manifest, tiles, units)
+            val atlas = loadAtlas(source, renderer, manifest, "game", TEXTURE_GAME)
+            Log.i(TAG, "에셋 로드 완료: 스프라이트 ${atlas.size}장")
+            return GameAssets(manifest, atlas)
         }
 
         private fun loadAtlas(

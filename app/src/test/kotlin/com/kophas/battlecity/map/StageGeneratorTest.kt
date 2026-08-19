@@ -57,33 +57,36 @@ class StageGeneratorTest {
     @Test
     fun `맵 크기는 플레이어 수에 따라 커진다`() {
         assertEquals(16, generator.blocksXFor(2))
-        assertEquals(20, generator.blocksXFor(3))
-        assertEquals(24, generator.blocksXFor(4))
+        assertEquals(23, generator.blocksXFor(3))
+        assertEquals(25, generator.blocksXFor(4))
     }
 
     @Test
-    fun `모든 플레이어 수에서 논리 해상도가 가로 4 대 세로 3 이다`() {
+    fun `모든 플레이어 수에서 논리 해상도가 16 대 9 에 붙어 있다`() {
+        // 블록이 정수라 정확히 16:9 가 되는 조합은 (16,9)와 (32,18) 뿐이다.
+        // 그 사이가 너무 벌어져서 가장 가까운 격자를 골라 쓴다. 오차는 0.5% 아래다.
         for (players in 2..4) {
             val stage = generator.generate(players.toLong(), players)
-            assertEquals(
-                "players=$players 비율이 4:3 이 아니다 (${stage.blocksX}x${stage.blocksY})",
-                4f / 3f,
-                stage.aspect,
-                1e-4f,
+            val error = kotlin.math.abs(stage.aspect / (16f / 9f) - 1f)
+            assertTrue(
+                "players=$players 비율이 16:9 에서 너무 멀다 " +
+                    "(${stage.blocksX}x${stage.blocksY}, 오차 ${error * 100}%)",
+                error < 0.006f,
             )
             assertTrue("가로가 세로보다 길어야 한다", stage.widthPx > stage.heightPx)
         }
     }
 
     @Test
-    fun `2인 맵은 16x12 블록 1024x768 이다`() {
+    fun `2인 맵은 16x9 블록 1024x576 으로 정확히 16 대 9 다`() {
         val stage = generator.generate(1L, playerCount = 2)
         assertEquals(16, stage.blocksX)
-        assertEquals(12, stage.blocksY)
+        assertEquals(9, stage.blocksY)
         assertEquals(32, stage.cellsX)
-        assertEquals(24, stage.cellsY)
+        assertEquals(18, stage.cellsY)
         assertEquals(1024f, stage.widthPx, 1e-3f)
-        assertEquals(768f, stage.heightPx, 1e-3f)
+        assertEquals(576f, stage.heightPx, 1e-3f)
+        assertEquals(16f / 9f, stage.aspect, 1e-4f)
     }
 
     @Test

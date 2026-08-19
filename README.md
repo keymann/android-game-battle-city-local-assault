@@ -253,7 +253,7 @@ app/src/main/
 │   └── GameSurfaceView.kt
 │
 └── assets/
-    ├── atlas/                tiles.png(픽셀 월드) + units.png(탱크)
+    ├── atlas/                game.png + game.xml (스프라이트 195장, 한 장)
     └── manifest/
         ├── assets.json       게임 의미 <-> 리소스 매핑
         └── balance.json      게임 규칙과 능력치
@@ -263,7 +263,7 @@ app/src/main/
 
 ## 리소스
 
-Kenney CC0 에셋 2종을 사용합니다. 선별 근거와 전체 매핑표는
+인게임 그래픽은 자체 제작 에셋 팩(`assets/`)이고, HUD 폰트만 Kenney CC0 입니다. 적용 방식과 전체 매핑표는
 [docs/ASSET_SELECTION.md](./docs/ASSET_SELECTION.md),
 스테이지 랜덤 생성 설계는 [docs/STAGE_GENERATION.md](./docs/STAGE_GENERATION.md),
 COM AI 설계는 [docs/AI.md](./docs/AI.md) 를 참고하세요.
@@ -283,6 +283,7 @@ COM AI 설계는 [docs/AI.md](./docs/AI.md) 를 참고하세요.
 | Phase 4 | 특수기 — 관통탄, 방어막, 대시, 쿨타임, UI | ✅ 완료 |
 | Phase 4.5 | 환경 아트 교체 — 지형·구조물·환경 오브젝트를 자체 리소스로 전면 교체 | ✅ 완료 |
 | Phase 5 | COM — Spawn, 타입별 AI, State Machine, 20 × Player 수 생성 | ✅ 완료 |
+| Phase 5.5 | 에셋 리팩터링 — 자체 에셋 팩 전면 적용, 아틀라스 1장, 16:9, 아이콘/스플래시 | ✅ 완료 |
 | Phase 6 | 로컬 멀티플레이 — Host, Join, Lobby, 상태 동기화, Disconnect 처리 | 예정 |
 | Phase 7 | 모바일 UI — Virtual Joystick, Fire/Special, HUD, Player Status | 예정 |
 | Phase 8 | 최종화 — 사운드, 이펙트, 진동, 최적화, 저사양/Tablet/Fold/해상도 테스트 | 예정 |
@@ -343,8 +344,9 @@ seed 로 생성된 4인용 4:3 스테이지(24×18 블록). 지형·도로 오�
 벽돌·석재 구조물, 환경 오브젝트, 본진이 모두 랜덤 배치됩니다.
 월드는 16px 픽셀아트, 회전하는 탱크만 벡터풍 팩을 씁니다.
 
-![Phase 5](docs/images/phase5_com_ai.png)
+![Phase 5.5](docs/images/phase55_asset_refresh.png)
 
-COM 80기가 상단 세 지점에서 나와 경로를 찾아 밀고 내려오고, 본진 앞마당에서는
-플레이어 쪽이 침입자를 요격합니다. AI 설계는 [docs/AI.md](./docs/AI.md) 에 있습니다.
-좌측 HUD 는 비트맵 폰트로 `P1 ♥♥♥ 0` / `ENEMY 71` 과 특수기 쿨타임 게이지를 표시합니다.
+인게임 그래픽 전체를 자체 에셋 팩으로 교체했습니다. 탱크는 4방향이 미리 그려져 있어
+회전 없이 그리고, 아틀라스는 한 장이라 프레임 안에서 텍스처 교체가 없습니다.
+화면비는 16:9 고정이며, HUD 는 상태창 판 위에 탱크 초상 · 하트 · 처치 수 ·
+특수기 쿨타임 고리를 얹습니다. AI 설계는 [docs/AI.md](./docs/AI.md) 에 있습니다.

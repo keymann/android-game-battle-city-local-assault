@@ -97,11 +97,6 @@ class WorldRenderer(
             ((timeSeconds * catalog.waterAnimFps).toInt().coerceAtLeast(0)) %
                 catalog.waterFrames.size,
         ]
-        val iceAlpha = ((catalog.iceTint ushr 24) and 0xFF) / 255f
-        val iceRed = ((catalog.iceTint ushr 16) and 0xFF) / 255f
-        val iceGreen = ((catalog.iceTint ushr 8) and 0xFF) / 255f
-        val iceBlue = (catalog.iceTint and 0xFF) / 255f
-
         // 블록(2x2 셀)이 통째로 같은 타일이면 쿼드 하나로 합쳐 그린다.
         // 벽이 부서져 일부만 남았을 때만 셀 단위로 쪼갠다. (계획서 §25.1)
         val blockSize = viewport.worldToScreenLength(Constants.BLOCK_PX)
@@ -134,10 +129,8 @@ class WorldRenderer(
                         size = blockSize,
                         batch = batch,
                         waterFrame = waterFrame,
-                        iceRed = iceRed,
-                        iceGreen = iceGreen,
-                        iceBlue = iceBlue,
-                        iceAlpha = iceAlpha,
+                        cellX = originX,
+                        cellY = originY,
                     )
                     continue
                 }
@@ -158,10 +151,8 @@ class WorldRenderer(
                             size = cellSize,
                             batch = batch,
                             waterFrame = waterFrame,
-                            iceRed = iceRed,
-                            iceGreen = iceGreen,
-                            iceBlue = iceBlue,
-                            iceAlpha = iceAlpha,
+                            cellX = cx,
+                            cellY = cy,
                         )
                     }
                 }
@@ -181,10 +172,8 @@ class WorldRenderer(
         size: Float,
         batch: SpriteBatch,
         waterFrame: TextureRegion,
-        iceRed: Float,
-        iceGreen: Float,
-        iceBlue: Float,
-        iceAlpha: Float,
+        cellX: Int,
+        cellY: Int,
     ) {
         when (type) {
             TileType.WATER -> batch.draw(
@@ -196,17 +185,18 @@ class WorldRenderer(
                 layer = Constants.Layer.HAZARD,
             )
 
+            // 얼음은 전용 타일이 4종이라 물들이지 않는다. 어느 칸에 어떤 무늬가
+            // 오는지는 좌표로 정한다. 저장할 필요도, 주고받을 필요도 없다.
             TileType.ICE -> batch.draw(
-                region = catalog.ice,
+                region = catalog.iceTiles[
+                    ((cellX * 31 + cellY * 17) % catalog.iceTiles.size + catalog.iceTiles.size) %
+                        catalog.iceTiles.size,
+                ],
                 x = screenX,
                 y = screenY,
                 width = size,
                 height = size,
                 layer = Constants.Layer.HAZARD,
-                red = iceRed,
-                green = iceGreen,
-                blue = iceBlue,
-                alpha = iceAlpha,
             )
 
             TileType.BRICK, TileType.STEEL -> {
@@ -269,13 +259,23 @@ class WorldRenderer(
         )
     }
 
+    /**
+     * 탱크.
+     *
+     * 방향별 그림이 따로 있어 **회전값이 없다.** 픽셀아트를 돌리면 가장자리가
+     * 뭉개지는데, 미리 그려 둔 4장을 골라 쓰면 그 문제가 통째로 사라진다.
+     *
+     * 스프라이트 캔버스는 차체보다 넓다. 포신이 밖으로 뻗기 때문이다. 그래서
+     * 탱크가 차지하는 칸이 아니라 **중심을 기준으로** 캔버스 크기만큼 그린다.
+     */
     private fun drawTanks(
         world: GameWorld,
         batch: SpriteBatch,
         viewport: Viewport,
         timeSeconds: Float,
     ) {
-        val size = viewport.worldToScreenLength(Tank.SIZE)
+        val spriteSize = viewport.worldToScreenLength(catalog.tankSpritePx)
+        val bodySize = viewport.worldToScreenLength(Tank.SIZE)
 
         for (tank in world.tanks) {
             if (!tank.alive) continue
@@ -284,200 +284,123 @@ class WorldRenderer(
             val concealed = world.map.conceals(tank.x, tank.y, Tank.SIZE, Tank.SIZE)
             val alpha = if (concealed) CONCEALED_ALPHA else 1f
 
-            val screenX = viewport.worldToScreenX(tank.x)
-            val screenY = viewport.worldToScreenY(tank.y)
-            val rotation = tank.direction.radians + catalog.tankRotationOffset
+            val centerX = viewport.worldToScreenX(tank.centerX)
+            val centerY = viewport.worldToScreenY(tank.centerY)
 
-            val body = catalog.bodyOf(tank)
-            val bodyHeight = size * (body.height.toFloat() / body.width)
-
-            // 지형과 색이 겹쳐도 형태가 읽히도록 어두운 실루엣을 먼저 깐다.
-            // 같은 레이어 / 같은 텍스처라 배치 안에서 삽입 순서가 그대로 유지된다.
-            catalog.outlineOf(tank)?.let { outline ->
-                val scale = catalog.silhouetteScale
-                val outlineWidth = size * scale
-                val outlineHeight = bodyHeight * scale
-                val silhouette = catalog.silhouetteColor
-                batch.draw(
-                    region = outline,
-                    x = screenX - (outlineWidth - size) * 0.5f,
-                    y = screenY - (outlineHeight - bodyHeight) * 0.5f,
-                    width = outlineWidth,
-                    height = outlineHeight,
-                    layer = Constants.Layer.ENTITY,
-                    rotation = rotation,
-                    red = red(silhouette),
-                    green = green(silhouette),
-                    blue = blue(silhouette),
-                    alpha = alpha * catalog.silhouetteAlpha,
-                )
-            }
-
-            // 대시 잔상은 몸체 뒤에 깔아야 진행 방향이 읽힌다. (계획서 §6.3)
             if (tank.specialActive && tank.special == BalanceConfig.Special.DASH) {
-                drawDashTrail(batch, tank, body, screenX, screenY, size, bodyHeight, rotation, viewport)
+                drawDashTrail(batch, tank, centerX, centerY, spriteSize, timeSeconds)
             }
 
             batch.draw(
-                region = body,
-                x = screenX,
-                y = screenY,
-                width = size,
-                height = bodyHeight,
+                region = catalog.tankSprite(tank),
+                x = centerX - spriteSize * 0.5f,
+                y = centerY - spriteSize * 0.5f,
+                width = spriteSize,
+                height = spriteSize,
                 layer = Constants.Layer.ENTITY,
-                rotation = rotation,
                 alpha = alpha,
             )
 
-            // 방어막은 탱크를 감싸는 청색 오라로 보여 준다. (계획서 §6.2)
             if (tank.specialActive && tank.special == BalanceConfig.Special.SHIELD) {
-                drawShieldAura(batch, tank, screenX, screenY, size, bodyHeight, rotation, timeSeconds)
+                drawShield(batch, centerX, centerY, spriteSize, timeSeconds)
             }
 
-            // 몸체와 포신이 같은 점(탱크 중심)을 축으로 돌아야 어긋나지 않는다.
-            //   몸체: origin (0.5, 0.5)  포신: origin (0.5, 1.0) 으로 포미를 중심에 둔다
-            val centerX = screenX + size * 0.5f
-            val centerY = screenY + bodyHeight * 0.5f
-            val barrel = catalog.barrelOf(tank)
-            val barrelScale = size / body.width
-            val barrelWidth = barrel.width * barrelScale
-            val barrelHeight = barrel.height * barrelScale
-            batch.draw(
-                region = barrel,
-                x = centerX - barrelWidth * 0.5f,
-                y = centerY - barrelHeight,
-                width = barrelWidth,
-                height = barrelHeight,
-                layer = Constants.Layer.ENTITY,
-                rotation = rotation,
-                originX = 0.5f,
-                originY = 1f,
-                alpha = alpha,
-            )
-
-            // 스폰 무적 동안 깜빡인다.
-            if (tank.spawnGuardRemaining > 0f && ((tank.spawnGuardRemaining * 8f).toInt() % 2) == 0) {
-                batch.draw(
-                    region = body,
-                    x = screenX,
-                    y = screenY,
-                    width = size,
-                    height = bodyHeight,
-                    layer = Constants.Layer.OVERLAY,
-                    rotation = rotation,
-                    alpha = 0.45f,
-                )
+            if (tank.faction == Tank.Faction.PLAYER) {
+                drawSlotMarker(batch, tank, centerX, centerY, bodySize, alpha)
             }
         }
     }
 
-    /** 진행 반대 방향으로 잔상을 남겨 속도를 보여 준다. */
-    @Suppress("LongParameterList")
-    private fun drawDashTrail(
+    /**
+     * 플레이어 머리 위 표식.
+     *
+     * 탱크 색은 **종류**가 정한다. 같은 종류를 고른 두 사람은 색이 같아서 구별되지
+     * 않으므로, 슬롯 색을 입힌 작은 표식을 띄운다.
+     */
+    private fun drawSlotMarker(
         batch: SpriteBatch,
         tank: Tank,
-        body: TextureRegion,
-        screenX: Float,
-        screenY: Float,
-        width: Float,
-        height: Float,
-        rotation: Float,
-        viewport: Viewport,
+        centerX: Float,
+        centerY: Float,
+        bodySize: Float,
+        alpha: Float,
     ) {
-        val fx = catalog.dashFx
-        val spacing = viewport.worldToScreenLength(fx.spacingPx)
-        for (i in 1..fx.afterImages) {
-            val fade = fx.alpha * (1f - i.toFloat() / (fx.afterImages + 1))
-            batch.draw(
-                region = body,
-                x = screenX - tank.direction.dx * spacing * i,
-                y = screenY - tank.direction.dy * spacing * i,
-                width = width,
-                height = height,
-                layer = Constants.Layer.ENTITY,
-                rotation = rotation,
-                red = red(fx.tint),
-                green = green(fx.tint),
-                blue = blue(fx.tint),
-                alpha = fade,
-            )
-        }
-    }
-
-    /** 탱크 외곽선을 키우고 청색으로 물들여 맥동시킨다. */
-    @Suppress("LongParameterList")
-    private fun drawShieldAura(
-        batch: SpriteBatch,
-        tank: Tank,
-        screenX: Float,
-        screenY: Float,
-        width: Float,
-        height: Float,
-        rotation: Float,
-        timeSeconds: Float,
-    ) {
-        val outline = catalog.outlineOf(tank) ?: return
-        val fx = catalog.shieldFx
-        val pulse = 0.75f + 0.25f * kotlin.math.sin(timeSeconds * fx.pulseHz * TWO_PI)
-        val auraWidth = width * fx.scale
-        val auraHeight = height * fx.scale
-
+        val marker = catalog.slotMarker
+        val size = bodySize * marker.sizeRatio
+        val color = marker.colorOf(tank.colorSlot)
         batch.draw(
-            region = outline,
-            x = screenX - (auraWidth - width) * 0.5f,
-            y = screenY - (auraHeight - height) * 0.5f,
-            width = auraWidth,
-            height = auraHeight,
+            region = marker.region,
+            x = centerX - size * 0.5f,
+            y = centerY + bodySize * marker.offsetRatio,
+            width = size,
+            height = size,
             layer = Constants.Layer.OVERLAY,
-            rotation = rotation,
-            red = red(fx.tint),
-            green = green(fx.tint),
-            blue = blue(fx.tint),
-            alpha = fx.alpha * pulse,
+            red = red(color),
+            green = green(color),
+            blue = blue(color),
+            alpha = alpha,
         )
     }
 
-    private fun drawProjectiles(world: GameWorld, batch: SpriteBatch, viewport: Viewport) {
-        val size = viewport.worldToScreenLength(Projectile.SIZE * 2.5f)
-        for (projectile in world.projectiles.active) {
-            if (!projectile.active) continue
-            val owner = world.tanks.firstOrNull { it.id == projectile.ownerId }
-
-            val region = if (projectile.piercing) {
-                catalog.piercingBullet
-            } else {
-                owner?.let { catalog.bulletOf(it) } ?: continue
-            }
-
-            // 관통탄은 뒤로 꼬리를 달아 일반 포탄과 확실히 구분한다. (계획서 §6.1)
-            if (projectile.piercing) {
-                val trail = catalog.piercingTrail
-                val trailSize = size * 1.4f
-                batch.draw(
-                    region = trail,
-                    x = viewport.worldToScreenX(projectile.centerX) -
-                        projectile.direction.dx * size - trailSize * 0.5f,
-                    y = viewport.worldToScreenY(projectile.centerY) -
-                        projectile.direction.dy * size - trailSize * 0.5f,
-                    width = trailSize,
-                    height = trailSize * (trail.height.toFloat() / trail.width),
-                    layer = Constants.Layer.ENTITY,
-                    rotation = projectile.direction.radians,
-                    red = red(catalog.piercingTint),
-                    green = green(catalog.piercingTint),
-                    blue = blue(catalog.piercingTint),
-                    alpha = catalog.piercingTrailAlpha,
-                )
-            }
-
+    /** 대시 잔상. 진행 반대쪽에 깔아 속도가 눈에 보이게 한다. (계획서 §6.3) */
+    private fun drawDashTrail(
+        batch: SpriteBatch,
+        tank: Tank,
+        centerX: Float,
+        centerY: Float,
+        size: Float,
+        timeSeconds: Float,
+    ) {
+        val region = catalog.dashFx.at(timeSeconds)
+        // 탱크보다 작게, 뒤로만 깐다. 같은 크기로 겹치면 탱크가 아예 안 보인다.
+        val trail = size * DASH_SIZE_RATIO
+        for (i in 1..DASH_AFTER_IMAGES) {
+            val back = size * DASH_SPACING_RATIO * i
             batch.draw(
                 region = region,
+                x = centerX - tank.direction.dx * back - trail * 0.5f,
+                y = centerY - tank.direction.dy * back - trail * 0.5f,
+                width = trail,
+                height = trail,
+                layer = Constants.Layer.EFFECT,
+                alpha = DASH_ALPHA / i,
+            )
+        }
+    }
+
+    /** 방어막. 탱크를 감싸는 보호막이 지속 시간 동안 맥동한다. (계획서 §6.2) */
+    private fun drawShield(
+        batch: SpriteBatch,
+        centerX: Float,
+        centerY: Float,
+        size: Float,
+        timeSeconds: Float,
+    ) {
+        val region = catalog.shieldFx.at(timeSeconds)
+        val shieldSize = size * SHIELD_SCALE
+        batch.draw(
+            region = region,
+            x = centerX - shieldSize * 0.5f,
+            y = centerY - shieldSize * 0.5f,
+            width = shieldSize,
+            height = shieldSize,
+            layer = Constants.Layer.EFFECT,
+            alpha = SHIELD_ALPHA,
+        )
+    }
+
+    /** 포탄도 방향별로 그려져 있다. 회전시키지 않는다. */
+    private fun drawProjectiles(world: GameWorld, batch: SpriteBatch, viewport: Viewport) {
+        val size = viewport.worldToScreenLength(Projectile.SIZE * PROJECTILE_SPRITE_SCALE)
+        for (projectile in world.projectiles.active) {
+            if (!projectile.active) continue
+            batch.draw(
+                region = catalog.shellSprite(projectile.direction, projectile.piercing),
                 x = viewport.worldToScreenX(projectile.centerX) - size * 0.5f,
                 y = viewport.worldToScreenY(projectile.centerY) - size * 0.5f,
                 width = size,
-                height = size * (region.height.toFloat() / region.width),
+                height = size,
                 layer = Constants.Layer.ENTITY,
-                rotation = projectile.direction.radians,
             )
         }
     }
@@ -509,7 +432,16 @@ class WorldRenderer(
 
     private companion object {
         const val CONCEALED_ALPHA = 0.35f
-        const val TWO_PI = 6.2831855f
-        const val RIPPLE_STEP = 0.55f
+
+        /** 포탄 그림은 실제 판정 크기보다 크게 그린다. 작으면 눈에 안 띈다. */
+        const val PROJECTILE_SPRITE_SCALE = 3f
+
+        const val DASH_AFTER_IMAGES = 3
+        const val DASH_SIZE_RATIO = 0.62f
+        const val DASH_SPACING_RATIO = 0.3f
+        const val DASH_ALPHA = 0.5f
+
+        const val SHIELD_SCALE = 1.15f
+        const val SHIELD_ALPHA = 0.85f
     }
 }

@@ -28,12 +28,23 @@ class StageGenerator(private val manifest: AssetManifest) {
         return build(currentSeed, playerCount, stageIndex, forceRepair = true)!!
     }
 
-    /** 가로 블록 수. 세로는 항상 이 값의 3/4 이라 맵이 4:3 을 유지한다. */
-    fun blocksXFor(playerCount: Int): Int =
-        (BASE_BLOCKS_X + BLOCKS_PER_EXTRA_PLAYER * (playerCount - MIN_PLAYERS))
-            .coerceIn(BASE_BLOCKS_X, MAX_BLOCKS_X)
+    /**
+     * 맵 크기. 플레이어가 많을수록 넓어진다.
+     *
+     * 블록은 정수라서 정확히 16:9 가 되는 조합이 (16,9), (32,18) 뿐이다. 그 사이가
+     * 너무 벌어지므로, 사람 수에 맞는 크기 중 **16:9 에 가장 가까운 격자**를 골라 둔다.
+     * 오차는 0.5% 아래라 눈에 띄지 않고, 남는 만큼은 뷰포트가 레터박스로 처리한다.
+     *
+     *   2인  16 x  9  = 1.7778  (정확히 16:9)
+     *   3인  23 x 13  = 1.7692  (-0.48%)
+     *   4인  25 x 14  = 1.7857  (+0.45%)
+     */
+    fun blocksXFor(playerCount: Int): Int = gridFor(playerCount).first
 
-    fun blocksYFor(playerCount: Int): Int = blocksXFor(playerCount) * 3 / 4
+    fun blocksYFor(playerCount: Int): Int = gridFor(playerCount).second
+
+    private fun gridFor(playerCount: Int): Pair<Int, Int> =
+        GRID_BY_PLAYERS[playerCount.coerceIn(MIN_PLAYERS, MAX_PLAYERS)] ?: GRID_BY_PLAYERS.getValue(MIN_PLAYERS)
 
     // -----------------------------------------------------------------------
 
@@ -828,10 +839,12 @@ class StageGenerator(private val manifest: AssetManifest) {
 
         const val MIN_PLAYERS = 2
         const val MAX_PLAYERS = 4
-        /** 2인 기준 가로 블록 수. 세로는 12 가 되어 4:3 이다. */
-        const val BASE_BLOCKS_X = 16
-        const val BLOCKS_PER_EXTRA_PLAYER = 4
-        const val MAX_BLOCKS_X = 24
+        /** 사람 수별 맵 격자. 16:9 에 가장 가까운 정수 조합이다. */
+        val GRID_BY_PLAYERS: Map<Int, Pair<Int, Int>> = mapOf(
+            2 to (16 to 9),
+            3 to (23 to 13),
+            4 to (25 to 14),
+        )
 
         private const val MAX_ATTEMPTS = 8
         private const val STAGE_SALT = 7919L

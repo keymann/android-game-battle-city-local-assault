@@ -91,7 +91,7 @@ class AssetManifest(val root: JsonValue) {
 
     fun hud(key: String): String? = root["hud"]?.get(key)?.asString
 
-    val hudLifeSprite: String get() = hud("life") ?: "battle_195"
+    val hudLifeSprite: String get() = hud("life") ?: "hud_heart_full"
 
     val hudDigitPrefix: String get() = hud("digitPrefix") ?: "ui_digit_"
 

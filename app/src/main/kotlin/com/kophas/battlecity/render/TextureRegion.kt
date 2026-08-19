@@ -42,6 +42,24 @@ data class TextureRegion(
         )
     }
 
+    /**
+     * 아래에서 [ratio] 만큼만 남긴 가로 띠.
+     *
+     * 쿨타임 고리를 밑에서부터 차오르게 그릴 때 쓴다. 원형 마스크를 쓰려면 셰이더가
+     * 필요한데, 스프라이트 배치에는 그런 것이 없다. 같은 그림을 어둡게 한 번,
+     * 밝게 잘라서 한 번 그리면 셰이더 없이도 연속으로 차오른다.
+     */
+    fun bottomBand(ratio: Float): TextureRegion {
+        val keep = ratio.coerceIn(0f, 1f)
+        if (keep >= 1f) return this
+        val cut = (v1 - v0) * (1f - keep)
+        return copy(
+            name = "$name#band",
+            height = maxOf(1, (height * keep).toInt()),
+            v0 = v0 + cut,
+        )
+    }
+
     companion object {
         const val DEFAULT_INSET_TEXELS: Float = 0.5f
 
