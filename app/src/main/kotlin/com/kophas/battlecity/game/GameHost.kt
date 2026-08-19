@@ -3,13 +3,18 @@ package com.kophas.battlecity.game
 import android.content.res.AssetManager
 import android.util.Log
 import android.view.Surface
+import com.kophas.battlecity.core.Direction
 import com.kophas.battlecity.core.GameLoop
 import com.kophas.battlecity.gameplay.BalanceConfig
+import com.kophas.battlecity.input.TouchControls
+import com.kophas.battlecity.net.Messages
+import com.kophas.battlecity.render.ControlsRenderer
 import com.kophas.battlecity.render.AssetSource
 import com.kophas.battlecity.render.GameAssets
 import com.kophas.battlecity.render.NativeRenderer
 import com.kophas.battlecity.render.RendererBackend
 import com.kophas.battlecity.render.SpriteBatch
+import com.kophas.battlecity.render.SpriteCatalog
 import com.kophas.battlecity.render.Viewport
 import java.util.concurrent.atomic.AtomicReference
 
@@ -31,6 +36,51 @@ class GameHost(private val assetManager: AssetManager) : GameLoop.Callbacks {
 
     private val renderer = NativeRenderer()
     private val batch = SpriteBatch()
+
+    /** 가상 조이스틱과 버튼. (계획서 §18) */
+    val touch = TouchControls()
+
+    private var controlsRenderer: ControlsRenderer? = null
+    private var lobbyScene: LobbyScene? = null
+    private var tick = 0L
+
+    /** 로비를 보여 줄 차례인가. 혼자 하는 판에는 로비가 없다. */
+    private fun inLobby(): Boolean = netDriver?.inLobby == true
+
+    // --- 손가락 (계획서 §18) ---------------------------------------------
+    //
+    // 로비와 전투는 받는 것이 다르다. 로비는 눌린 자리만 보고, 전투는 조이스틱을
+    // 끌고 다닌다. 창에서 갈라 놓으면 창이 게임 상태를 알아야 하므로 여기서 가른다.
+
+    fun onTouchDown(pointerId: Int, x: Float, y: Float) {
+        if (inLobby()) {
+            handleLobbyTap(x, y)
+        } else {
+            touch.onDown(pointerId, x, y)
+        }
+    }
+
+    fun onTouchMove(pointerId: Int, x: Float, y: Float) {
+        if (!inLobby()) touch.onMove(pointerId, x, y)
+    }
+
+    fun onTouchUp(pointerId: Int) {
+        if (inLobby()) lobbyScene?.onRelease() else touch.onUp(pointerId)
+    }
+
+    fun onTouchCancel() {
+        if (inLobby()) lobbyScene?.onRelease() else touch.onCancel()
+    }
+
+    private fun handleLobbyTap(x: Float, y: Float) {
+        val lobby = lobbyScene ?: return
+        val driver = netDriver ?: return
+        when (lobby.onTap(x, y)) {
+            LobbyScene.Action.TOGGLE_READY -> driver.toggleReady()
+            LobbyScene.Action.START -> driver.startMatch(scene)
+            LobbyScene.Action.NONE -> Unit
+        }
+    }
     private val viewport = Viewport(DEFAULT_LOGICAL, DEFAULT_LOGICAL)
     private val loop = GameLoop(this)
 
@@ -60,6 +110,8 @@ class GameHost(private val assetManager: AssetManager) : GameLoop.Callbacks {
 
     fun onSurfaceChanged(width: Int, height: Int) {
         pendingCommand.set(SurfaceCommand.Resize(width, height))
+        touch.resize(width, height)
+        lobbyScene?.resize(width, height)
     }
 
     fun onSurfaceDestroyed() {
@@ -86,8 +138,34 @@ class GameHost(private val assetManager: AssetManager) : GameLoop.Callbacks {
     }
 
     override fun onUpdate(tickIndex: Long, tickSeconds: Float) {
+        tick++
         netDriver?.onTick()
-        scene?.update(tickSeconds)
+
+        val currentScene = scene
+        val driver = netDriver
+        // 로비에서는 조종 입력을 보내지 않는다. 아직 탱크가 없다.
+        if (currentScene != null && driver != null && !inLobby()) {
+            driver.submitLocalInput(currentScene, readTouch())
+        }
+
+        currentScene?.update(tickSeconds)
+    }
+
+    /**
+     * 손가락을 게임 입력으로 옮긴다.
+     *
+     * 조이스틱은 아날로그로 받되 가장 가까운 네 방향으로 접는다. (계획서 §19)
+     * 그 접는 일은 [TouchControls] 가 이미 해 두었으므로 여기서는 담기만 한다.
+     */
+    private fun readTouch(): Messages.Input {
+        val state = touch.consume()
+        return Messages.Input(
+            tick = tick,
+            direction = state.direction?.ordinal ?: Messages.Input.NO_DIRECTION,
+            moving = state.moving,
+            fire = state.fire,
+            special = state.special,
+        )
     }
 
     override fun onRender(alpha: Float) {
@@ -105,7 +183,18 @@ class GameHost(private val assetManager: AssetManager) : GameLoop.Callbacks {
         viewport.update(width, height, insets)
 
         batch.begin()
-        currentScene.render(batch, viewport)
+        if (inLobby()) {
+            // 로비에서는 맵을 그리지 않는다. 아직 어떤 판인지 정해지지 않았다.
+            lobbyScene?.let { lobby ->
+                netDriver?.fillLobbyView(lobby.view)
+                lobby.render(batch)
+            }
+        } else {
+            currentScene.render(batch, viewport)
+            // 조작 UI 는 맵 위에, 화면 픽셀 좌표로 그린다. 맵과 함께 늘었다 줄었다
+            // 하면 안 된다. 손가락 크기는 해상도가 아니라 기기 크기를 따르기 때문이다.
+            controlsRenderer?.render(batch, touch, currentScene.tankOfSlot(localSlot()))
+        }
         batch.end()
 
         if (batch.droppedSprites > 0) {
@@ -126,16 +215,24 @@ class GameHost(private val assetManager: AssetManager) : GameLoop.Callbacks {
         when (val command = pendingCommand.getAndSet(null)) {
             null -> Unit
             is SurfaceCommand.Attach -> attach(command)
-            is SurfaceCommand.Resize -> renderer.resize(command.width, command.height)
+            is SurfaceCommand.Resize -> {
+                renderer.resize(command.width, command.height)
+                touch.resize(command.width, command.height)
+                lobbyScene?.resize(command.width, command.height)
+            }
             SurfaceCommand.Detach -> {
                 netDriver?.close()
                 netDriver = null
+                controlsRenderer = null
+                lobbyScene = null
                 renderer.detachSurface()
                 assets = null
                 scene = null
             }
         }
     }
+
+    private fun localSlot(): Int = netDriver?.localSlot ?: 0
 
     private fun attach(command: SurfaceCommand.Attach) {
         val backend = renderer.attachSurface(command.surface, preferVulkan)
@@ -144,6 +241,7 @@ class GameHost(private val assetManager: AssetManager) : GameLoop.Callbacks {
             return
         }
         renderer.resize(command.width, command.height)
+        touch.resize(command.width, command.height)
 
         val source = AssetSource.of(assetManager)
         val loaded = GameAssets.load(source, renderer)
@@ -151,14 +249,19 @@ class GameHost(private val assetManager: AssetManager) : GameLoop.Callbacks {
 
         // 세션을 먼저 연다. 자리 배정이 씬보다 앞서야 사람이 잡은 자리에 AI 가 안 붙는다.
         val driver = NetDriver(netRole, playerName, hostAddress)
+        // 이 기기를 쥔 사람의 자리에도 AI 를 붙이지 않는다.
+        driver.humanSlots += driver.localSlot
         netDriver = driver
+        val catalog = SpriteCatalog(loaded)
+        controlsRenderer = ControlsRenderer(catalog)
+        lobbyScene = LobbyScene(catalog).apply { resize(command.width, command.height) }
 
         // 밸런스 값은 코드가 아니라 balance.json 에서 온다. (계획서 §41-19)
         val newScene = BattleScene(
             assets = loaded,
             balance = BalanceConfig.load(source),
             role = netRole,
-            remoteSlots = driver.remoteSlots,
+            humanSlots = driver.humanSlots,
         )
         driver.attachScene(newScene)
         scene = newScene

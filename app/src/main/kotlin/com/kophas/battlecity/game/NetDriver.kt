@@ -34,8 +34,63 @@ class NetDriver(
     var localSlot: Int = 0
         private set
 
-    /** 사람이 잡은 자리. 여기에는 AI 를 붙이지 않는다. */
-    val remoteSlots = HashSet<Int>()
+    /** 사람이 잡은 자리. 여기에는 AI 를 붙이지 않는다. 조종간이 둘이 되기 때문이다. */
+    val humanSlots = HashSet<Int>()
+
+    /** 아직 로비에 있는가. 판이 시작되면 false 가 된다. */
+    val inLobby: Boolean
+        get() = role != NetRole.LOCAL && !started
+
+    private var started = false
+    private var lastLobby: Messages.LobbyUpdate? = null
+
+    /** 로비 화면에 그릴 값을 채운다. Host 는 제 로비에서, Client 는 받은 것에서. */
+    fun fillLobbyView(view: LobbyScene.View) {
+        val update = host?.lobby?.snapshot() ?: lastLobby
+        view.slots = update?.slots.orEmpty()
+        view.countdownTicks = update?.countdownTicks ?: 0
+        view.localSlot = localSlot
+        view.host = role == NetRole.HOST
+        view.connected = client?.state != ClientSession.State.DISCONNECTED
+        view.searching = client?.state == ClientSession.State.SEARCHING
+    }
+
+    /** 자기 자리의 준비 상태를 뒤집는다. */
+    fun toggleReady() {
+        when (role) {
+            NetRole.HOST -> {
+                val lobby = host?.lobby ?: return
+                val slot = lobby.slots.getOrNull(localSlot) ?: return
+                lobby.setReady(localSlot, !slot.ready, slot.tankType, clock())
+            }
+
+            NetRole.CLIENT -> {
+                val ready = lastLobby?.slots?.getOrNull(localSlot)?.ready == true
+                client?.setReady(!ready, 0)
+            }
+
+            NetRole.LOCAL -> Unit
+        }
+    }
+
+    /** START. Host 만 누를 수 있다. (계획서 §28) */
+    fun startMatch(currentScene: BattleScene?) {
+        val session = host ?: return
+        session.prepareMatch(
+            seed = Rng.advanceSeed(clock()),
+            stageIndex = 0,
+            gridHash = currentScene?.stageGridHash ?: 0L,
+        )
+        session.requestStart()
+    }
+
+    /** 이 기기의 조종 입력. Host/LOCAL 은 바로 먹이고 Client 는 올려 보낸다. */
+    fun submitLocalInput(scene: BattleScene, input: Messages.Input) {
+        when (role) {
+            NetRole.CLIENT -> client?.sendInput(input)
+            else -> scene.applyRemoteInput(localSlot, input)
+        }
+    }
 
     private val transport: Transport? = when (role) {
         NetRole.LOCAL -> null
@@ -80,17 +135,18 @@ class NetDriver(
         val session = HostSession(transport, playerName, 0, clock)
         session.listener = object : HostSession.Listener {
             override fun onPlayerJoined(slot: Int, name: String) {
-                remoteSlots += slot
+                humanSlots += slot
                 Log.i(TAG, "$name 님이 ${slot + 1}번 자리에 들어왔다")
             }
 
             override fun onPlayerLeft(slot: Int) {
-                remoteSlots -= slot
+                humanSlots -= slot
                 Log.i(TAG, "${slot + 1}번 자리가 끊겼다. 남은 사람은 계속한다")
             }
 
             override fun onMatchStart(start: Messages.Start) {
                 Log.i(TAG, "판 시작 seed=${start.seed} 인원=${start.playerCount}")
+                started = true
                 scene?.beginStage(start.seed, start.stageIndex, start.playerCount)
             }
 
@@ -112,9 +168,12 @@ class NetDriver(
 
             override fun onJoined(slot: Int) {
                 localSlot = slot
+                humanSlots += slot
                 Log.i(TAG, "${slot + 1}번 자리를 받았다")
-                // 조작 UI 는 Phase 7 에서 들어온다. 그때까지는 들어가면 곧 준비된 것으로 본다.
-                session.setReady(true, 0)
+            }
+
+            override fun onLobby(update: Messages.LobbyUpdate) {
+                lastLobby = update
             }
 
             override fun onDenied(reason: Int) {
@@ -122,6 +181,7 @@ class NetDriver(
             }
 
             override fun onMatchStart(start: Messages.Start) {
+                started = true
                 scene?.beginStage(start.seed, start.stageIndex, start.playerCount)
                 val expected = scene?.stageGridHash
                 if (expected != null && expected != start.gridHash) {
@@ -148,16 +208,6 @@ class NetDriver(
         val currentScene = scene
 
         session.update()
-
-        // 조작 UI 가 없는 지금은 인원이 차고 모두 준비되면 곧바로 시작한다.
-        if (!session.lobby.started && session.lobby.canStart && session.lobby.countdownTicks == 0) {
-            session.prepareMatch(
-                seed = Rng.advanceSeed(clock()),
-                stageIndex = 0,
-                gridHash = currentScene?.stageGridHash ?: 0L,
-            )
-            session.requestStart()
-        }
 
         if (currentScene != null && tick % Protocol.TICKS_PER_SNAPSHOT == 0L) {
             session.sendSnapshot(currentScene.captureSnapshot(tick))

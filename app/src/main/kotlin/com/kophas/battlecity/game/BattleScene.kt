@@ -47,8 +47,8 @@ class BattleScene(
     private var playerCount: Int = DEFAULT_PLAYERS,
     startSeed: Long = DEFAULT_SEED,
     private val role: NetRole = NetRole.LOCAL,
-    /** 사람이 원격에서 조종하는 자리. 여기에는 AI 를 붙이지 않는다. */
-    private val remoteSlots: Set<Int> = emptySet(),
+    /** 사람이 조종하는 자리. 여기에는 AI 를 붙이지 않는다. */
+    private val humanSlots: Set<Int> = emptySet(),
 ) {
     private val catalog = SpriteCatalog(assets)
     private val generator = StageGenerator(assets.manifest, assets.mapGen)
@@ -126,7 +126,7 @@ class BattleScene(
         slotOfTank[tank.id] = slot.index
         match.onPlayerSpawned(slot.index, tank.id)
         // 사람이 잡은 자리에는 AI 를 붙이지 않는다. 붙이면 조종간이 둘이 된다.
-        if (slot.index !in remoteSlots) director.attach(tank)
+        if (slot.index !in humanSlots) director.attach(tank)
     }
 
     // -----------------------------------------------------------------------
@@ -236,6 +236,10 @@ class BattleScene(
         worldRenderer.render(world, batch, viewport, elapsedSeconds)
         hudRenderer.render(batch, viewport, match, world)
     }
+
+    /** 이 기기가 조종하는 탱크. 조작 UI 가 특수기 쿨타임을 보여 줄 때 쓴다. */
+    fun tankOfSlot(slot: Int): Tank? =
+        world.tanks.firstOrNull { it.ownerSlot == slot && it.alive }
 
     // -----------------------------------------------------------------------
 

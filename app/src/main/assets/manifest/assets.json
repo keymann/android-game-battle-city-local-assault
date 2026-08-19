@@ -190,6 +190,24 @@
       "ring": "hud_cooldown_75"
     },
     "network": { "online": "hud_network_strong", "offline": "hud_network_disconnected" },
+    "lobby": {
+      "comment": "로비 화면 (계획서 §28).",
+      "title": "lobby_title_plate",
+      "slotByColor": [
+        "lobby_player_slot_cyan", "lobby_player_slot_orange",
+        "lobby_player_slot_lime", "lobby_player_slot_violet"
+      ],
+      "ready": "lobby_ready_badge",
+      "waiting": "lobby_waiting_badge",
+      "locked": "lobby_locked_badge",
+      "host": "lobby_host_badge",
+      "disconnected": "lobby_disconnected",
+      "start": "lobby_primary_button_normal",
+      "startPressed": "lobby_primary_button_pressed",
+      "secondary": "lobby_secondary_button",
+      "wifiStrong": "lobby_wifi_strong",
+      "wifiWeak": "lobby_wifi_weak"
+    },
     "controls": {
       "comment": "Phase 7 에서 쓴다. 지금은 그리지 않는다.",
       "joystickBase": "hud_joystick_base",

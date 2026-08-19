@@ -14,3 +14,5 @@
 | `phase45_environment.png` | Phase 4.5 — 자체 리소스로 교체한 지형·환경 오브젝트 |
 | `phase5_com_ai.png` | Phase 5 — COM 80기가 밀고 내려오고 본진 앞에서 요격이 붙는다 |
 | `phase55_asset_refresh.png` | Phase 5.5 — 자체 에셋 팩 전면 적용, 16:9 화면 |
+| `phase7_controls.png` | Phase 7 — 가상 조이스틱과 FIRE/SPECIAL 버튼 |
+| `phase7_lobby.png` | Phase 7 — 로비 화면 |

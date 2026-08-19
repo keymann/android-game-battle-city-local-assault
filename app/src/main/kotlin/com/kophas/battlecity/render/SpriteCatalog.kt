@@ -175,11 +175,67 @@ class SpriteCatalog(private val assets: GameAssets) {
     val cooldownRing: TextureRegion =
         assets[node("hud", "cooldown", "ring")?.asString ?: "hud_cooldown_75"]
 
+    // --- 조작 UI (계획서 §18) ---------------------------------------------
+
+    private fun control(key: String, fallback: String): TextureRegion =
+        assets[node("hud", "controls", key)?.asString ?: fallback]
+
+    val stickBase: TextureRegion = control("joystickBase", "hud_joystick_base")
+
+    val stickKnob: TextureRegion = control("joystickKnob", "hud_joystick_knob")
+
+    val fireButton: TextureRegion = control("fire", "hud_fire_button_normal")
+
+    val fireButtonPressed: TextureRegion = control("firePressed", "hud_fire_button_pressed")
+
+    val specialButton: TextureRegion = control("special", "hud_special_button_normal")
+
+    val specialButtonPressed: TextureRegion =
+        control("specialPressed", "hud_special_button_pressed")
+
+    // --- 로비 (계획서 §28) -------------------------------------------------
+
+    private fun lobby(key: String, fallback: String): TextureRegion =
+        assets[node("hud", "lobby", key)?.asString ?: fallback]
+
+    val lobbyTitle: TextureRegion = lobby("title", "lobby_title_plate")
+
+    /** 자리 색은 슬롯 번호를 따른다. P1 cyan / P2 orange / P3 lime / P4 violet. */
+    val lobbySlots: List<TextureRegion> =
+        (node("hud", "lobby", "slotByColor")?.asStringList ?: emptyList())
+            .map { assets[it] }
+            .ifEmpty { listOf(assets["lobby_player_slot_cyan"]) }
+
+    val lobbyReady: TextureRegion = lobby("ready", "lobby_ready_badge")
+
+    val lobbyWaiting: TextureRegion = lobby("waiting", "lobby_waiting_badge")
+
+    val lobbyLocked: TextureRegion = lobby("locked", "lobby_locked_badge")
+
+    val lobbyHost: TextureRegion = lobby("host", "lobby_host_badge")
+
+    val lobbyDisconnected: TextureRegion = lobby("disconnected", "lobby_disconnected")
+
+    val lobbyStart: TextureRegion = lobby("start", "lobby_primary_button_normal")
+
+    val lobbyStartPressed: TextureRegion = lobby("startPressed", "lobby_primary_button_pressed")
+
+    val lobbyWifi: TextureRegion = lobby("wifiStrong", "lobby_wifi_strong")
+
+    val lobbyWifiWeak: TextureRegion = lobby("wifiWeak", "lobby_wifi_weak")
+
     private val digits: List<TextureRegion> =
         (0..9).map { assets["${manifest.hudDigitPrefix}$it"] }
 
     private val chars: Map<Char, TextureRegion> =
         ('A'..'Z').associateWith { assets["${manifest.hudCharPrefix}$it"] }
+
+    /** 글자와 숫자 말고 폰트에 있는 기호. 빗금은 없어서 붙임표로 대신한다. */
+    private val symbols: Map<Char, TextureRegion> = buildMap {
+        assets.find("ui_minus")?.let { put('-', it) }
+        assets.find("ui_plus")?.let { put('+', it) }
+        assets.find("ui_percent")?.let { put('%', it) }
+    }
 
     fun digit(value: Int): TextureRegion = digits[value.coerceIn(0, 9)]
 
@@ -187,6 +243,7 @@ class SpriteCatalog(private val assets: GameAssets) {
     fun glyph(char: Char): TextureRegion? = when (char) {
         in '0'..'9' -> digits[char - '0']
         in 'A'..'Z' -> chars[char]
+        '-', '+', '%' -> symbols[char]
         in 'a'..'z' -> chars[char.uppercaseChar()]
         else -> null
     }

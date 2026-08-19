@@ -38,17 +38,12 @@ class HudRenderer(private val catalog: SpriteCatalog) {
             y += unit * ROW_SPACING
         }
 
+        // 남은 적은 총량과 함께 보여 준다. 몇 기 남았는지만으로는 판의 길이를
+        // 가늠할 수 없다. (계획서 §20 ENEMY 32/80)
         y += unit * 0.6f
         drawPanel(batch, originX - unit * 0.3f, y - unit * 0.2f, unit * ENEMY_WIDTH_UNITS, unit * 1.2f)
-        drawText(batch, "ENEMY", originX, y, unit * 0.85f, 1f)
-        drawText(
-            batch,
-            match.enemiesRemaining.toString(),
-            originX + unit * 0.85f * GLYPH_ADVANCE * 6f,
-            y,
-            unit * 0.85f,
-            1f,
-        )
+        val label = "ENEMY ${match.enemiesRemaining}-${match.totalEnemies}"
+        drawText(batch, label, originX, y, unit * 0.8f, 1f)
     }
 
     private fun drawPlayerRow(
@@ -201,7 +196,7 @@ class HudRenderer(private val catalog: SpriteCatalog) {
         )
     }
 
-    /** 비트맵 폰트로 한 줄 찍는다. 지원하지 않는 문자는 공백으로 넘어간다. */
+    /** 비트맵 폰트로 한 줄 찍는다. 지원하지 않는 문자(공백, 빗금)는 자리만 비운다. */
     private fun drawText(
         batch: SpriteBatch,
         text: String,
@@ -241,7 +236,7 @@ class HudRenderer(private val catalog: SpriteCatalog) {
 
         /** 상태창 바탕 폭. HUD 한 칸 기준. */
         const val ROW_WIDTH_UNITS = 8.6f
-        const val ENEMY_WIDTH_UNITS = 6.4f
+        const val ENEMY_WIDTH_UNITS = 8.2f
         const val PANEL_ALPHA = 0.88f
 
         /** 쿨타임 고리의 비어 있는 부분 밝기. */

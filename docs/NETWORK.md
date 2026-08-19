@@ -120,3 +120,17 @@ adb -s 기기B shell am start -n com.kophas.battlecity/.MainActivity \
 ```
 
 에뮬레이터끼리는 서로를 볼 수 없어(각자 NAT 뒤에 있다) 이 확인은 실기가 필요하다.
+
+---
+
+## 8. 로비 화면 (Phase 7 에서 붙였다)
+
+`game/LobbyScene.kt` 가 그린다. Host 는 자기 `LobbyState` 를, Client 는 받은
+`LOBBY` 패킷을 같은 모양(`LobbyScene.View`)으로 채워 넣는다.
+
+- 자기 자리를 누르면 준비 상태가 바뀐다. 남의 자리는 눌러도 소용없다
+- START 는 Host 에게만 살아 있고, 두 명 이상이 모두 준비해야 눌린다
+- 누르면 3 → 2 → 1 → GO 를 세고 그 순간의 seed 로 모두가 같은 판을 연다
+
+Phase 6 에서는 조작 UI 가 없어 "들어오면 곧 준비된 것으로 보고 인원이 차면 스스로
+시작" 하게 두었는데, 그 임시 규칙은 걷어냈다.
