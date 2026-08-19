@@ -219,14 +219,35 @@ class SettingsScene(private val catalog: SpriteCatalog) {
      */
     private fun panelRect() = ui.centeredRect(PANEL_TOP, PANEL_WIDTH, PANEL_UNITS)
 
-    private fun column(side: Int): Float {
+    /**
+     * 판 안쪽에서 글자와 조작기가 들어가도 되는 자리.
+     *
+     * 판 그림의 네 귀퉁이에는 굵은 걸쇠 장식이 있고, 그것은 판을 아무리 넓게 늘려도
+     * 크기가 그대로다 — [ScreenUi.bar] 가 좌우 끝 조각을 원래 비율로 그리기 때문이다.
+     * 그래서 여백을 판 **너비**의 비율로 잡으면 넓은 화면에서 걸쇠 위로 글자가 올라간다.
+     * 끝 조각의 크기(= 높이에서 나온다)를 기준으로 잡아야 어느 화면에서나 비껴간다.
+     */
+    private fun contentRect(): ScreenUi.Rect {
         val panel = panelRect()
-        return panel.x + panel.width * (if (side == LEFT) 0.05f else 0.53f)
+        // bar() 가 쓰는 끝 조각 너비와 같은 식이다. 그 안쪽 절반쯤에 걸쇠가 있다.
+        val cap = panel.height * catalog.settings.panel.aspect / BAR_SLICES
+        val inset = cap * CAP_CLEARANCE
+        return ScreenUi.Rect(
+            x = panel.x + inset,
+            y = panel.y + panel.height * CONTENT_TOP,
+            width = panel.width - inset * 2f,
+            height = panel.height * (CONTENT_BOTTOM - CONTENT_TOP),
+        )
     }
 
-    private fun columnWidth(): Float = panelRect().width * 0.42f
+    private fun column(side: Int): Float {
+        val content = contentRect()
+        return content.x + content.width * (if (side == LEFT) 0f else 0.53f)
+    }
 
-    private fun rowY(row: Int): Float = panelRect().y + ui.unit * (ROW_TOP + row * ROW_HEIGHT)
+    private fun columnWidth(): Float = contentRect().width * 0.47f
+
+    private fun rowY(row: Int): Float = contentRect().y + ui.unit * (ROW_TOP + row * ROW_HEIGHT)
 
     /** 조작기는 칸의 오른쪽 절반에 놓는다. 왼쪽 절반은 이름표 자리다. */
     private fun controlRect(row: Int, side: Int, widthScale: Float = CONTROL_WIDTH): ScreenUi.Rect {
@@ -270,9 +291,16 @@ class SettingsScene(private val catalog: SpriteCatalog) {
         return ScreenUi.Rect(base.x + base.width - width, base.y, width, base.height)
     }
 
+    /**
+     * 눈금 자리. 오른쪽에 값 글자가 들어갈 만큼을 미리 비워 둔다.
+     *
+     * 값을 눈금 오른쪽에 쓰는데, 눈금을 칸 끝까지 붙이면 값이 판 테두리 위로
+     * 올라간다. 가장 긴 값("AUTO")이 들어갈 폭을 떼어 놓는다.
+     */
     private fun sliderRect(row: Int, side: Int): ScreenUi.Rect {
         val base = controlRect(row, side, CONTROL_WIDTH * 0.82f)
-        return ScreenUi.Rect(base.x, base.centerY - ui.unit * 0.22f, base.width, ui.unit * 0.44f)
+        val shift = ui.unit * VALUE_RESERVE
+        return ScreenUi.Rect(base.x - shift, base.centerY - ui.unit * 0.22f, base.width, ui.unit * 0.44f)
     }
 
     private fun actionRect(index: Int): ScreenUi.Rect {
@@ -282,7 +310,7 @@ class SettingsScene(private val catalog: SpriteCatalog) {
         val total = width * 3f + gap * 2f
         return ScreenUi.Rect(
             x = panel.centerX - total * 0.5f + (width + gap) * index,
-            y = panel.bottom - ui.unit * 1.75f,
+            y = panel.bottom - panel.height * (1f - CONTENT_BOTTOM) - ui.unit * 1.25f,
             width = width,
             height = ui.unit * 1.25f,
         )
@@ -380,7 +408,7 @@ class SettingsScene(private val catalog: SpriteCatalog) {
         val art = catalog.settings
         val unit = ui.unit
 
-        rowLabel(batch, "BGM VOLUME", ROW_BGM, RIGHT, ScreenUi.WHITE, indent = unit * ICON_INDENT)
+        rowLabel(batch, "BGM", ROW_BGM, RIGHT, ScreenUi.WHITE, indent = unit * ICON_INDENT)
         ui.icon(
             batch,
             if (device.bgmVolume == 0) art.speakerMuted else art.bgmIcon,
@@ -398,7 +426,7 @@ class SettingsScene(private val catalog: SpriteCatalog) {
             ScreenUi.WHITE,
         )
 
-        rowLabel(batch, "SFX VOLUME", ROW_SFX, RIGHT, ScreenUi.WHITE, indent = unit * ICON_INDENT)
+        rowLabel(batch, "SFX", ROW_SFX, RIGHT, ScreenUi.WHITE, indent = unit * ICON_INDENT)
         ui.icon(
             batch,
             if (device.sfxVolume == 0) art.speakerMuted else art.sfxIcon,
@@ -539,10 +567,23 @@ class SettingsScene(private val catalog: SpriteCatalog) {
         private const val PANEL_UNITS = 13.4f
         private const val PANEL_WIDTH = 0.94f
 
+        /** ScreenUi.bar 가 판을 나누는 조각 수. 끝 조각 크기를 되짚는 데 쓴다. */
+        private const val BAR_SLICES = 3f
+
+        /** 끝 조각 안에서 걸쇠 장식을 비껴가는 데 필요한 만큼. */
+        private const val CAP_CLEARANCE = 0.5f
+
+        /** 판 높이에서 위아래 테두리가 먹는 몫. */
+        private const val CONTENT_TOP = 0.12f
+        private const val CONTENT_BOTTOM = 0.88f
+
+        /** 눈금 오른쪽에 값 글자를 놓을 자리. */
+        private const val VALUE_RESERVE = 2.2f
+
         /** 조작기가 차지하는 칸의 비율. 나머지가 이름표 자리다. */
         private const val CONTROL_WIDTH = 0.5f
-        private const val ROW_TOP = 2.4f
-        private const val ROW_HEIGHT = 1.35f
+        private const val ROW_TOP = 0.4f
+        private const val ROW_HEIGHT = 1.4f
 
         /** 소리 칸은 아이콘을 왼쪽에 두므로 글자를 그만큼 민다. */
         private const val ICON_INDENT = 1.0f
