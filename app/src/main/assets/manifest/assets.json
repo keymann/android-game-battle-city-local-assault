@@ -142,13 +142,13 @@
       "renderLayer": "ground",
       "atlas": "tiny",
       "indices": [
-        37,
-        91
+        37
       ],
-      "animFps": 2,
+      "animFps": 0.5,
       "bridgeIndex": 148,
       "bridgeDeckIndex": 130,
-      "comment": "37 / 91 만 잔디가 섞이지 않은 열린 수면이다"
+      "comment": "asset2 에서 잔디·모래가 전혀 섞이지 않은 열린 수면은 #37 뿐이다. 나머지는 전부 해안 전이 타일이라 연못 안쪽에 쓰면 잔디 조각이 박힌다. 프레임이 하나뿐이라 물결은 밝기 틴트로 만든다.",
+      "shimmer": 0.1
     },
     "FOREST": {
       "collision": "none",
@@ -176,7 +176,7 @@
       "renderLayer": "ground",
       "atlas": "tiny",
       "indices": [
-        91
+        37
       ],
       "tint": "#DFF6FFCC",
       "decal": {

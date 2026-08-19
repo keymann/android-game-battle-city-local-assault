@@ -4,6 +4,7 @@ import android.content.res.AssetManager
 import android.util.Log
 import android.view.Surface
 import com.kophas.battlecity.core.GameLoop
+import com.kophas.battlecity.gameplay.BalanceConfig
 import com.kophas.battlecity.render.AssetSource
 import com.kophas.battlecity.render.GameAssets
 import com.kophas.battlecity.render.NativeRenderer
@@ -34,7 +35,7 @@ class GameHost(private val assetManager: AssetManager) : GameLoop.Callbacks {
     private val loop = GameLoop(this)
 
     private var assets: GameAssets? = null
-    private var scene: Phase2Scene? = null
+    private var scene: BattleScene? = null
     private var insets = Viewport.Insets.NONE
 
     var preferVulkan: Boolean = true
@@ -129,9 +130,11 @@ class GameHost(private val assetManager: AssetManager) : GameLoop.Callbacks {
         }
         renderer.resize(command.width, command.height)
 
-        val loaded = GameAssets.load(AssetSource.of(assetManager), renderer)
+        val source = AssetSource.of(assetManager)
+        val loaded = GameAssets.load(source, renderer)
         assets = loaded
-        val newScene = Phase2Scene(loaded)
+        // 밸런스 값은 코드가 아니라 balance.json 에서 온다. (계획서 §41-19)
+        val newScene = BattleScene(loaded, BalanceConfig.load(source))
         scene = newScene
         viewport.resizeWorld(newScene.logicalWidth, newScene.logicalHeight)
     }

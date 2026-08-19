@@ -21,6 +21,7 @@ import kotlin.math.round
  */
 class GameWorld(
     stage: StageData,
+    private val balance: BalanceConfig,
     private val config: Config = Config(),
 ) {
     data class Config(
@@ -38,6 +39,10 @@ class GameWorld(
     interface Listener {
         fun onBrickDestroyed(cellX: Int, cellY: Int) = Unit
         fun onProjectileHit(x: Float, y: Float) = Unit
+
+        /** HP 가 깎였지만 아직 살아 있다. (계획서 §12, §13) */
+        fun onTankDamaged(tank: Tank, amount: Int, attackerId: Int) = Unit
+
         fun onTankDestroyed(tank: Tank, killerId: Int) = Unit
         fun onBaseDestroyed() = Unit
     }
@@ -61,23 +66,34 @@ class GameWorld(
     // 스폰
     // -----------------------------------------------------------------------
 
+    /**
+     * 능력치는 전부 [BalanceConfig] 에서 읽어 채운다. 호출자가 숫자를 넘기지 않는다.
+     * (계획서 §7 중요 구현 원칙)
+     */
     fun spawnTank(
         faction: Tank.Faction,
         type: Tank.Type,
         colorSlot: Int,
         blockIndex: Int,
         direction: Direction,
-        moveSpeed: Float,
-        fireCooldown: Float,
+        ownerSlot: Int = -1,
     ): Tank? {
         val tank = tankPool.obtain() ?: return null
+        val stats = balance.statsFor(faction, type)
         val (px, py) = stage.blockToPx(blockIndex)
+
         tank.faction = faction
         tank.type = type
         tank.colorSlot = colorSlot
-        tank.moveSpeed = moveSpeed
-        tank.fireCooldown = fireCooldown
+        tank.ownerSlot = ownerSlot
+        tank.attackPower = stats.attackPower
+        tank.defensePower = stats.defensePower
+        tank.maxHp = balance.rules.maxHp
+        tank.moveSpeed = balance.units.moveSpeedOf(stats.moveSpeedRank)
+        tank.fireCooldown = balance.units.fireCooldownOf(stats.fireRateRank)
         tank.spawnAt(px, py, direction)
+        tank.spawnGuardRemaining = balance.rules.spawnGuardSeconds
+
         tanks += tank
         nextTankId++
         spawnExplosion(Explosion.Kind.SPAWN, tank.centerX, tank.centerY, Tank.SIZE)
@@ -233,7 +249,10 @@ class GameWorld(
     // 발사와 포탄
     // -----------------------------------------------------------------------
 
-    fun fire(tank: Tank, power: Int = 1, piercing: Boolean = false): Projectile? {
+    /**
+     * @param power 생략하면 탱크의 공격력을 그대로 쓴다.
+     */
+    fun fire(tank: Tank, power: Int = tank.attackPower, piercing: Boolean = false): Projectile? {
         if (!tank.canFire) return null
         val projectile = projectiles.obtain() ?: return null
 
@@ -245,7 +264,8 @@ class GameWorld(
             fromY = spawnY,
             direction = tank.direction,
             owner = tank,
-            speed = config.projectileSpeed,
+            speed = if (piercing) balance.units.piercingProjectileSpeed
+            else balance.units.projectileSpeed,
             power = power,
             piercing = piercing,
         )
@@ -291,7 +311,7 @@ class GameWorld(
             if (tank.spawnGuardRemaining > 0f) continue
             if (!projectile.overlaps(tank)) continue
 
-            destroyTank(tank, projectile.ownerId)
+            applyDamage(tank, projectile.power, projectile.ownerId)
             if (!projectile.piercing) {
                 explodeProjectile(projectile, Explosion.Kind.BULLET_HIT)
                 return
@@ -406,6 +426,34 @@ class GameWorld(
     // 파괴와 폭발
     // -----------------------------------------------------------------------
 
+    /**
+     * 피해를 준다. (계획서 §13)
+     *
+     * ```
+     * Damage = max(1, 공격력 - 방어력 x 계수)
+     * ```
+     * 공식과 계수는 balance.json 이 정한다. 여기서는 적용만 한다.
+     *
+     * @return 실제로 깎인 HP
+     */
+    fun applyDamage(tank: Tank, attackPower: Int, attackerId: Int): Int {
+        if (!tank.alive || tank.spawnGuardRemaining > 0f) return 0
+
+        var amount = balance.damageOf(attackPower, tank.defensePower)
+        // 방어형 특수기(방어막)는 Phase 4 에서 켜진다. 여기서는 훅만 열어 둔다.
+        amount = (amount * (1f - tank.damageReduction)).toInt().coerceAtLeast(1)
+
+        val applied = kotlin.math.min(amount, tank.hp)
+        tank.hp -= applied
+
+        if (tank.hp <= 0) {
+            destroyTank(tank, attackerId)
+        } else {
+            listener?.onTankDamaged(tank, applied, attackerId)
+        }
+        return applied
+    }
+
     fun destroyTank(tank: Tank, killerId: Int) {
         if (!tank.alive) return
         tank.alive = false
@@ -443,7 +491,7 @@ class GameWorld(
             for (tank in tanks) {
                 if (!tank.alive || tank.spawnGuardRemaining > 0f) continue
                 if (abs(tank.centerX - blastX) <= radiusPx && abs(tank.centerY - blastY) <= radiusPx) {
-                    destroyTank(tank, -1)
+                    applyDamage(tank, BLAST_ATTACK_POWER, -1)
                 }
             }
         }
@@ -482,5 +530,8 @@ class GameWorld(
         const val CELL_EPSILON = 0.001f
         const val SLIDE_EPSILON = 1f
         const val MAX_CHAIN = 64
+
+        /** 폭발성 프롭의 공격력. 방어형도 두 방이면 터지도록 잡았다. */
+        const val BLAST_ATTACK_POWER = 4
     }
 }

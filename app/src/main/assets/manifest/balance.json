@@ -1,0 +1,89 @@
+{
+  "version": 1,
+  "comment": "게임 규칙과 밸런스 값. 코드에 하드코딩하지 않는다 (계획서 §7 중요 구현 원칙, §41-19).",
+
+  "rules": {
+    "livesPerPlayer": 3,
+    "maxHp": 100,
+    "respawnDelaySeconds": 2.0,
+    "spawnGuardSeconds": 1.5,
+
+    "comment_damage": "Damage = 공격력 - 방어력 x 계수, 최소 minDamage (계획서 §13)",
+    "defenseCoefficient": 0.5,
+    "minDamage": 1,
+    "damageUnitHp": 25,
+
+    "comment_enemy": "총 COM = 플레이어 수 x enemiesPerPlayer. 동시 존재는 따로 제한한다 (계획서 §9, §44.2)",
+    "enemiesPerPlayer": 20,
+    "maxActiveEnemies": { "2": 8, "3": 10, "4": 12 },
+    "enemySpawnIntervalSeconds": 2.5,
+
+    "comment_score": "COM 1대 = 1 Kill. 타입별 가중치는 두지 않는다 (계획서 §32)",
+    "killScore": 1,
+    "friendlyKillScore": 0
+  },
+
+  "units": {
+    "comment": "계획서의 1~4 등급값을 실제 단위로 바꾸는 계수. 등급표는 그대로 두고 여기만 조정한다.",
+    "moveSpeedBasePxPerSecond": 32.0,
+    "moveSpeedPerRankPxPerSecond": 48.0,
+    "fireCooldownBaseSeconds": 0.9,
+    "fireCooldownPerRankSeconds": 0.18,
+    "fireCooldownMinSeconds": 0.15,
+    "projectileSpeedPxPerSecond": 448.0,
+    "piercingProjectileSpeedPxPerSecond": 560.0
+  },
+
+  "playerTanks": {
+    "ATTACK": {
+      "label": "공격형",
+      "attackPower": 3,
+      "defensePower": 1,
+      "moveSpeed": 2,
+      "fireRate": 2,
+      "special": "PIERCING",
+      "specialCooldownSeconds": 8.0,
+      "specialDurationSeconds": 0.0
+    },
+    "DEFENSE": {
+      "label": "방어형",
+      "attackPower": 2,
+      "defensePower": 3,
+      "moveSpeed": 1,
+      "fireRate": 2,
+      "special": "SHIELD",
+      "specialCooldownSeconds": 10.0,
+      "specialDurationSeconds": 3.0,
+      "damageReduction": 0.5
+    },
+    "SPEED": {
+      "label": "스피드형",
+      "attackPower": 1,
+      "defensePower": 1,
+      "moveSpeed": 4,
+      "fireRate": 3,
+      "special": "DASH",
+      "specialCooldownSeconds": 6.0,
+      "specialDurationSeconds": 1.0,
+      "speedMultiplier": 2.0
+    }
+  },
+
+  "enemyTanks": {
+    "ATTACK": { "label": "공격형 COM", "attackPower": 3, "defensePower": 1, "moveSpeed": 2, "fireRate": 2 },
+    "DEFENSE": { "label": "방어형 COM", "attackPower": 2, "defensePower": 3, "moveSpeed": 1, "fireRate": 2 },
+    "SPEED": { "label": "스피드형 COM", "attackPower": 1, "defensePower": 1, "moveSpeed": 4, "fireRate": 3 }
+  },
+
+  "enemyMix": {
+    "comment": "COM 타입 출현 비율. 합이 100 이 아니어도 가중치로 정규화한다.",
+    "ATTACK": 35,
+    "DEFENSE": 30,
+    "SPEED": 35
+  },
+
+  "tieBreak": {
+    "comment": "동점 시 우선순위 (계획서 §16.2)",
+    "order": ["KILLS", "LIVES", "HP", "SHARED"]
+  }
+}

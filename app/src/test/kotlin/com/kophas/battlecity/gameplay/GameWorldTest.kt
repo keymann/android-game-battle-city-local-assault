@@ -5,6 +5,8 @@ import com.kophas.battlecity.core.Direction
 import com.kophas.battlecity.map.StageData
 import com.kophas.battlecity.map.StageTheme
 import com.kophas.battlecity.map.TileType
+import com.kophas.battlecity.render.AssetSource
+import java.io.File
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -19,6 +21,13 @@ import org.junit.Test
 class GameWorldTest {
 
     private val tick = Constants.TICK_SECONDS
+
+    private val assetsDir: File = sequenceOf(
+        File("src/main/assets"),
+        File("app/src/main/assets"),
+    ).firstOrNull { it.isDirectory } ?: error("assets 디렉터리를 찾지 못했다")
+
+    private val balance = BalanceConfig.load(AssetSource.ofDirectory(assetsDir))
 
     /** 12x9 블록(24x18 셀)의 빈 4:3 맵. 본진은 하단 중앙. */
     private fun emptyStage(blocksX: Int = 12, blocksY: Int = 9): StageData {
@@ -53,25 +62,27 @@ class GameWorldTest {
         )
     }
 
-    private fun world(): GameWorld = GameWorld(emptyStage())
+    private fun world(): GameWorld = GameWorld(emptyStage(), balance)
 
     private fun GameWorld.addTank(
         blockX: Int,
         blockY: Int,
         direction: Direction = Direction.UP,
         faction: Tank.Faction = Tank.Faction.PLAYER,
+        type: Tank.Type = Tank.Type.ATTACK,
         speed: Float = Constants.BLOCK_PX * 2f,
     ): Tank {
         val tank = spawnTank(
             faction = faction,
-            type = Tank.Type.ATTACK,
+            type = type,
             colorSlot = 0,
             blockIndex = blockY * stage.blocksX + blockX,
             direction = direction,
-            moveSpeed = speed,
-            fireCooldown = 0.2f,
         )!!
+        // 테스트는 판정만 보므로 스폰 무적과 이동/발사 간격을 고정한다.
         tank.spawnGuardRemaining = 0f
+        tank.moveSpeed = speed
+        tank.fireCooldown = 0.2f
         return tank
     }
 
@@ -298,15 +309,33 @@ class GameWorldTest {
     }
 
     @Test
-    fun `포탄이 적 탱크를 파괴한다`() {
+    fun `포탄이 적 탱크의 HP 를 깎는다`() {
         val world = world()
         val shooter = world.addTank(3, 5, Direction.UP)
         val target = world.addTank(3, 3, faction = Tank.Faction.ENEMY)
+        val fullHp = target.hp
 
         world.fire(shooter)
         repeat(60) { world.update(tick) }
 
-        assertFalse("적 탱크가 살아 있다", target.alive)
+        assertTrue("HP 가 깎여야 한다", target.hp < fullHp)
+    }
+
+    @Test
+    fun `HP 가 0이 되면 파괴된다`() {
+        val world = world()
+        val shooter = world.addTank(3, 5, Direction.UP)
+        val target = world.addTank(3, 3, faction = Tank.Faction.ENEMY)
+
+        // 공격형(3) 대 공격형(방어 1) -> 데미지 2 x 25 = 50. 두 방이면 100 HP 가 0이 된다.
+        var guard = 0
+        while (target.alive && guard < 600) {
+            world.fire(shooter)
+            world.update(tick)
+            guard++
+        }
+
+        assertFalse("결국 파괴돼야 한다", target.alive)
     }
 
     @Test
@@ -456,12 +485,12 @@ class GameWorldTest {
             theme = base.theme,
             seed = base.seed,
         )
-        val world = GameWorld(stage)
+        val world = GameWorld(stage, balance)
         val shooter = world.spawnTank(
-            Tank.Faction.PLAYER, Tank.Type.ATTACK, 0,
-            6 * blocksX + 3, Direction.UP, Constants.BLOCK_PX * 2f, 0.2f,
+            Tank.Faction.PLAYER, Tank.Type.ATTACK, 0, 6 * blocksX + 3, Direction.UP,
         )!!
         shooter.spawnGuardRemaining = 0f
+        shooter.fireCooldown = 0.2f
 
         world.fire(shooter)
         repeat(90) { world.update(tick) }
