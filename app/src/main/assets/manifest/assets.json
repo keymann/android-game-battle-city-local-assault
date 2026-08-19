@@ -1,0 +1,570 @@
+{
+  "version": 1,
+  "credits": "Kenney (www.kenney.nl) — Top-down Tanks Redux / Tiny Battle, CC0 1.0",
+  "atlases": {
+    "main": {
+      "image": "atlas/main.png",
+      "descriptor": "atlas/main.xml",
+      "type": "xml_subtexture",
+      "sourceScale": 2.0,
+      "source": "asset1 (Top-down Tanks Redux, Retina)"
+    },
+    "tiny": {
+      "image": "atlas/tiny.png",
+      "type": "index_grid",
+      "tileSize": 16,
+      "columns": 18,
+      "rows": 11,
+      "spacing": 0,
+      "source": "asset2 (Tiny Battle, tilemap_packed)"
+    }
+  },
+  "world": {
+    "blockPx": 64,
+    "cellPx": 32,
+    "cellsPerBlock": 2,
+    "tankSizePx": 56,
+    "comment": "block = 지형 타일 1장 = 탱크 1대. cell = BRICK/STEEL 파괴 최소 단위(원작 8px 벽돌 감각)."
+  },
+  "terrain": {
+    "grass": {
+      "atlas": "main",
+      "base": [
+        "tileGrass1",
+        "tileGrass2"
+      ]
+    },
+    "sand": {
+      "atlas": "main",
+      "base": [
+        "tileSand1",
+        "tileSand2"
+      ]
+    },
+    "grassRoad": {
+      "atlas": "main",
+      "N": "tileGrass_roadNorth",
+      "E": "tileGrass_roadEast",
+      "NE": "tileGrass_roadCornerUR",
+      "NW": "tileGrass_roadCornerUL",
+      "SE": "tileGrass_roadCornerLR",
+      "SW": "tileGrass_roadCornerLL",
+      "TN": "tileGrass_roadSplitN",
+      "TE": "tileGrass_roadSplitE",
+      "TS": "tileGrass_roadSplitS",
+      "TW": "tileGrass_roadSplitW",
+      "X": "tileGrass_roadCrossing",
+      "XR": "tileGrass_roadCrossingRound"
+    },
+    "sandRoad": {
+      "atlas": "main",
+      "N": "tileSand_roadNorth",
+      "E": "tileSand_roadEast",
+      "NE": "tileSand_roadCornerUR",
+      "NW": "tileSand_roadCornerUL",
+      "SE": "tileSand_roadCornerLR",
+      "SW": "tileSand_roadCornerLL",
+      "TN": "tileSand_roadSplitN",
+      "TE": "tileSand_roadSplitE",
+      "TS": "tileSand_roadSplitS",
+      "TW": "tileSand_roadSplitW",
+      "X": "tileSand_roadCrossing",
+      "XR": "tileSand_roadCrossingRound"
+    },
+    "biomeEdge": {
+      "atlas": "main",
+      "N": "tileGrass_transitionN",
+      "E": "tileGrass_transitionE",
+      "S": "tileGrass_transitionS",
+      "W": "tileGrass_transitionW"
+    },
+    "biomeRoadEdge": {
+      "atlas": "main",
+      "N": "tileGrass_roadTransitionN",
+      "E": "tileGrass_roadTransitionE",
+      "S": "tileGrass_roadTransitionS",
+      "W": "tileGrass_roadTransitionW",
+      "N_dirt": "tileGrass_roadTransitionN_dirt",
+      "E_dirt": "tileGrass_roadTransitionE_dirt",
+      "S_dirt": "tileGrass_roadTransitionS_dirt",
+      "W_dirt": "tileGrass_roadTransitionW_dirt"
+    }
+  },
+  "tiles": {
+    "EMPTY": {
+      "collision": "none",
+      "bulletPass": true,
+      "renderLayer": "ground"
+    },
+    "BRICK": {
+      "collision": "block",
+      "bulletPass": false,
+      "destructible": true,
+      "hp": 1,
+      "renderLayer": "object",
+      "atlas": "main",
+      "sprites": [
+        "crateWood",
+        "crateWood_side",
+        "barricadeWood",
+        "sandbagBeige",
+        "sandbagBrown",
+        "sandbagBeige_open",
+        "sandbagBrown_open"
+      ],
+      "damagedOverlay": "explosionSmoke1"
+    },
+    "STEEL": {
+      "collision": "block",
+      "bulletPass": false,
+      "destructible": "piercingOnly",
+      "hp": 3,
+      "renderLayer": "object",
+      "atlas": "main",
+      "sprites": [
+        "crateMetal",
+        "crateMetal_side",
+        "barricadeMetal",
+        "fenceRed",
+        "fenceYellow"
+      ]
+    },
+    "WATER": {
+      "collision": "block",
+      "bulletPass": true,
+      "destructible": false,
+      "renderLayer": "ground",
+      "atlas": "tiny",
+      "indices": [
+        37,
+        38
+      ],
+      "animFps": 2,
+      "bridgeIndex": 148,
+      "bridgeDeckIndex": 130
+    },
+    "FOREST": {
+      "collision": "none",
+      "bulletPass": true,
+      "conceal": true,
+      "renderLayer": "canopy",
+      "atlas": "main",
+      "sprites": [
+        "treeGreen_large",
+        "treeGreen_small",
+        "treeBrown_large",
+        "treeBrown_small"
+      ],
+      "litter": [
+        "treeGreen_leaf",
+        "treeGreen_twigs",
+        "treeBrown_leaf",
+        "treeBrown_twigs"
+      ]
+    },
+    "ICE": {
+      "collision": "none",
+      "bulletPass": true,
+      "friction": 0.12,
+      "renderLayer": "ground",
+      "atlas": "tiny",
+      "indices": [
+        37
+      ],
+      "tint": "#DFF6FFCC",
+      "decal": {
+        "atlas": "main",
+        "sprites": [
+          "tracksSmall",
+          "tracksDouble"
+        ]
+      }
+    },
+    "BASE": {
+      "collision": "block",
+      "bulletPass": false,
+      "renderLayer": "object",
+      "atlas": "tiny",
+      "intactIndex": 70,
+      "waveIndex": 71,
+      "destroyedIndex": 194,
+      "wallTile": "BRICK",
+      "wallShape": "U"
+    },
+    "SPAWN": {
+      "collision": "none",
+      "bulletPass": true,
+      "renderLayer": "ground",
+      "effect": "spawnPuff"
+    }
+  },
+  "tanks": {
+    "playerSlots": [
+      {
+        "slot": 0,
+        "color": "blue",
+        "atlas": "main",
+        "body": "tankBody_blue",
+        "outline": "tankBody_blue_outline",
+        "barrelPrefix": "tankBlue_barrel",
+        "bulletPrefix": "bulletBlue",
+        "flagIndex": 52,
+        "preview": "tank_blue"
+      },
+      {
+        "slot": 1,
+        "color": "green",
+        "atlas": "main",
+        "body": "tankBody_green",
+        "outline": "tankBody_green_outline",
+        "barrelPrefix": "tankGreen_barrel",
+        "bulletPrefix": "bulletGreen",
+        "flagIndex": 34,
+        "preview": "tank_green"
+      },
+      {
+        "slot": 2,
+        "color": "red",
+        "atlas": "main",
+        "body": "tankBody_red",
+        "outline": "tankBody_red_outline",
+        "barrelPrefix": "tankRed_barrel",
+        "bulletPrefix": "bulletRed",
+        "flagIndex": 70,
+        "preview": "tank_red"
+      },
+      {
+        "slot": 3,
+        "color": "sand",
+        "atlas": "main",
+        "body": "tankBody_sand",
+        "outline": "tankBody_sand_outline",
+        "barrelPrefix": "tankSand_barrel",
+        "bulletPrefix": "bulletSand",
+        "flagIndex": 88,
+        "preview": "tank_sand"
+      }
+    ],
+    "barrelByType": {
+      "SPEED": 1,
+      "DEFENSE": 2,
+      "ATTACK": 3
+    },
+    "bulletByType": {
+      "SPEED": 1,
+      "DEFENSE": 2,
+      "ATTACK": 3
+    },
+    "enemy": {
+      "ATTACK": {
+        "atlas": "main",
+        "body": "tankBody_bigRed",
+        "barrel": "tankRed_barrel3",
+        "bullet": "bulletDark3",
+        "preview": "tank_bigRed"
+      },
+      "DEFENSE": {
+        "atlas": "main",
+        "body": "tankBody_darkLarge",
+        "barrel": "tankDark_barrel2",
+        "bullet": "bulletDark2",
+        "preview": "tank_darkLarge"
+      },
+      "SPEED": {
+        "atlas": "main",
+        "body": "tankBody_dark",
+        "barrel": "tankDark_barrel1",
+        "bullet": "bulletDark1",
+        "preview": "tank_dark"
+      },
+      "ELITE": {
+        "atlas": "main",
+        "body": "tankBody_huge",
+        "barrel": "tankDark_barrel3",
+        "bullet": "bulletDark3",
+        "preview": "tank_huge"
+      }
+    },
+    "trackDecal": {
+      "atlas": "main",
+      "sprites": [
+        "tracksLarge",
+        "tracksDouble",
+        "tracksSmall"
+      ],
+      "spawnIntervalPx": 24,
+      "lifetimeMs": 6000
+    },
+    "wreck": {
+      "atlas": "main",
+      "sprites": [
+        "oilSpill_small",
+        "oilSpill_large"
+      ]
+    }
+  },
+  "projectiles": {
+    "normal": {
+      "atlas": "main",
+      "spriteFromTank": true
+    },
+    "piercing": {
+      "atlas": "main",
+      "sprite": "shotLarge",
+      "trail": "shotRed"
+    },
+    "muzzleFlash": {
+      "atlas": "main",
+      "sprites": [
+        "shotOrange",
+        "shotThin"
+      ],
+      "lifetimeMs": 70
+    }
+  },
+  "effects": {
+    "tankExplosion": {
+      "atlas": "main",
+      "frames": [
+        "explosion1",
+        "explosion2",
+        "explosion3",
+        "explosion4",
+        "explosion5"
+      ],
+      "fps": 18
+    },
+    "bulletHit": {
+      "atlas": "main",
+      "frames": [
+        "explosionSmoke1",
+        "explosionSmoke2",
+        "explosionSmoke3"
+      ],
+      "fps": 24
+    },
+    "brickBreak": {
+      "atlas": "main",
+      "frames": [
+        "explosionSmoke1",
+        "explosionSmoke3",
+        "explosionSmoke5"
+      ],
+      "fps": 20
+    },
+    "spawnPuff": {
+      "atlas": "main",
+      "frames": [
+        "explosionSmoke5",
+        "explosionSmoke4",
+        "explosionSmoke3",
+        "explosionSmoke2",
+        "explosionSmoke1"
+      ],
+      "fps": 14
+    },
+    "shieldAura": {
+      "atlas": "main",
+      "sprite": "tankBody_blue_outline",
+      "blend": "additive"
+    },
+    "dashTrail": {
+      "atlas": "main",
+      "sprites": [
+        "tracksDouble"
+      ],
+      "alpha": 0.5
+    }
+  },
+  "props": {
+    "comment": "EMPTY 블록에 확률 배치. explosive=파괴 시 연쇄 폭발, solid=충돌, decor=충돌 없음",
+    "groups": {
+      "fuelDepot": {
+        "kind": "explosive",
+        "blastCells": 3,
+        "atlas": "main",
+        "sprites": [
+          "barrelRed_top",
+          "barrelBlack_top",
+          "barrelGreen_top",
+          "barrelRust_top"
+        ]
+      },
+      "ordnance": {
+        "kind": "explosive",
+        "blastCells": 2,
+        "atlas": "main",
+        "sprites": [
+          "specialBarrel1",
+          "specialBarrel2",
+          "specialBarrel3",
+          "specialBarrel4",
+          "specialBarrel5",
+          "specialBarrel6",
+          "specialBarrel7"
+        ]
+      },
+      "supplyCrate": {
+        "kind": "solid",
+        "destructible": true,
+        "hp": 1,
+        "atlas": "main",
+        "sprites": [
+          "crateWood",
+          "crateWood_side"
+        ]
+      },
+      "armorCrate": {
+        "kind": "solid",
+        "destructible": false,
+        "atlas": "main",
+        "sprites": [
+          "crateMetal",
+          "crateMetal_side"
+        ]
+      },
+      "sandbagLine": {
+        "kind": "solid",
+        "destructible": true,
+        "hp": 1,
+        "atlas": "main",
+        "sprites": [
+          "sandbagBeige",
+          "sandbagBrown",
+          "sandbagBeige_open",
+          "sandbagBrown_open"
+        ],
+        "layout": "line"
+      },
+      "roadblock": {
+        "kind": "solid",
+        "destructible": true,
+        "hp": 2,
+        "atlas": "main",
+        "sprites": [
+          "barricadeWood",
+          "barricadeMetal",
+          "fenceRed",
+          "fenceYellow"
+        ],
+        "layout": "line"
+      },
+      "barrelSide": {
+        "kind": "decor",
+        "atlas": "main",
+        "sprites": [
+          "barrelBlack_side",
+          "barrelGreen_side",
+          "barrelRed_side",
+          "barrelRust_side"
+        ]
+      },
+      "scorch": {
+        "kind": "decor",
+        "atlas": "main",
+        "sprites": [
+          "oilSpill_large",
+          "oilSpill_small"
+        ]
+      },
+      "cabling": {
+        "kind": "decor",
+        "atlas": "main",
+        "sprites": [
+          "wireStraight",
+          "wireCrooked"
+        ]
+      },
+      "oldTracks": {
+        "kind": "decor",
+        "atlas": "main",
+        "sprites": [
+          "tracksLarge",
+          "tracksDouble",
+          "tracksSmall"
+        ]
+      },
+      "foliage": {
+        "kind": "decor",
+        "atlas": "main",
+        "sprites": [
+          "treeGreen_leaf",
+          "treeGreen_twigs",
+          "treeBrown_leaf",
+          "treeBrown_twigs"
+        ]
+      }
+    }
+  },
+  "hud": {
+    "atlas": "tiny",
+    "life": 195,
+    "lifeEmptyTint": "#00000080",
+    "digits": [
+      180,
+      181,
+      182,
+      183,
+      184,
+      185,
+      186,
+      187,
+      188,
+      189
+    ],
+    "unknown": 190,
+    "ammo": 191,
+    "fuel": 192,
+    "locked": 193,
+    "baseDown": 194,
+    "cursor": 196,
+    "playerFlags": {
+      "blue": 52,
+      "green": 34,
+      "red": 70,
+      "sand": 88,
+      "neutral": 16
+    }
+  },
+  "overlays": {
+    "comment": "asset1의 모든 *_outline 변형은 규칙 기반으로 사용한다. baseSprite + suffix 로 조회.",
+    "suffix": "_outline",
+    "uses": {
+      "hitFlash": {
+        "target": "tank|bullet|prop",
+        "tint": "#FFFFFF",
+        "durationMs": 90,
+        "blend": "additive"
+      },
+      "shield": {
+        "target": "tank",
+        "tint": "#66CCFFB0",
+        "blend": "additive",
+        "pulseHz": 3,
+        "note": "방어형 특수기 지속 중"
+      },
+      "piercing": {
+        "target": "bullet",
+        "tint": "#FFD24AFF",
+        "blend": "additive",
+        "note": "공격형 관통탄"
+      },
+      "localPlayer": {
+        "target": "tank",
+        "tint": "#FFFFFF60",
+        "note": "내 탱크 상시 외곽선"
+      },
+      "selection": {
+        "target": "tank",
+        "tint": "#FFFFFFFF",
+        "note": "탱크 선택 화면 하이라이트"
+      },
+      "armed": {
+        "target": "prop",
+        "tint": "#FF5A3CFF",
+        "pulseHz": 2,
+        "note": "폭발성 프롭 점화 예고"
+      }
+    }
+  }
+}
