@@ -8,3 +8,4 @@
 | `ref_asset1_props.png` | asset1 환경 오브젝트 / 이펙트 / 포탄 |
 | `ref_asset1_terrain.png` | asset1 지형 타일 40종 |
 | `ref_asset2_index.png` | asset2 198 타일 전체 인덱스 (0~197) |
+| `phase1_vulkan.png` | Phase 1 실기 렌더 결과 (Vulkan 백엔드, Pixel 9 Pro 에뮬레이터) |
