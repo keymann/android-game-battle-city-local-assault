@@ -4,13 +4,13 @@ plugins {
 }
 
 android {
-    namespace = "com.keymann.battlecity"
+    namespace = "com.kophas.battlecity"
     compileSdk = 35
     buildToolsVersion = "35.0.0"
     ndkVersion = "27.0.12077973"
 
     defaultConfig {
-        applicationId = "com.keymann.battlecity"
+        applicationId = "com.kophas.battlecity"
         minSdk = 26
         targetSdk = 35
         versionCode = 1

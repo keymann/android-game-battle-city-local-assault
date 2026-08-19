@@ -26,19 +26,19 @@ RendererHandle* fromHandle(jlong handle) {
 extern "C" {
 
 JNIEXPORT jlong JNICALL
-Java_com_keymann_battlecity_render_NativeRenderer_nativeCreate(JNIEnv*, jobject) {
+Java_com_kophas_battlecity_render_NativeRenderer_nativeCreate(JNIEnv*, jobject) {
     auto* handle = new RendererHandle();
     return static_cast<jlong>(reinterpret_cast<intptr_t>(handle));
 }
 
 JNIEXPORT jboolean JNICALL
-Java_com_keymann_battlecity_render_NativeRenderer_nativeIsVulkanSupported(JNIEnv*, jclass) {
+Java_com_kophas_battlecity_render_NativeRenderer_nativeIsVulkanSupported(JNIEnv*, jclass) {
     return bc::vk::VulkanRenderer::isSupported() ? JNI_TRUE : JNI_FALSE;
 }
 
 // preferVulkan=false 이면 Vulkan 을 건너뛰고 바로 GLES 로 간다(디버그/강제 폴백용).
 // 반환값은 bc::Backend 정수. 0 이면 두 백엔드 모두 실패.
-JNIEXPORT jint JNICALL Java_com_keymann_battlecity_render_NativeRenderer_nativeAttachSurface(
+JNIEXPORT jint JNICALL Java_com_kophas_battlecity_render_NativeRenderer_nativeAttachSurface(
         JNIEnv* env, jobject, jlong handle, jobject surface, jboolean preferVulkan) {
     RendererHandle* h = fromHandle(handle);
     if (h == nullptr) return 0;
@@ -72,14 +72,14 @@ JNIEXPORT jint JNICALL Java_com_keymann_battlecity_render_NativeRenderer_nativeA
     return 0;
 }
 
-JNIEXPORT void JNICALL Java_com_keymann_battlecity_render_NativeRenderer_nativeResize(
+JNIEXPORT void JNICALL Java_com_kophas_battlecity_render_NativeRenderer_nativeResize(
         JNIEnv*, jobject, jlong handle, jint width, jint height) {
     RendererHandle* h = fromHandle(handle);
     if (h == nullptr || !h->impl) return;
     h->impl->onSurfaceResized(width, height);
 }
 
-JNIEXPORT void JNICALL Java_com_keymann_battlecity_render_NativeRenderer_nativeDetachSurface(
+JNIEXPORT void JNICALL Java_com_kophas_battlecity_render_NativeRenderer_nativeDetachSurface(
         JNIEnv*, jobject, jlong handle) {
     RendererHandle* h = fromHandle(handle);
     if (h == nullptr) return;
@@ -94,7 +94,7 @@ JNIEXPORT void JNICALL Java_com_keymann_battlecity_render_NativeRenderer_nativeD
 }
 
 JNIEXPORT void JNICALL
-Java_com_keymann_battlecity_render_NativeRenderer_nativeDestroy(JNIEnv*, jobject, jlong handle) {
+Java_com_kophas_battlecity_render_NativeRenderer_nativeDestroy(JNIEnv*, jobject, jlong handle) {
     RendererHandle* h = fromHandle(handle);
     if (h == nullptr) return;
     if (h->impl) {
@@ -109,7 +109,7 @@ Java_com_keymann_battlecity_render_NativeRenderer_nativeDestroy(JNIEnv*, jobject
 }
 
 // pixels 는 반드시 direct ByteBuffer 여야 한다(복사 없이 읽는다).
-JNIEXPORT jboolean JNICALL Java_com_keymann_battlecity_render_NativeRenderer_nativeUploadTexture(
+JNIEXPORT jboolean JNICALL Java_com_kophas_battlecity_render_NativeRenderer_nativeUploadTexture(
         JNIEnv* env, jobject, jlong handle, jint textureId, jint width, jint height,
         jobject pixels) {
     RendererHandle* h = fromHandle(handle);
@@ -123,7 +123,7 @@ JNIEXPORT jboolean JNICALL Java_com_keymann_battlecity_render_NativeRenderer_nat
     return h->impl->uploadTexture(textureId, width, height, data) ? JNI_TRUE : JNI_FALSE;
 }
 
-JNIEXPORT void JNICALL Java_com_keymann_battlecity_render_NativeRenderer_nativeReleaseTexture(
+JNIEXPORT void JNICALL Java_com_kophas_battlecity_render_NativeRenderer_nativeReleaseTexture(
         JNIEnv*, jobject, jlong handle, jint textureId) {
     RendererHandle* h = fromHandle(handle);
     if (h == nullptr || !h->impl) return;
@@ -132,7 +132,7 @@ JNIEXPORT void JNICALL Java_com_keymann_battlecity_render_NativeRenderer_nativeR
 
 // sprites / runs 도 direct 버퍼다. 프레임마다 JNI 배열 복사가 일어나지 않도록
 // Kotlin SpriteBatch 가 direct ByteBuffer 를 유지한다. (계획서 §25 Draw Call 최소화)
-JNIEXPORT void JNICALL Java_com_keymann_battlecity_render_NativeRenderer_nativeRenderFrame(
+JNIEXPORT void JNICALL Java_com_kophas_battlecity_render_NativeRenderer_nativeRenderFrame(
         JNIEnv* env, jobject, jlong handle, jfloat clearR, jfloat clearG, jfloat clearB,
         jobject sprites, jint spriteCount, jobject runs, jint runCount) {
     RendererHandle* h = fromHandle(handle);
@@ -152,13 +152,13 @@ JNIEXPORT void JNICALL Java_com_keymann_battlecity_render_NativeRenderer_nativeR
     h->impl->renderFrame(clearR, clearG, clearB, spriteData, spriteCount, runData, runCount);
 }
 
-JNIEXPORT jint JNICALL Java_com_keymann_battlecity_render_NativeRenderer_nativeSurfaceWidth(
+JNIEXPORT jint JNICALL Java_com_kophas_battlecity_render_NativeRenderer_nativeSurfaceWidth(
         JNIEnv*, jobject, jlong handle) {
     RendererHandle* h = fromHandle(handle);
     return (h != nullptr && h->impl) ? h->impl->surfaceWidth() : 0;
 }
 
-JNIEXPORT jint JNICALL Java_com_keymann_battlecity_render_NativeRenderer_nativeSurfaceHeight(
+JNIEXPORT jint JNICALL Java_com_kophas_battlecity_render_NativeRenderer_nativeSurfaceHeight(
         JNIEnv*, jobject, jlong handle) {
     RendererHandle* h = fromHandle(handle);
     return (h != nullptr && h->impl) ? h->impl->surfaceHeight() : 0;

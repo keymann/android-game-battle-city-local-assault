@@ -221,7 +221,7 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 OpenGL ES 폴백 경로를 강제로 확인하려면:
 
 ```bash
-adb shell am start -n com.keymann.battlecity/.MainActivity --ez preferVulkan false
+adb shell am start -n com.kophas.battlecity/.MainActivity --ez preferVulkan false
 ```
 
 ---
@@ -237,7 +237,7 @@ app/src/main/
 │   ├── gl/gl_renderer.cpp    OpenGL ES 3.0 폴백
 │   └── shaders/              GLSL -> SPIR-V -> C 헤더 (빌드 시 glslc)
 │
-├── kotlin/com/keymann/battlecity/
+├── kotlin/com/kophas/battlecity/
 │   ├── core/                 Constants, FixedStepClock, GameLoop
 │   ├── render/               Viewport, SpriteBatch, TextureAtlas, GridAtlas,
 │   │                         AssetManifest, GameAssets, NativeRenderer
