@@ -57,9 +57,29 @@ class Tank(val id: Int) {
     var slideX: Float = 0f
     var slideY: Float = 0f
 
+    // --- 특수기 (계획서 §6) -------------------------------------------------
+    // 능력치와 마찬가지로 값은 balance.json 에서 오고 여기서는 상태만 든다.
+
+    var special: BalanceConfig.Special = BalanceConfig.Special.NONE
+
+    /** 재사용까지 남은 시간. 0 이하면 쓸 수 있다. */
+    var specialCooldownRemaining: Float = 0f
+
+    /** 지속형 특수기가 남긴 시간. 0 이하면 효과가 꺼져 있다. */
+    var specialActiveRemaining: Float = 0f
+
+    var specialCooldown: Float = 0f
+
+    var specialDuration: Float = 0f
+
+    /** 방어막이 켜졌을 때 적용할 피해 감소율. */
+    var shieldDamageReduction: Float = 0f
+
+    /** 대시가 켜졌을 때 곱할 이동속도 배수. */
+    var dashSpeedMultiplier: Float = 1f
+
     /**
-     * 받는 피해 감소율 0..1. 방어형 특수기(방어막)가 Phase 4 에서 켠다. (계획서 §6.2)
-     * 평소에는 0 이다.
+     * 받는 피해 감소율 0..1. 방어막이 켜져 있는 동안만 0보다 크다. (계획서 §6.2)
      */
     var damageReduction: Float = 0f
 
@@ -70,6 +90,24 @@ class Tank(val id: Int) {
     val centerY: Float get() = y + SIZE * 0.5f
 
     val canFire: Boolean get() = alive && fireCooldownRemaining <= 0f
+
+    val canUseSpecial: Boolean
+        get() = alive && special != BalanceConfig.Special.NONE && specialCooldownRemaining <= 0f
+
+    val specialActive: Boolean get() = specialActiveRemaining > 0f
+
+    /** 0..1. 1이면 바로 쓸 수 있다. HUD 게이지에 그대로 쓴다. */
+    val specialReadyRatio: Float
+        get() = if (specialCooldown <= 0f) 1f
+        else (1f - specialCooldownRemaining / specialCooldown).coerceIn(0f, 1f)
+
+    /** 대시 중에는 더 빨리 달린다. */
+    val effectiveMoveSpeed: Float
+        get() = if (specialActive && special == BalanceConfig.Special.DASH) {
+            moveSpeed * dashSpeedMultiplier
+        } else {
+            moveSpeed
+        }
 
     /** 0..1 로 정규화한 체력. HUD 게이지용. */
     val hpRatio: Float get() = if (maxHp <= 0) 0f else (hp.toFloat() / maxHp).coerceIn(0f, 1f)
@@ -85,6 +123,8 @@ class Tank(val id: Int) {
         slideX = 0f
         slideY = 0f
         damageReduction = 0f
+        specialCooldownRemaining = 0f
+        specialActiveRemaining = 0f
         spawnGuardRemaining = SPAWN_GUARD_SECONDS
     }
 

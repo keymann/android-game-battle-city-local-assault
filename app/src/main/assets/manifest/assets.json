@@ -344,6 +344,26 @@
         "oilSpill_small",
         "oilSpill_large"
       ]
+    },
+    "specialFx": {
+      "comment": "특수기 연출. 스프라이트를 새로 만들지 않고 기존 외곽선/포탄을 색과 크기로 변형한다.",
+      "shield": {
+        "tint": "#66CCFF",
+        "alpha": 0.55,
+        "scale": 1.28,
+        "pulseHz": 3.0
+      },
+      "dash": {
+        "tint": "#FFFFFF",
+        "alpha": 0.3,
+        "afterImages": 3,
+        "spacingPx": 13.0
+      },
+      "piercing": {
+        "sprite": "shotRed",
+        "tint": "#FFD24A",
+        "alpha": 0.7
+      }
     }
   },
   "projectiles": {
@@ -535,11 +555,11 @@
     "locked": "ui_076",
     "baseDown": "battle_194",
     "cursor": "ui_077",
-    "barLeft": "ui_139",
-    "barMid": "ui_140",
-    "barRight": "ui_141",
-    "barEmptyLeft": "ui_157",
-    "barEmptyMid": "ui_158",
-    "barEmptyRight": "ui_159"
+    "gauge": {
+      "comment": "특수기 쿨타임 게이지. 가운데 조각을 가로로 늘여 쓴다.",
+      "fill": "ui_140",
+      "track": "ui_158",
+      "heightRatio": 0.34
+    }
   }
 }

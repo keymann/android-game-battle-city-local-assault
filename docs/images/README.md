@@ -10,3 +10,4 @@
 | `ref_asset2_index.png` | asset2 198 타일 전체 인덱스 (0~197) |
 | `phase3_hud.png` | Phase 3 — 좌측 HUD(진영기·하트·처치 수·남은 COM) |
 | `phase35_world.png` | Phase 3.5 — 픽셀아트 월드 + 벡터 탱크 |
+| `phase4_specials.png` | Phase 4 — 특수기 쿨타임 게이지와 방어막 오라 |

@@ -1,6 +1,7 @@
 package com.kophas.battlecity.render
 
 import com.kophas.battlecity.core.Constants
+import com.kophas.battlecity.gameplay.BalanceConfig
 import com.kophas.battlecity.gameplay.GameWorld
 import com.kophas.battlecity.gameplay.Projectile
 import com.kophas.battlecity.gameplay.Tank
@@ -37,7 +38,7 @@ class WorldRenderer(
         drawDecor(stage, batch, viewport)
         drawCells(world, batch, viewport, timeSeconds)
         drawBase(world, stage, batch, viewport, timeSeconds)
-        drawTanks(world, batch, viewport)
+        drawTanks(world, batch, viewport, timeSeconds)
         drawProjectiles(world, batch, viewport)
         drawExplosions(world, batch, viewport)
     }
@@ -269,7 +270,12 @@ class WorldRenderer(
         )
     }
 
-    private fun drawTanks(world: GameWorld, batch: SpriteBatch, viewport: Viewport) {
+    private fun drawTanks(
+        world: GameWorld,
+        batch: SpriteBatch,
+        viewport: Viewport,
+        timeSeconds: Float,
+    ) {
         val size = viewport.worldToScreenLength(Tank.SIZE)
 
         for (tank in world.tanks) {
@@ -308,6 +314,11 @@ class WorldRenderer(
                 )
             }
 
+            // 대시 잔상은 몸체 뒤에 깔아야 진행 방향이 읽힌다. (계획서 §6.3)
+            if (tank.specialActive && tank.special == BalanceConfig.Special.DASH) {
+                drawDashTrail(batch, tank, body, screenX, screenY, size, bodyHeight, rotation, viewport)
+            }
+
             batch.draw(
                 region = body,
                 x = screenX,
@@ -318,6 +329,11 @@ class WorldRenderer(
                 rotation = rotation,
                 alpha = alpha,
             )
+
+            // 방어막은 탱크를 감싸는 청색 오라로 보여 준다. (계획서 §6.2)
+            if (tank.specialActive && tank.special == BalanceConfig.Special.SHIELD) {
+                drawShieldAura(batch, tank, screenX, screenY, size, bodyHeight, rotation, timeSeconds)
+            }
 
             // 몸체와 포신이 같은 점(탱크 중심)을 축으로 돌아야 어긋나지 않는다.
             //   몸체: origin (0.5, 0.5)  포신: origin (0.5, 1.0) 으로 포미를 중심에 둔다
@@ -356,6 +372,72 @@ class WorldRenderer(
         }
     }
 
+    /** 진행 반대 방향으로 잔상을 남겨 속도를 보여 준다. */
+    @Suppress("LongParameterList")
+    private fun drawDashTrail(
+        batch: SpriteBatch,
+        tank: Tank,
+        body: TextureRegion,
+        screenX: Float,
+        screenY: Float,
+        width: Float,
+        height: Float,
+        rotation: Float,
+        viewport: Viewport,
+    ) {
+        val fx = catalog.dashFx
+        val spacing = viewport.worldToScreenLength(fx.spacingPx)
+        for (i in 1..fx.afterImages) {
+            val fade = fx.alpha * (1f - i.toFloat() / (fx.afterImages + 1))
+            batch.draw(
+                region = body,
+                x = screenX - tank.direction.dx * spacing * i,
+                y = screenY - tank.direction.dy * spacing * i,
+                width = width,
+                height = height,
+                layer = Constants.Layer.ENTITY,
+                rotation = rotation,
+                red = red(fx.tint),
+                green = green(fx.tint),
+                blue = blue(fx.tint),
+                alpha = fade,
+            )
+        }
+    }
+
+    /** 탱크 외곽선을 키우고 청색으로 물들여 맥동시킨다. */
+    @Suppress("LongParameterList")
+    private fun drawShieldAura(
+        batch: SpriteBatch,
+        tank: Tank,
+        screenX: Float,
+        screenY: Float,
+        width: Float,
+        height: Float,
+        rotation: Float,
+        timeSeconds: Float,
+    ) {
+        val outline = catalog.outlineOf(tank) ?: return
+        val fx = catalog.shieldFx
+        val pulse = 0.75f + 0.25f * kotlin.math.sin(timeSeconds * fx.pulseHz * TWO_PI)
+        val auraWidth = width * fx.scale
+        val auraHeight = height * fx.scale
+
+        batch.draw(
+            region = outline,
+            x = screenX - (auraWidth - width) * 0.5f,
+            y = screenY - (auraHeight - height) * 0.5f,
+            width = auraWidth,
+            height = auraHeight,
+            layer = Constants.Layer.OVERLAY,
+            rotation = rotation,
+            red = red(fx.tint),
+            green = green(fx.tint),
+            blue = blue(fx.tint),
+            alpha = fx.alpha * pulse,
+        )
+    }
+
     private fun drawProjectiles(world: GameWorld, batch: SpriteBatch, viewport: Viewport) {
         val size = viewport.worldToScreenLength(Projectile.SIZE * 2.5f)
         for (projectile in world.projectiles.active) {
@@ -366,6 +448,27 @@ class WorldRenderer(
                 catalog.piercingBullet
             } else {
                 owner?.let { catalog.bulletOf(it) } ?: continue
+            }
+
+            // 관통탄은 뒤로 꼬리를 달아 일반 포탄과 확실히 구분한다. (계획서 §6.1)
+            if (projectile.piercing) {
+                val trail = catalog.piercingTrail
+                val trailSize = size * 1.4f
+                batch.draw(
+                    region = trail,
+                    x = viewport.worldToScreenX(projectile.centerX) -
+                        projectile.direction.dx * size - trailSize * 0.5f,
+                    y = viewport.worldToScreenY(projectile.centerY) -
+                        projectile.direction.dy * size - trailSize * 0.5f,
+                    width = trailSize,
+                    height = trailSize * (trail.height.toFloat() / trail.width),
+                    layer = Constants.Layer.ENTITY,
+                    rotation = projectile.direction.radians,
+                    red = red(catalog.piercingTint),
+                    green = green(catalog.piercingTint),
+                    blue = blue(catalog.piercingTint),
+                    alpha = catalog.piercingTrailAlpha,
+                )
             }
 
             batch.draw(

@@ -134,6 +134,37 @@ class SpriteCatalog(private val assets: GameAssets) {
     val piercingBullet: TextureRegion =
         assets[manifest.root["projectiles"]?.get("piercing")?.get("sprite")?.asString ?: "shotLarge"]
 
+    // --- 특수기 연출 (계획서 §6) ------------------------------------------
+
+    /** 방어막. 탱크 외곽선을 키우고 청색으로 물들여 맥동시킨다. */
+    class ShieldFx(val tint: Int, val alpha: Float, val scale: Float, val pulseHz: Float)
+
+    /** 대시. 진행 반대 방향으로 잔상을 남긴다. */
+    class DashFx(val tint: Int, val alpha: Float, val afterImages: Int, val spacingPx: Float)
+
+    private val specialFx = manifest.root["tanks"]?.get("specialFx")
+
+    val shieldFx = ShieldFx(
+        tint = parseColor(specialFx?.get("shield")?.get("tint")?.asString, 0x66CCFF),
+        alpha = specialFx?.get("shield")?.get("alpha")?.asFloat ?: 0.55f,
+        scale = specialFx?.get("shield")?.get("scale")?.asFloat ?: 1.28f,
+        pulseHz = specialFx?.get("shield")?.get("pulseHz")?.asFloat ?: 3f,
+    )
+
+    val dashFx = DashFx(
+        tint = parseColor(specialFx?.get("dash")?.get("tint")?.asString, 0xFFFFFF),
+        alpha = specialFx?.get("dash")?.get("alpha")?.asFloat ?: 0.30f,
+        afterImages = specialFx?.get("dash")?.get("afterImages")?.asInt ?: 3,
+        spacingPx = specialFx?.get("dash")?.get("spacingPx")?.asFloat ?: 13f,
+    )
+
+    val piercingTrail: TextureRegion =
+        assets[specialFx?.get("piercing")?.get("sprite")?.asString ?: "shotRed"]
+
+    val piercingTint: Int = parseColor(specialFx?.get("piercing")?.get("tint")?.asString, 0xFFD24A)
+
+    val piercingTrailAlpha: Float = specialFx?.get("piercing")?.get("alpha")?.asFloat ?: 0.7f
+
     val trackDecals: List<TextureRegion> =
         (manifest.root["tanks"]?.get("trackDecal")?.get("sprites")?.asStringList ?: emptyList())
             .map { assets[it] }
@@ -155,6 +186,16 @@ class SpriteCatalog(private val assets: GameAssets) {
         ('A'..'Z').associateWith { assets["${manifest.hudCharPrefix}$it"] }
 
     fun digit(value: Int): TextureRegion = digits[value.coerceIn(0, 9)]
+
+    /** 특수기 쿨타임 게이지. 가운데 조각을 가로로 늘여 쓴다. */
+    val gaugeFill: TextureRegion =
+        assets[manifest.root["hud"]?.get("gauge")?.get("fill")?.asString ?: "ui_140"]
+
+    val gaugeTrack: TextureRegion =
+        assets[manifest.root["hud"]?.get("gauge")?.get("track")?.asString ?: "ui_158"]
+
+    val gaugeHeightRatio: Float =
+        manifest.root["hud"]?.get("gauge")?.get("heightRatio")?.asFloat ?: 0.34f
 
     /** 비트맵 폰트 글리프. 지원하지 않는 문자는 null 이라 공백으로 넘어간다. */
     fun glyph(char: Char): TextureRegion? = when (char) {
