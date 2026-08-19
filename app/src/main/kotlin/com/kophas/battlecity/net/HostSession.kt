@@ -70,8 +70,11 @@ class HostSession(
     fun isInResult(slot: Int): Boolean =
         slot == HOST_SLOT || (slot in inResult && lobby.slots.getOrNull(slot)?.connected == true)
 
+    /** 방을 연 시각. 목록에 "언제 열린 방인가" 로 나간다. */
+    private val createdAtMs: Long = clock()
+
     init {
-        lobby.openAsHost(hostName, hostTankType, clock())
+        lobby.openAsHost(hostName, hostTankType, createdAtMs)
     }
 
     /** 판을 시작할 때 쓸 값. 맵을 만들어 본 뒤 해시까지 넣어 준다. */
@@ -252,10 +255,7 @@ class HostSession(
         if (lobby.started) return
         if (now - lastAnnounceMs < ANNOUNCE_INTERVAL_MS) return
         lastAnnounceMs = now
-        val message = Messages.Announce(
-            hostName, lobby.connectedCount, Protocol.MAX_PLAYERS, lobby.started,
-        )
-        val packet = Messages.writeAnnounce(writer, message)
+        val packet = Messages.writeAnnounce(writer, announcement())
         transport.broadcast(Protocol.DISCOVERY_PORT, packet.buffer, packet.length)
     }
 
@@ -268,11 +268,22 @@ class HostSession(
     }
 
     private fun sendAnnounceTo(peer: Peer) {
-        val message = Messages.Announce(
-            hostName, lobby.connectedCount, Protocol.MAX_PLAYERS, lobby.started,
-        )
-        send(peer, Messages.writeAnnounce(writer, message))
+        send(peer, Messages.writeAnnounce(writer, announcement()))
     }
+
+    /**
+     * 목록에 나갈 방 소개.
+     *
+     * 이름은 생성자에 받은 것이 아니라 **로비가 다듬은 것**을 쓴다. 비트맵 폰트에는
+     * A~Z 와 숫자밖에 없어서, 다듬지 않은 이름은 남의 화면에서 빈칸으로 보인다.
+     */
+    private fun announcement() = Messages.Announce(
+        hostName = lobby.slots[HOST_SLOT].name,
+        players = lobby.connectedCount,
+        maxPlayers = Protocol.MAX_PLAYERS,
+        started = lobby.started,
+        createdAt = createdAtMs,
+    )
 
     private fun send(peer: Peer, packet: PacketWriter) {
         transport.send(peer, packet.buffer, packet.length)

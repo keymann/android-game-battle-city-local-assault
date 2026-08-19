@@ -160,8 +160,8 @@
 	<SubTexture name="set_toggle_off.png" x="1" y="1101" width="160" height="88"/>
 	<SubTexture name="set_toggle_on.png" x="517" y="1101" width="160" height="80"/>
 	<SubTexture name="shell_normal_down.png" x="93" y="1637" width="14" height="40"/>
-	<SubTexture name="shell_normal_left.png" x="858" y="1686" width="40" height="13"/>
-	<SubTexture name="shell_normal_right.png" x="817" y="1686" width="40" height="15"/>
+	<SubTexture name="shell_normal_left.png" x="875" y="1686" width="40" height="13"/>
+	<SubTexture name="shell_normal_right.png" x="834" y="1686" width="40" height="15"/>
 	<SubTexture name="shell_normal_up.png" x="108" y="1637" width="14" height="40"/>
 	<SubTexture name="shell_piercing_down.png" x="123" y="1637" width="21" height="40"/>
 	<SubTexture name="shell_piercing_left.png" x="320" y="1637" width="40" height="18"/>
@@ -238,19 +238,20 @@
 	<SubTexture name="ui_char_X.png" x="545" y="1686" width="16" height="16"/>
 	<SubTexture name="ui_char_Y.png" x="562" y="1686" width="16" height="16"/>
 	<SubTexture name="ui_char_Z.png" x="579" y="1686" width="16" height="16"/>
-	<SubTexture name="ui_digit_0.png" x="596" y="1686" width="16" height="16"/>
-	<SubTexture name="ui_digit_1.png" x="613" y="1686" width="16" height="16"/>
-	<SubTexture name="ui_digit_2.png" x="630" y="1686" width="16" height="16"/>
-	<SubTexture name="ui_digit_3.png" x="647" y="1686" width="16" height="16"/>
-	<SubTexture name="ui_digit_4.png" x="664" y="1686" width="16" height="16"/>
-	<SubTexture name="ui_digit_5.png" x="681" y="1686" width="16" height="16"/>
-	<SubTexture name="ui_digit_6.png" x="698" y="1686" width="16" height="16"/>
-	<SubTexture name="ui_digit_7.png" x="715" y="1686" width="16" height="16"/>
-	<SubTexture name="ui_digit_8.png" x="732" y="1686" width="16" height="16"/>
-	<SubTexture name="ui_digit_9.png" x="749" y="1686" width="16" height="16"/>
-	<SubTexture name="ui_minus.png" x="766" y="1686" width="16" height="16"/>
-	<SubTexture name="ui_percent.png" x="783" y="1686" width="16" height="16"/>
-	<SubTexture name="ui_plus.png" x="800" y="1686" width="16" height="16"/>
+	<SubTexture name="ui_colon.png" x="596" y="1686" width="16" height="16"/>
+	<SubTexture name="ui_digit_0.png" x="613" y="1686" width="16" height="16"/>
+	<SubTexture name="ui_digit_1.png" x="630" y="1686" width="16" height="16"/>
+	<SubTexture name="ui_digit_2.png" x="647" y="1686" width="16" height="16"/>
+	<SubTexture name="ui_digit_3.png" x="664" y="1686" width="16" height="16"/>
+	<SubTexture name="ui_digit_4.png" x="681" y="1686" width="16" height="16"/>
+	<SubTexture name="ui_digit_5.png" x="698" y="1686" width="16" height="16"/>
+	<SubTexture name="ui_digit_6.png" x="715" y="1686" width="16" height="16"/>
+	<SubTexture name="ui_digit_7.png" x="732" y="1686" width="16" height="16"/>
+	<SubTexture name="ui_digit_8.png" x="749" y="1686" width="16" height="16"/>
+	<SubTexture name="ui_digit_9.png" x="766" y="1686" width="16" height="16"/>
+	<SubTexture name="ui_minus.png" x="783" y="1686" width="16" height="16"/>
+	<SubTexture name="ui_percent.png" x="800" y="1686" width="16" height="16"/>
+	<SubTexture name="ui_plus.png" x="817" y="1686" width="16" height="16"/>
 	<SubTexture name="water_frame_1.png" x="747" y="1396" width="64" height="64"/>
 	<SubTexture name="water_frame_2.png" x="812" y="1396" width="64" height="64"/>
 	<SubTexture name="water_frame_3.png" x="877" y="1396" width="64" height="64"/>

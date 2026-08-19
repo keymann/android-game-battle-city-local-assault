@@ -362,11 +362,16 @@ class SpriteCatalog(private val assets: GameAssets) {
     private val chars: Map<Char, TextureRegion> =
         ('A'..'Z').associateWith { assets["${manifest.hudCharPrefix}$it"] }
 
-    /** 글자와 숫자 말고 폰트에 있는 기호. 빗금은 없어서 붙임표로 대신한다. */
+    /**
+     * 글자와 숫자 말고 쓰는 기호. 빗금은 없어서 붙임표로 대신한다.
+     *
+     * 콜론은 시트에 없어서 같은 화풍으로 직접 그려 얹었다. (tools/build_atlas.py)
+     */
     private val symbols: Map<Char, TextureRegion> = buildMap {
         assets.find("ui_minus")?.let { put('-', it) }
         assets.find("ui_plus")?.let { put('+', it) }
         assets.find("ui_percent")?.let { put('%', it) }
+        assets.find("ui_colon")?.let { put(':', it) }
     }
 
     fun digit(value: Int): TextureRegion = digits[value.coerceIn(0, 9)]
@@ -375,7 +380,7 @@ class SpriteCatalog(private val assets: GameAssets) {
     fun glyph(char: Char): TextureRegion? = when (char) {
         in '0'..'9' -> digits[char - '0']
         in 'A'..'Z' -> chars[char]
-        '-', '+', '%' -> symbols[char]
+        '-', '+', '%', ':' -> symbols[char]
         in 'a'..'z' -> chars[char.uppercaseChar()]
         else -> null
     }

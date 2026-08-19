@@ -20,3 +20,4 @@
 | `phase9_menu.png` | Phase 9 — 메인 메뉴 (방 찾기 상태 표시 포함) |
 | `phase9_settings.png` | Phase 9 — 방 규칙과 기기 소리 설정 |
 | `phase9_result.png` | Phase 9 — 결과 화면 (순위·승자·다음 판) |
+| `phase9_rooms.png` | Phase 9 — 방 목록. 기기가 하나뿐이라 줄은 넣어 둔 값으로 그렸다 |

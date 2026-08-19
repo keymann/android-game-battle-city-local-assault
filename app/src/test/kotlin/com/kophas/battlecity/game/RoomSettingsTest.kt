@@ -1,5 +1,6 @@
 package com.kophas.battlecity.game
 
+import java.time.ZoneId
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -77,6 +78,27 @@ class RoomSettingsTest {
                 SettingsScene.activeEnemiesAt(SettingsScene.activeEnemiesFraction(value)),
             )
         }
+    }
+
+    @Test
+    fun `방이 열린 시각을 MMDD HH mm 으로 쓴다`() {
+        val seoul = ZoneId.of("Asia/Seoul")
+        // 2026-08-20 08:15 KST
+        val epoch = java.time.ZonedDateTime.of(2026, 8, 20, 8, 15, 0, 0, seoul).toInstant().toEpochMilli()
+        assertEquals("0820 08:15", RoomListScene.formatOpenedAt(epoch, seoul))
+    }
+
+    @Test
+    fun `한 자리 수도 두 자리로 채운다`() {
+        val seoul = ZoneId.of("Asia/Seoul")
+        val epoch = java.time.ZonedDateTime.of(2026, 1, 2, 3, 4, 0, 0, seoul).toInstant().toEpochMilli()
+        assertEquals("0102 03:04", RoomListScene.formatOpenedAt(epoch, seoul))
+    }
+
+    @Test
+    fun `시각을 모르면 빈 자리로 둔다`() {
+        // 옛 판의 방은 시각을 싣지 않는다. 1970년으로 쓰면 거짓말이 된다.
+        assertEquals("----", RoomListScene.formatOpenedAt(0L))
     }
 
     @Test

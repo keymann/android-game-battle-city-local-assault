@@ -15,6 +15,8 @@ object Messages {
         val players: Int,
         val maxPlayers: Int,
         val started: Boolean,
+        /** 방을 연 시각. 방 목록에서 언제 열린 방인지 보여 준다. */
+        val createdAt: Long = 0L,
     )
 
     fun writeAnnounce(writer: PacketWriter, value: Announce): PacketWriter =
@@ -23,12 +25,14 @@ object Messages {
             .byte(value.players)
             .byte(value.maxPlayers)
             .bool(value.started)
+            .long(value.createdAt)
 
     fun readAnnounce(reader: PacketReader) = Announce(
         hostName = reader.text(),
         players = reader.byte(),
         maxPlayers = reader.byte(),
         started = reader.bool(),
+        createdAt = reader.long(),
     )
 
     // --- 입장 -------------------------------------------------------------

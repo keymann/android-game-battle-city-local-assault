@@ -1,6 +1,8 @@
 package com.kophas.battlecity.net
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -53,6 +55,66 @@ class RoomScannerTest {
         // 방이 사라졌다는 통보는 오지 않는다. 답이 끊긴 것으로 알아채야 한다.
         host.close()
         tick(times = 6, stepMs = 700)
+        assertEquals(0, scanner.roomCount)
+    }
+
+    @Test
+    fun `목록에 방장 이름과 인원과 연 시각이 담긴다`() {
+        val opened = now
+        val host = HostSession(network.open("10.0.0.1", Protocol.PORT), "거실", 0, clock)
+        tick(host = host)
+
+        val room = scanner.list.single()
+        assertEquals("거실", room.hostName)
+        // 방장 한 사람. 인원은 방장을 포함해 센다.
+        assertEquals(1, room.players)
+        assertEquals(Protocol.MAX_PLAYERS, room.maxPlayers)
+        assertEquals(opened, room.createdAt)
+        assertFalse("혼자 있는 방이 찼을 리 없다", room.full)
+    }
+
+    @Test
+    fun `정원이 차면 찬 것으로 표시된다`() {
+        val host = HostSession(network.open("10.0.0.1", Protocol.PORT), "거실", 0, clock)
+        repeat(Protocol.MAX_PLAYERS - 1) { host.lobby.join("손님", 0, 0, now) }
+        tick(host = host)
+
+        val room = scanner.list.single()
+        assertEquals(Protocol.MAX_PLAYERS, room.players)
+        assertTrue("정원이 찼다", room.full)
+    }
+
+    @Test
+    fun `새로 고치면 목록을 비우고 다시 받는다`() {
+        val host = HostSession(network.open("10.0.0.1", Protocol.PORT), "거실", 0, clock)
+        tick(host = host)
+        assertEquals(1, scanner.roomCount)
+
+        scanner.refresh()
+        assertEquals("새로 고친 직후에는 비어 있다", 0, scanner.roomCount)
+
+        tick(host = host)
+        assertEquals("다시 받아 온다", 1, scanner.roomCount)
+    }
+
+    @Test
+    fun `찬 방으로 표시하면 잠긴다`() {
+        val host = HostSession(network.open("10.0.0.1", Protocol.PORT), "거실", 0, clock)
+        tick(host = host)
+        val room = scanner.list.single()
+        assertFalse(room.full)
+
+        // 들어가려다 거절당했을 때. 다음 알림이 오기 전에 잠가 둔다.
+        scanner.markFull(room.peer)
+        assertTrue(scanner.list.single().full)
+    }
+
+    @Test
+    fun `지우면 목록에서 빠진다`() {
+        val host = HostSession(network.open("10.0.0.1", Protocol.PORT), "거실", 0, clock)
+        tick(host = host)
+
+        scanner.remove(scanner.list.single().peer)
         assertEquals(0, scanner.roomCount)
     }
 

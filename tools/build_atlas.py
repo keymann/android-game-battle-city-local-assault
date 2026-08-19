@@ -21,6 +21,7 @@
 
 import json
 import os
+import subprocess
 import shutil
 import sys
 
@@ -199,6 +200,53 @@ def build_screen(entries, folder, prefix, size):
         entries.append((f"{prefix}{name}", out))
 
 
+#: 콜론 도트 모양. 폰트 시트에 없어서 같은 화풍으로 직접 그린다.
+#: `.` 투명 · `#` 테두리 · `W` 밝은 면 · `s`,`S` 그림자
+COLON_ART = [
+    "................",
+    "................",
+    "................",
+    ".....######.....",
+    ".....##WW##.....",
+    ".....##ss##.....",
+    ".....##SS##.....",
+    ".....######.....",
+    "................",
+    "................",
+    ".....######.....",
+    ".....##WW##.....",
+    ".....##ss##.....",
+    ".....##SS##.....",
+    ".....######.....",
+    "................",
+]
+
+COLON_PALETTE = {
+    ".": (0, 0, 0, 0),
+    "#": (0x47, 0x32, 0x4B, 0xFF),
+    "W": (0xFF, 0xFF, 0xFF, 0xFF),
+    "s": (0x81, 0x75, 0x9B, 0xFF),
+    "S": (0x99, 0x9A, 0xC4, 0xFF),
+}
+
+
+def build_colon(entries):
+    """시각을 `08:15` 로 쓰려면 콜론이 있어야 한다.
+
+    Kenney 시트에는 글자와 숫자, 그리고 `-` `+` `%` 밖에 없다. 콜론은 점 두 개라
+    시트의 다른 글자에서 색을 그대로 빌려 오면 같은 폰트로 보인다. 빌린 색은
+    `ui_minus` 에서 잰 것이다.
+    """
+    raw = bytearray()
+    for row in COLON_ART:
+        for cell in row:
+            raw.extend(COLON_PALETTE[cell])
+    out = f"{A.SPRITES}/ui_colon.png"
+    subprocess.run(["magick", "-size", "16x16", "-depth", "8", "rgba:-", out],
+                   input=bytes(raw), check=True)
+    entries.append(("ui_colon", out))
+
+
 def build_font(entries):
     """비트맵 폰트를 얹는다.
 
@@ -237,6 +285,7 @@ def main():
     build_screen(entries, "lobby_settings", "set_", SCREEN)
     build_screen(entries, "result", "result_", SCREEN)
     build_font(entries)
+    build_colon(entries)
 
     entries = [(n, p) for n, p in entries if not n.startswith("_")]
     A.pack(entries, os.path.join(OUT_DIR, "game.png"),

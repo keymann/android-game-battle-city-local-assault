@@ -221,6 +221,12 @@ class NetDriver(
     /** 호스트와 끊겼을 때 부른다. (계획서 §37) */
     var onDisconnected: (() -> Unit)? = null
 
+    /** 자리를 받았을 때. 방 목록에서 로비로 넘어가는 신호다. */
+    var onJoined: (() -> Unit)? = null
+
+    /** 입장을 거절당했을 때. 까닭은 [Protocol.Deny]. */
+    var onDenied: ((Int) -> Unit)? = null
+
     /** 이 기기의 조종 입력. Host/LOCAL 은 바로 먹이고 Client 는 올려 보낸다. */
     fun submitLocalInput(scene: BattleScene, input: Messages.Input) {
         when (role) {
@@ -307,6 +313,7 @@ class NetDriver(
                 localSlot = slot
                 humanSlots += slot
                 Log.i(TAG, "${slot + 1}번 자리를 받았다")
+                onJoined?.invoke()
             }
 
             override fun onLobby(update: Messages.LobbyUpdate) {
@@ -324,6 +331,7 @@ class NetDriver(
 
             override fun onDenied(reason: Int) {
                 Log.w(TAG, "입장을 거절당했다 (사유 $reason)")
+                onDenied?.invoke(reason)
             }
 
             override fun onMatchStart(start: Messages.Start) {

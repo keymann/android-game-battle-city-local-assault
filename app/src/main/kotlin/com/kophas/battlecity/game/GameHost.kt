@@ -48,7 +48,7 @@ class GameHost(
 ) : GameLoop.Callbacks {
 
     /** 지금 보고 있는 화면. */
-    enum class Screen { MENU, LOBBY, BATTLE, RESULT }
+    enum class Screen { MENU, ROOMS, LOBBY, BATTLE, RESULT }
 
     private sealed interface SurfaceCommand {
         data class Attach(val surface: Surface, val width: Int, val height: Int) : SurfaceCommand
@@ -70,6 +70,7 @@ class GameHost(
     private var controlsRenderer: ControlsRenderer? = null
     private var lobbyScene: LobbyScene? = null
     private var menuScene: MainMenuScene? = null
+    private var roomListScene: RoomListScene? = null
     private var settingsScene: SettingsScene? = null
     private var resultScene: ResultScene? = null
     private var audio: AudioDirector? = null
@@ -174,6 +175,7 @@ class GameHost(
         touch.resize(width, height)
         lobbyScene?.resize(width, height)
         menuScene?.resize(width, height)
+        roomListScene?.resize(width, height)
         settingsScene?.resize(width, height)
         resultScene?.resize(width, height)
     }
@@ -193,6 +195,7 @@ class GameHost(
         }
         when (screen) {
             Screen.MENU -> menuScene?.onTap(x, y)
+            Screen.ROOMS -> roomListScene?.onDown(x, y)
             Screen.LOBBY -> handleLobbyTap(x, y)
             Screen.BATTLE -> touch.onDown(pointerId, x, y)
             Screen.RESULT -> resultScene?.onDown(x, y)
@@ -221,6 +224,7 @@ class GameHost(
                     handleMenuAction(action)
                 }
             }
+            Screen.ROOMS -> roomListScene?.onUp(x, y)?.let { handleRoomListAction(it) }
             Screen.LOBBY -> lobbyScene?.onRelease()
             Screen.BATTLE -> touch.onUp(pointerId)
             Screen.RESULT -> resultScene?.onUp(x, y)?.let { handleResultAction(it) }
@@ -230,6 +234,7 @@ class GameHost(
     fun onTouchCancel() {
         settingsScene?.onCancelTouch()
         resultScene?.onCancelTouch()
+        roomListScene?.onCancelTouch()
         menuScene?.onRelease()
         when (screen) {
             Screen.LOBBY -> lobbyScene?.onRelease()
@@ -247,9 +252,9 @@ class GameHost(
 
             MainMenuScene.Action.JoinGame -> {
                 tap()
-                // 방을 이미 찾아 두었으면 그 주소로 바로 붙는다. 다시 찾을 이유가 없다.
-                hostAddress = scanner?.firstRoom?.address ?: hostAddress
-                openRoom(NetRole.CLIENT)
+                // 바로 붙지 않고 목록을 보여 준다. 방이 여럿일 수 있다. (계획서 §27)
+                roomListScene?.lastDenial = null
+                screen = Screen.ROOMS
             }
 
             MainMenuScene.Action.OpenSettings -> {
@@ -325,6 +330,82 @@ class GameHost(
 
     private fun tap() = audio?.vibrate(AudioDirector.Haptic.UI_TAP)
 
+    /** 목록에서 고른 방. 답을 기다리는 동안 목록을 그대로 두고 위에 표시만 한다. */
+    private var joiningRoom: com.kophas.battlecity.net.RoomScanner.Room? = null
+
+    private fun handleRoomListAction(action: RoomListScene.Action) {
+        tap()
+        when (action) {
+            RoomListScene.Action.Refresh -> {
+                scanner?.refresh()
+                roomListScene?.lastDenial = null
+            }
+
+            RoomListScene.Action.Back -> {
+                // 답을 기다리던 중이면 그만둔다. 그대로 두면 뒤늦게 로비로 끌려간다.
+                cancelJoin()
+                screen = Screen.MENU
+            }
+
+            is RoomListScene.Action.Join -> {
+                joiningRoom = action.room
+                roomListScene?.joining = action.room
+                roomListScene?.lastDenial = null
+                hostAddress = action.room.peer.address
+                openRoom(NetRole.CLIENT, keepScanner = true)
+            }
+
+            RoomListScene.Action.None -> Unit
+        }
+    }
+
+    private fun cancelJoin() {
+        if (joiningRoom == null) return
+        joiningRoom = null
+        roomListScene?.joining = null
+        closeRoom()
+    }
+
+    /**
+     * 입장을 거절당했다. 목록을 고친 뒤 제자리로 돌려보낸다. (계획서 §28)
+     *
+     * 고른 순간과 들어가는 순간 사이에 방이 바뀔 수 있다. 그 사이를 없앨 수는
+     * 없으므로, 거절당한 까닭을 목록에 반영해 다음 선택이 헛되지 않게 한다.
+     */
+    private fun onJoinDenied(reason: Int) {
+        val room = joiningRoom
+        joiningRoom = null
+        roomListScene?.joining = null
+        closeRoom()
+
+        when (reason) {
+            Protocol.Deny.ROOM_FULL -> {
+                // 자리가 날 수도 있으니 지우지 않고 잠근다.
+                room?.let { scanner?.markFull(it.peer) }
+                roomListScene?.lastDenial = "ROOM IS FULL"
+            }
+
+            Protocol.Deny.ALREADY_STARTED -> {
+                // 이미 시작한 방은 들어갈 수 없다. 목록에 둘 이유가 없다.
+                room?.let { scanner?.remove(it.peer) }
+                roomListScene?.lastDenial = "GAME ALREADY STARTED"
+            }
+
+            else -> roomListScene?.lastDenial = "CANNOT JOIN"
+        }
+        screen = Screen.ROOMS
+        audio?.play(AudioDirector.Event.NETWORK_LOST)
+    }
+
+    private fun enterLobby() {
+        joiningRoom = null
+        roomListScene?.joining = null
+        scanner?.close()
+        scanner = null
+        screen = Screen.LOBBY
+        audio?.setTrack(AudioDirector.Track.LOBBY)
+    }
+
     /** 방을 닫고 메인 메뉴로. 로비와 결과 화면이 함께 쓴다. */
     private fun returnToMenu() {
         closeRoom()
@@ -375,13 +456,15 @@ class GameHost(
     }
 
     /** 방을 연다(HOST) 또는 방에 붙는다(CLIENT). */
-    private fun openRoom(role: NetRole) {
+    private fun openRoom(role: NetRole, keepScanner: Boolean = false) {
         val loaded = assets ?: return
         val rules = balance ?: return
         val art = catalog ?: return
         closeRoom()
-        scanner?.close()
-        scanner = null
+        if (!keepScanner) {
+            scanner?.close()
+            scanner = null
+        }
 
         val driver = NetDriver(role, playerName, hostAddress, art.palette.size)
         // 이 기기를 쥔 사람의 자리에도 AI 를 붙이지 않는다. 조종간이 둘이 되기 때문이다.
@@ -402,6 +485,8 @@ class GameHost(
         newScene.showNetwork = role != NetRole.LOCAL
         newScene.onMatchFinished = { enterResult() }
         driver.onMatchStarted = { enterBattle() }
+        driver.onJoined = { enterLobby() }
+        driver.onDenied = { reason -> onJoinDenied(reason) }
         driver.onDisconnected = {
             audio?.stopAllLoops()
             audio?.play(AudioDirector.Event.NETWORK_LOST)
@@ -410,7 +495,13 @@ class GameHost(
         scene = newScene
         viewport.resizeWorld(newScene.logicalWidth, newScene.logicalHeight)
 
-        screen = if (role == NetRole.LOCAL) Screen.BATTLE else Screen.LOBBY
+        // 방에 붙는 중이면 자리를 받을 때까지 목록에 머문다. 들어가지도 못했는데
+        // 로비를 보여 주면 남의 방에 들어간 것처럼 읽힌다.
+        screen = when {
+            role == NetRole.LOCAL -> Screen.BATTLE
+            keepScanner -> Screen.ROOMS
+            else -> Screen.LOBBY
+        }
         lastCountdownSecond = -1
         audio?.setTrack(if (role == NetRole.LOCAL) AudioDirector.Track.BATTLE else AudioDirector.Track.LOBBY)
     }
@@ -476,6 +567,17 @@ class GameHost(
                 menuScene?.let { menu ->
                     menu.playerName = playerName.ifBlank { DEFAULT_NAME }
                     menu.roomsFound = scanner?.roomCount
+                }
+                return
+            }
+
+            Screen.ROOMS -> {
+                scanner?.update()
+                // 붙는 중이면 세션도 굴려야 한다. 답(자리 배정 · 거절)이 여기로 온다.
+                netDriver?.onTick()
+                roomListScene?.let { list ->
+                    list.rooms = scanner?.list.orEmpty()
+                    list.scanning = list.rooms.isEmpty() && scanner != null
                 }
                 return
             }
@@ -574,6 +676,8 @@ class GameHost(
         when (screen) {
             Screen.MENU -> menuScene?.render(batch)
 
+            Screen.ROOMS -> roomListScene?.render(batch)
+
             Screen.LOBBY -> lobbyScene?.let { lobby ->
                 // 로비에서는 맵을 그리지 않는다. 아직 어떤 판인지 정해지지 않았다.
                 netDriver?.fillLobbyView(lobby.view)
@@ -638,6 +742,7 @@ class GameHost(
                 controlsRenderer = null
                 lobbyScene = null
                 menuScene = null
+                roomListScene = null
                 settingsScene = null
                 resultScene = null
                 audio?.stopAllLoops()
@@ -682,6 +787,7 @@ class GameHost(
         controlsRenderer = ControlsRenderer(art)
         lobbyScene = LobbyScene(art)
         menuScene = MainMenuScene(art)
+        roomListScene = RoomListScene(art)
         resultScene = ResultScene(art)
         settingsScene = SettingsScene(art).apply {
             // 슬라이더를 끄는 동안 바로 들려야 고른 값이 맞는지 알 수 있다.
