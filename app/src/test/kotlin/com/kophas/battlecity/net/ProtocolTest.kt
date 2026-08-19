@@ -48,10 +48,10 @@ class ProtocolTest {
 
     @Test
     fun `입장과 배정이 그대로 돌아온다`() {
-        val join = Messages.Join("플레이어2", 2)
+        val join = Messages.Join("P2", 2, 3)
         assertEquals(join, Messages.readJoin(reader(Messages.writeJoin(writer(), join))))
 
-        val ack = Messages.JoinAck(3, 1)
+        val ack = Messages.JoinAck(3, 1, 5)
         assertEquals(ack, Messages.readJoinAck(reader(Messages.writeJoinAck(writer(), ack))))
     }
 
@@ -59,9 +59,9 @@ class ProtocolTest {
     fun `로비 현황이 그대로 돌아온다`() {
         val value = Messages.LobbyUpdate(
             slots = listOf(
-                Messages.LobbySlot(0, "호스트", 0, ready = true, connected = true, host = true),
-                Messages.LobbySlot(1, "손님", 2, ready = false, connected = true, host = false),
-                Messages.LobbySlot(2, "", 0, ready = false, connected = false, host = false),
+                Messages.LobbySlot(0, "HST", 0, 0, ready = true, connected = true, host = true),
+                Messages.LobbySlot(1, "GST", 2, 4, ready = false, connected = true, host = false),
+                Messages.LobbySlot(2, "", 0, 2, ready = false, connected = false, host = false),
             ),
             countdownTicks = 137,
         )

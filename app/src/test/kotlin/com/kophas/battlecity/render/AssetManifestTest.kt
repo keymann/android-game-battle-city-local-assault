@@ -133,12 +133,22 @@ class AssetManifestTest {
     }
 
     @Test
-    fun `슬롯 표식 색이 플레이어 수만큼 있다`() {
-        // 탱크 색은 종류가 정한다. 같은 종류를 고른 두 사람은 이 표식으로만 구분된다.
-        val colors = manifest.root["tanks"]?.get("slotMarker")?.get("colors")?.asStringList.orEmpty()
-        assertEquals(4, colors.size)
-        assertEquals("색이 겹치면 구분이 안 된다", 4, colors.distinct().size)
+    fun `팔레트에 사람 수보다 많은 색이 있다`() {
+        // 사람끼리 같은 색을 고를 수 없으므로(로비 규칙) 네 명이 채워도 남아야 한다.
+        val players = manifest.root["tanks"]?.get("palette")?.get("players")?.asArray.orEmpty()
+        val colors = players.mapNotNull { it["color"]?.asString }
+        assertTrue("색이 ${colors.size}개뿐이다", colors.size > 4)
+        assertEquals("색이 겹치면 구분이 안 된다", colors.size, colors.distinct().size)
         assertTrue(colors.all { it.startsWith("#") })
+    }
+
+    @Test
+    fun `COM 색은 사람이 고를 수 없는 색이다`() {
+        val com = manifest.root["tanks"]?.get("palette")?.get("com")?.get("color")?.asString
+        assertNotNull("COM 색이 없다", com)
+        val players = manifest.root["tanks"]?.get("palette")?.get("players")?.asArray.orEmpty()
+            .mapNotNull { it["color"]?.asString }
+        assertTrue("COM 색을 사람도 고를 수 있으면 적아 구분이 안 된다", com !in players)
     }
 
     // --- 포탄과 이펙트 ----------------------------------------------------

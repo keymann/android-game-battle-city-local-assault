@@ -9,6 +9,8 @@ package com.kophas.battlecity.gameplay
 class MatchState(
     val playerCount: Int,
     val balance: BalanceConfig,
+    /** 로비에서 고른 이름 · 탱크 · 색. 없으면 기본값으로 채운다. */
+    profiles: List<PlayerProfile> = emptyList(),
 ) {
     enum class Phase { PLAYING, VICTORY, GAME_OVER }
 
@@ -19,7 +21,15 @@ class MatchState(
      *
      * HP 와 Life 를 분리한다. HP 가 0이면 탱크가 부서지고 Life 가 1 줄어든다. (계획서 §12)
      */
-    class Slot(val index: Int, val tankType: Tank.Type, lives: Int) {
+    class Slot(val index: Int, val profile: PlayerProfile, lives: Int) {
+
+        val tankType: Tank.Type get() = profile.type
+
+        val name: String get() = profile.name
+
+        /** 팔레트 자리 번호. 탱크와 HUD 를 이 색으로 물들인다. */
+        val colorIndex: Int get() = profile.colorIndex
+
         var lives: Int = lives
             internal set
 
@@ -56,7 +66,7 @@ class MatchState(
     val rules = balance.rules
 
     val players: List<Slot> = List(playerCount) { index ->
-        Slot(index, Tank.Type.entries[index % Tank.Type.entries.size], rules.livesPerPlayer)
+        Slot(index, profiles.getOrElse(index) { PlayerProfile.default(index) }, rules.livesPerPlayer)
     }
 
     /** 이번 판에 만들어야 할 COM 총수. (계획서 §9) */

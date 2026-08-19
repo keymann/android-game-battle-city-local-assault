@@ -130,7 +130,7 @@ class SessionTest {
         val client = joinedClient(50003, "손님")
         assertFalse("아직 준비 안 했다", host.lobby.canStart)
 
-        client.setReady(true, 2)
+        client.setReady(true, 2, 3, "GST")
         pump(client)
         assertTrue(host.lobby.canStart)
         assertTrue(host.lobby.slots[1].ready)
@@ -140,12 +140,12 @@ class SessionTest {
     @Test
     fun `준비를 물리면 카운트다운이 멈춘다`() {
         val client = joinedClient(50004, "손님")
-        client.setReady(true, 0)
+        client.setReady(true, 0, 1, "GST")
         pump(client)
         assertTrue(host.requestStart())
         assertTrue(host.lobby.countdownTicks > 0)
 
-        client.setReady(false, 0)
+        client.setReady(false, 0, 1, "GST")
         pump(client)
         assertEquals(0, host.lobby.countdownTicks)
     }
@@ -153,7 +153,7 @@ class SessionTest {
     @Test
     fun `카운트다운이 끝나면 양쪽이 같은 seed 로 시작한다`() {
         val client = joinedClient(50005, "손님")
-        client.setReady(true, 0)
+        client.setReady(true, 0, 1, "GST")
         pump(client)
 
         host.prepareMatch(seed = 20260819L, stageIndex = 3, gridHash = -777L)
@@ -185,7 +185,7 @@ class SessionTest {
     @Test
     fun `시작한 뒤에는 들어올 수 없다`() {
         val client = joinedClient(50006, "손님")
-        client.setReady(true, 0)
+        client.setReady(true, 0, 1, "GST")
         pump(client)
         host.requestStart()
         repeat(Protocol.COUNTDOWN_SECONDS * 60 + 4) { host.update() }
@@ -326,7 +326,7 @@ class SessionTest {
 
     private fun startedClient(port: Int): ClientSession {
         val client = joinedClient(port, "손님")
-        client.setReady(true, 0)
+        client.setReady(true, 0, 1, "GST")
         pump(client)
         host.prepareMatch(1L, 0, 0L)
         host.requestStart()

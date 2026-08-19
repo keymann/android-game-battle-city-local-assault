@@ -1,5 +1,7 @@
 package com.kophas.battlecity.net
 
+import com.kophas.battlecity.gameplay.PlayerProfile
+
 /**
  * 로비. (계획서 §28, §38)
  *
@@ -7,12 +9,20 @@ package com.kophas.battlecity.net
  * 최소 두 명이 있어야 한다. 네트워크를 모르고 규칙만 안다. 그래서 통로 없이도
  * 상태 변화를 그대로 시험할 수 있다.
  */
-class LobbyState(private val maxPlayers: Int = Protocol.MAX_PLAYERS) {
+class LobbyState(
+    private val maxPlayers: Int = Protocol.MAX_PLAYERS,
+    /** 고를 수 있는 색의 수. 사람 수보다 많아야 모두 다른 색을 쥘 수 있다. */
+    private val paletteSize: Int = Protocol.MAX_PLAYERS + 2,
+) {
 
     class Slot(val index: Int) {
         var name: String = ""
             internal set
         var tankType: Int = 0
+            internal set
+
+        /** 팔레트 자리 번호. 사람끼리 겹칠 수 없다. */
+        var colorIndex: Int = index
             internal set
         var ready: Boolean = false
             internal set
@@ -39,8 +49,10 @@ class LobbyState(private val maxPlayers: Int = Protocol.MAX_PLAYERS) {
     /** Host 는 언제나 0번 자리다. 방을 연 사람이 곧 권위다. (계획서 §4.2) */
     fun openAsHost(name: String, tankType: Int, nowMs: Long): Slot {
         val slot = slots[0]
-        slot.name = name
+        // 이름 규칙은 여기 한 곳에만 둔다. 비면 자리 번호로 P1 ~ P4 가 들어간다.
+        slot.name = PlayerProfile.sanitize(name, 0)
         slot.tankType = tankType
+        slot.colorIndex = 0
         slot.connected = true
         slot.host = true
         slot.ready = true
@@ -49,11 +61,13 @@ class LobbyState(private val maxPlayers: Int = Protocol.MAX_PLAYERS) {
     }
 
     /** @return 배정한 자리. 방이 찼거나 이미 시작했으면 null. */
-    fun join(name: String, tankType: Int, nowMs: Long): Slot? {
+    fun join(name: String, tankType: Int, colorIndex: Int, nowMs: Long): Slot? {
         if (started) return null
         val slot = slots.firstOrNull { !it.connected } ?: return null
-        slot.name = name
+        slot.name = PlayerProfile.sanitize(name, slot.index)
         slot.tankType = tankType
+        // 원하는 색이 이미 쓰이고 있으면 남은 색으로 바꿔 준다.
+        slot.colorIndex = if (isColorFree(colorIndex, slot.index)) colorIndex else freeColor(slot.index)
         slot.connected = true
         slot.host = false
         slot.ready = false
@@ -69,14 +83,39 @@ class LobbyState(private val maxPlayers: Int = Protocol.MAX_PLAYERS) {
         countdownTicks = 0
     }
 
-    fun setReady(index: Int, ready: Boolean, tankType: Int, nowMs: Long) {
+    /**
+     * 준비 상태와 고른 것을 함께 받는다.
+     *
+     * 색이 이미 쓰이고 있으면 **바꾸지 않고 쓰던 것을 지킨다.** 거절하는 대신
+     * 조용히 되돌리는 이유는, 두 사람이 같은 순간에 같은 색을 누르는 일이 흔하고
+     * 그때마다 오류를 띄우면 로비가 시끄러워지기 때문이다.
+     */
+    fun setReady(
+        index: Int,
+        ready: Boolean,
+        tankType: Int,
+        colorIndex: Int,
+        name: String,
+        nowMs: Long,
+    ) {
         val slot = slots.getOrNull(index) ?: return
         if (!slot.connected) return
         slot.ready = ready
         slot.tankType = tankType
+        if (isColorFree(colorIndex, index)) slot.colorIndex = colorIndex
+        if (name.isNotBlank()) slot.name = PlayerProfile.sanitize(name, index)
         slot.lastSeenMs = nowMs
         if (!ready) countdownTicks = 0
     }
+
+    /** 그 색을 지금 다른 사람이 쓰고 있지 않은가. */
+    fun isColorFree(colorIndex: Int, exceptSlot: Int): Boolean {
+        if (colorIndex !in 0 until paletteSize) return false
+        return slots.none { it.connected && it.index != exceptSlot && it.colorIndex == colorIndex }
+    }
+
+    private fun freeColor(slotIndex: Int): Int =
+        (0 until paletteSize).firstOrNull { isColorFree(it, slotIndex) } ?: slotIndex
 
     fun touch(index: Int, nowMs: Long) {
         slots.getOrNull(index)?.lastSeenMs = nowMs
@@ -137,7 +176,9 @@ class LobbyState(private val maxPlayers: Int = Protocol.MAX_PLAYERS) {
 
     fun snapshot(): Messages.LobbyUpdate = Messages.LobbyUpdate(
         slots = slots.map {
-            Messages.LobbySlot(it.index, it.name, it.tankType, it.ready, it.connected, it.host)
+            Messages.LobbySlot(
+                it.index, it.name, it.tankType, it.colorIndex, it.ready, it.connected, it.host,
+            )
         },
         countdownTicks = countdownTicks,
     )

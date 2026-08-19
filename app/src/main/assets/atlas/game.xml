@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- tools/build_atlas.py 가 생성한다. 직접 수정하지 말 것. -->
 <TextureAtlas imagePath="game.png">
-	<SubTexture name="barrel_hazard.png" x="1" y="767" width="38" height="56"/>
-	<SubTexture name="barrel_steel.png" x="40" y="767" width="38" height="56"/>
+	<SubTexture name="barrel_hazard.png" x="878" y="702" width="38" height="56"/>
+	<SubTexture name="barrel_steel.png" x="917" y="702" width="38" height="56"/>
 	<SubTexture name="base_damage_1.png" x="486" y="486" width="72" height="64"/>
 	<SubTexture name="base_damage_2.png" x="559" y="486" width="72" height="64"/>
 	<SubTexture name="base_destroyed.png" x="632" y="486" width="72" height="64"/>
@@ -18,15 +18,15 @@
 	<SubTexture name="brick_damage_2b.png" x="269" y="572" width="64" height="64"/>
 	<SubTexture name="brick_intact_a.png" x="334" y="572" width="64" height="64"/>
 	<SubTexture name="brick_intact_b.png" x="399" y="572" width="64" height="64"/>
-	<SubTexture name="brick_rubble_a.png" x="494" y="767" width="56" height="49"/>
-	<SubTexture name="brick_rubble_b.png" x="608" y="767" width="56" height="48"/>
-	<SubTexture name="bush_cluster.png" x="665" y="767" width="56" height="48"/>
-	<SubTexture name="crate_broken.png" x="551" y="767" width="56" height="49"/>
-	<SubTexture name="crate_intact.png" x="79" y="767" width="56" height="56"/>
+	<SubTexture name="brick_rubble_a.png" x="359" y="767" width="56" height="49"/>
+	<SubTexture name="brick_rubble_b.png" x="473" y="767" width="56" height="48"/>
+	<SubTexture name="bush_cluster.png" x="530" y="767" width="56" height="48"/>
+	<SubTexture name="crate_broken.png" x="416" y="767" width="56" height="49"/>
+	<SubTexture name="crate_intact.png" x="956" y="702" width="56" height="56"/>
 	<SubTexture name="dash_trail_1.png" x="93" y="1" width="96" height="96"/>
 	<SubTexture name="dash_trail_2.png" x="190" y="1" width="96" height="96"/>
 	<SubTexture name="dash_trail_3.png" x="287" y="1" width="96" height="96"/>
-	<SubTexture name="debris_brick.png" x="201" y="767" width="56" height="55"/>
+	<SubTexture name="debris_brick.png" x="66" y="767" width="56" height="55"/>
 	<SubTexture name="enemy_attack_down.png" x="384" y="1" width="96" height="96"/>
 	<SubTexture name="enemy_attack_left.png" x="481" y="1" width="96" height="96"/>
 	<SubTexture name="enemy_attack_right.png" x="578" y="1" width="96" height="96"/>
@@ -59,27 +59,25 @@
 	<SubTexture name="ground_lush_grass.png" x="66" y="637" width="64" height="64"/>
 	<SubTexture name="ground_scorched_a.png" x="131" y="637" width="64" height="64"/>
 	<SubTexture name="ground_scorched_b.png" x="196" y="637" width="64" height="64"/>
-	<SubTexture name="hud_cooldown_25.png" x="261" y="637" width="57" height="64"/>
-	<SubTexture name="hud_cooldown_75.png" x="319" y="637" width="60" height="64"/>
-	<SubTexture name="hud_enemy_counter.png" x="846" y="702" width="64" height="59"/>
-	<SubTexture name="hud_fire_button_normal.png" x="380" y="637" width="63" height="64"/>
-	<SubTexture name="hud_fire_button_pressed.png" x="716" y="702" width="64" height="60"/>
-	<SubTexture name="hud_heart_empty.png" x="444" y="637" width="60" height="64"/>
-	<SubTexture name="hud_heart_full.png" x="505" y="637" width="50" height="64"/>
-	<SubTexture name="hud_joystick_base.png" x="781" y="702" width="64" height="60"/>
-	<SubTexture name="hud_joystick_knob.png" x="136" y="767" width="64" height="56"/>
-	<SubTexture name="hud_kill_explosion.png" x="556" y="637" width="64" height="64"/>
-	<SubTexture name="hud_network_disconnected.png" x="621" y="637" width="57" height="64"/>
-	<SubTexture name="hud_network_strong.png" x="679" y="637" width="63" height="64"/>
-	<SubTexture name="hud_player_dead.png" x="743" y="637" width="62" height="64"/>
-	<SubTexture name="hud_special_button_normal.png" x="806" y="637" width="64" height="64"/>
-	<SubTexture name="hud_special_button_pressed.png" x="315" y="767" width="64" height="54"/>
-	<SubTexture name="hud_status_panel.png" x="871" y="637" width="64" height="64"/>
-	<SubTexture name="ice_clean_a.png" x="936" y="637" width="64" height="64"/>
-	<SubTexture name="ice_clean_b.png" x="1" y="702" width="64" height="64"/>
-	<SubTexture name="ice_cracked_a.png" x="66" y="702" width="64" height="64"/>
-	<SubTexture name="ice_cracked_b.png" x="131" y="702" width="64" height="64"/>
-	<SubTexture name="impact_small.png" x="437" y="767" width="56" height="51"/>
+	<SubTexture name="hud_enemy_counter.png" x="716" y="702" width="64" height="59"/>
+	<SubTexture name="hud_fire_button_normal.png" x="261" y="637" width="63" height="64"/>
+	<SubTexture name="hud_fire_button_pressed.png" x="586" y="702" width="64" height="60"/>
+	<SubTexture name="hud_heart_empty.png" x="325" y="637" width="60" height="64"/>
+	<SubTexture name="hud_heart_full.png" x="386" y="637" width="50" height="64"/>
+	<SubTexture name="hud_joystick_base.png" x="651" y="702" width="64" height="60"/>
+	<SubTexture name="hud_joystick_knob.png" x="1" y="767" width="64" height="56"/>
+	<SubTexture name="hud_kill_explosion.png" x="437" y="637" width="64" height="64"/>
+	<SubTexture name="hud_network_disconnected.png" x="502" y="637" width="57" height="64"/>
+	<SubTexture name="hud_network_strong.png" x="560" y="637" width="63" height="64"/>
+	<SubTexture name="hud_player_dead.png" x="624" y="637" width="62" height="64"/>
+	<SubTexture name="hud_special_button_normal.png" x="687" y="637" width="64" height="64"/>
+	<SubTexture name="hud_special_button_pressed.png" x="180" y="767" width="64" height="54"/>
+	<SubTexture name="hud_status_panel.png" x="752" y="637" width="64" height="64"/>
+	<SubTexture name="ice_clean_a.png" x="817" y="637" width="64" height="64"/>
+	<SubTexture name="ice_clean_b.png" x="882" y="637" width="64" height="64"/>
+	<SubTexture name="ice_cracked_a.png" x="947" y="637" width="64" height="64"/>
+	<SubTexture name="ice_cracked_b.png" x="1" y="702" width="64" height="64"/>
+	<SubTexture name="impact_small.png" x="302" y="767" width="56" height="51"/>
 	<SubTexture name="lobby_disconnected.png" x="389" y="195" width="91" height="96"/>
 	<SubTexture name="lobby_host_badge.png" x="849" y="389" width="96" height="93"/>
 	<SubTexture name="lobby_locked_badge.png" x="481" y="195" width="89" height="96"/>
@@ -92,14 +90,14 @@
 	<SubTexture name="lobby_ready_badge.png" x="921" y="195" width="89" height="96"/>
 	<SubTexture name="lobby_secondary_button.png" x="98" y="486" width="96" height="81"/>
 	<SubTexture name="lobby_settings_button.png" x="752" y="389" width="96" height="94"/>
-	<SubTexture name="lobby_title_plate.png" x="911" y="702" width="96" height="59"/>
+	<SubTexture name="lobby_title_plate.png" x="781" y="702" width="96" height="59"/>
 	<SubTexture name="lobby_waiting_badge.png" x="1" y="486" width="96" height="85"/>
 	<SubTexture name="lobby_wifi_strong.png" x="195" y="486" width="96" height="79"/>
 	<SubTexture name="lobby_wifi_weak.png" x="1" y="292" width="96" height="96"/>
-	<SubTexture name="muzzle_flash_down.png" x="722" y="767" width="27" height="48"/>
-	<SubTexture name="muzzle_flash_left.png" x="914" y="767" width="48" height="30"/>
-	<SubTexture name="muzzle_flash_right.png" x="963" y="767" width="48" height="29"/>
-	<SubTexture name="muzzle_flash_up.png" x="750" y="767" width="34" height="48"/>
+	<SubTexture name="muzzle_flash_down.png" x="587" y="767" width="27" height="48"/>
+	<SubTexture name="muzzle_flash_left.png" x="779" y="767" width="48" height="30"/>
+	<SubTexture name="muzzle_flash_right.png" x="828" y="767" width="48" height="29"/>
+	<SubTexture name="muzzle_flash_up.png" x="615" y="767" width="34" height="48"/>
 	<SubTexture name="player_attack_down.png" x="98" y="292" width="96" height="96"/>
 	<SubTexture name="player_attack_left.png" x="195" y="292" width="96" height="96"/>
 	<SubTexture name="player_attack_right.png" x="292" y="292" width="96" height="96"/>
@@ -112,104 +110,104 @@
 	<SubTexture name="player_speed_left.png" x="1" y="389" width="96" height="96"/>
 	<SubTexture name="player_speed_right.png" x="98" y="389" width="96" height="96"/>
 	<SubTexture name="player_speed_up.png" x="195" y="389" width="96" height="96"/>
-	<SubTexture name="ricochet_steel.png" x="258" y="767" width="56" height="55"/>
-	<SubTexture name="rock_cluster.png" x="785" y="767" width="56" height="48"/>
-	<SubTexture name="sandbag_corner.png" x="380" y="767" width="56" height="53"/>
-	<SubTexture name="sandbag_straight.png" x="1" y="824" width="56" height="27"/>
-	<SubTexture name="shell_normal_down.png" x="842" y="767" width="14" height="40"/>
-	<SubTexture name="shell_normal_left.png" x="433" y="852" width="40" height="13"/>
-	<SubTexture name="shell_normal_right.png" x="392" y="852" width="40" height="15"/>
-	<SubTexture name="shell_normal_up.png" x="857" y="767" width="14" height="40"/>
-	<SubTexture name="shell_piercing_down.png" x="872" y="767" width="21" height="40"/>
-	<SubTexture name="shell_piercing_left.png" x="58" y="824" width="40" height="18"/>
-	<SubTexture name="shell_piercing_right.png" x="99" y="824" width="40" height="18"/>
-	<SubTexture name="shell_piercing_up.png" x="894" y="767" width="19" height="40"/>
+	<SubTexture name="ricochet_steel.png" x="123" y="767" width="56" height="55"/>
+	<SubTexture name="rock_cluster.png" x="650" y="767" width="56" height="48"/>
+	<SubTexture name="sandbag_corner.png" x="245" y="767" width="56" height="53"/>
+	<SubTexture name="sandbag_straight.png" x="877" y="767" width="56" height="27"/>
+	<SubTexture name="shell_normal_down.png" x="707" y="767" width="14" height="40"/>
+	<SubTexture name="shell_normal_left.png" x="297" y="841" width="40" height="13"/>
+	<SubTexture name="shell_normal_right.png" x="256" y="841" width="40" height="15"/>
+	<SubTexture name="shell_normal_up.png" x="722" y="767" width="14" height="40"/>
+	<SubTexture name="shell_piercing_down.png" x="737" y="767" width="21" height="40"/>
+	<SubTexture name="shell_piercing_left.png" x="934" y="767" width="40" height="18"/>
+	<SubTexture name="shell_piercing_right.png" x="975" y="767" width="40" height="18"/>
+	<SubTexture name="shell_piercing_up.png" x="759" y="767" width="19" height="40"/>
 	<SubTexture name="shield_1.png" x="292" y="389" width="96" height="96"/>
 	<SubTexture name="shield_2.png" x="389" y="389" width="96" height="96"/>
 	<SubTexture name="shield_3.png" x="486" y="389" width="96" height="96"/>
 	<SubTexture name="shield_hit.png" x="583" y="389" width="96" height="96"/>
 	<SubTexture name="spawn_glow.png" x="680" y="389" width="71" height="96"/>
-	<SubTexture name="steel_clean_a.png" x="196" y="702" width="64" height="64"/>
-	<SubTexture name="steel_reinforced_a.png" x="261" y="702" width="64" height="64"/>
-	<SubTexture name="steel_reinforced_b.png" x="326" y="702" width="64" height="64"/>
-	<SubTexture name="steel_riveted_b.png" x="391" y="702" width="64" height="64"/>
-	<SubTexture name="ui_alt_char_A.png" x="140" y="824" width="16" height="16"/>
-	<SubTexture name="ui_alt_char_B.png" x="157" y="824" width="16" height="16"/>
-	<SubTexture name="ui_alt_char_C.png" x="174" y="824" width="16" height="16"/>
-	<SubTexture name="ui_alt_char_D.png" x="191" y="824" width="16" height="16"/>
-	<SubTexture name="ui_alt_char_E.png" x="208" y="824" width="16" height="16"/>
-	<SubTexture name="ui_alt_char_F.png" x="225" y="824" width="16" height="16"/>
-	<SubTexture name="ui_alt_char_G.png" x="242" y="824" width="16" height="16"/>
-	<SubTexture name="ui_alt_char_H.png" x="259" y="824" width="16" height="16"/>
-	<SubTexture name="ui_alt_char_I.png" x="276" y="824" width="16" height="16"/>
-	<SubTexture name="ui_alt_char_J.png" x="293" y="824" width="16" height="16"/>
-	<SubTexture name="ui_alt_char_K.png" x="310" y="824" width="16" height="16"/>
-	<SubTexture name="ui_alt_char_L.png" x="327" y="824" width="16" height="16"/>
-	<SubTexture name="ui_alt_char_M.png" x="344" y="824" width="16" height="16"/>
-	<SubTexture name="ui_alt_char_N.png" x="361" y="824" width="16" height="16"/>
-	<SubTexture name="ui_alt_char_O.png" x="378" y="824" width="16" height="16"/>
-	<SubTexture name="ui_alt_char_P.png" x="395" y="824" width="16" height="16"/>
-	<SubTexture name="ui_alt_char_Q.png" x="412" y="824" width="16" height="16"/>
-	<SubTexture name="ui_alt_char_R.png" x="429" y="824" width="16" height="16"/>
-	<SubTexture name="ui_alt_char_S.png" x="446" y="824" width="16" height="16"/>
-	<SubTexture name="ui_alt_char_T.png" x="463" y="824" width="16" height="16"/>
-	<SubTexture name="ui_alt_char_U.png" x="480" y="824" width="16" height="16"/>
-	<SubTexture name="ui_alt_char_V.png" x="497" y="824" width="16" height="16"/>
-	<SubTexture name="ui_alt_char_W.png" x="514" y="824" width="16" height="16"/>
-	<SubTexture name="ui_alt_char_X.png" x="531" y="824" width="16" height="16"/>
-	<SubTexture name="ui_alt_char_Y.png" x="548" y="824" width="16" height="16"/>
-	<SubTexture name="ui_alt_char_Z.png" x="565" y="824" width="16" height="16"/>
-	<SubTexture name="ui_alt_digit_0.png" x="582" y="824" width="16" height="16"/>
-	<SubTexture name="ui_alt_digit_1.png" x="599" y="824" width="16" height="16"/>
-	<SubTexture name="ui_alt_digit_2.png" x="616" y="824" width="16" height="16"/>
-	<SubTexture name="ui_alt_digit_3.png" x="633" y="824" width="16" height="16"/>
-	<SubTexture name="ui_alt_digit_4.png" x="650" y="824" width="16" height="16"/>
-	<SubTexture name="ui_alt_digit_5.png" x="667" y="824" width="16" height="16"/>
-	<SubTexture name="ui_alt_digit_6.png" x="684" y="824" width="16" height="16"/>
-	<SubTexture name="ui_alt_digit_7.png" x="701" y="824" width="16" height="16"/>
-	<SubTexture name="ui_alt_digit_8.png" x="718" y="824" width="16" height="16"/>
-	<SubTexture name="ui_alt_digit_9.png" x="735" y="824" width="16" height="16"/>
-	<SubTexture name="ui_char_A.png" x="752" y="824" width="16" height="16"/>
-	<SubTexture name="ui_char_B.png" x="769" y="824" width="16" height="16"/>
-	<SubTexture name="ui_char_C.png" x="786" y="824" width="16" height="16"/>
-	<SubTexture name="ui_char_D.png" x="803" y="824" width="16" height="16"/>
-	<SubTexture name="ui_char_E.png" x="820" y="824" width="16" height="16"/>
-	<SubTexture name="ui_char_F.png" x="837" y="824" width="16" height="16"/>
-	<SubTexture name="ui_char_G.png" x="854" y="824" width="16" height="16"/>
-	<SubTexture name="ui_char_H.png" x="871" y="824" width="16" height="16"/>
-	<SubTexture name="ui_char_I.png" x="888" y="824" width="16" height="16"/>
-	<SubTexture name="ui_char_J.png" x="905" y="824" width="16" height="16"/>
-	<SubTexture name="ui_char_K.png" x="922" y="824" width="16" height="16"/>
-	<SubTexture name="ui_char_L.png" x="939" y="824" width="16" height="16"/>
-	<SubTexture name="ui_char_M.png" x="956" y="824" width="16" height="16"/>
-	<SubTexture name="ui_char_N.png" x="973" y="824" width="16" height="16"/>
-	<SubTexture name="ui_char_O.png" x="990" y="824" width="16" height="16"/>
-	<SubTexture name="ui_char_P.png" x="1007" y="824" width="16" height="16"/>
-	<SubTexture name="ui_char_Q.png" x="1" y="852" width="16" height="16"/>
-	<SubTexture name="ui_char_R.png" x="18" y="852" width="16" height="16"/>
-	<SubTexture name="ui_char_S.png" x="35" y="852" width="16" height="16"/>
-	<SubTexture name="ui_char_T.png" x="52" y="852" width="16" height="16"/>
-	<SubTexture name="ui_char_U.png" x="69" y="852" width="16" height="16"/>
-	<SubTexture name="ui_char_V.png" x="86" y="852" width="16" height="16"/>
-	<SubTexture name="ui_char_W.png" x="103" y="852" width="16" height="16"/>
-	<SubTexture name="ui_char_X.png" x="120" y="852" width="16" height="16"/>
-	<SubTexture name="ui_char_Y.png" x="137" y="852" width="16" height="16"/>
-	<SubTexture name="ui_char_Z.png" x="154" y="852" width="16" height="16"/>
-	<SubTexture name="ui_digit_0.png" x="171" y="852" width="16" height="16"/>
-	<SubTexture name="ui_digit_1.png" x="188" y="852" width="16" height="16"/>
-	<SubTexture name="ui_digit_2.png" x="205" y="852" width="16" height="16"/>
-	<SubTexture name="ui_digit_3.png" x="222" y="852" width="16" height="16"/>
-	<SubTexture name="ui_digit_4.png" x="239" y="852" width="16" height="16"/>
-	<SubTexture name="ui_digit_5.png" x="256" y="852" width="16" height="16"/>
-	<SubTexture name="ui_digit_6.png" x="273" y="852" width="16" height="16"/>
-	<SubTexture name="ui_digit_7.png" x="290" y="852" width="16" height="16"/>
-	<SubTexture name="ui_digit_8.png" x="307" y="852" width="16" height="16"/>
-	<SubTexture name="ui_digit_9.png" x="324" y="852" width="16" height="16"/>
-	<SubTexture name="ui_minus.png" x="341" y="852" width="16" height="16"/>
-	<SubTexture name="ui_percent.png" x="358" y="852" width="16" height="16"/>
-	<SubTexture name="ui_plus.png" x="375" y="852" width="16" height="16"/>
-	<SubTexture name="water_frame_1.png" x="456" y="702" width="64" height="64"/>
-	<SubTexture name="water_frame_2.png" x="521" y="702" width="64" height="64"/>
-	<SubTexture name="water_frame_3.png" x="586" y="702" width="64" height="64"/>
-	<SubTexture name="water_frame_4.png" x="651" y="702" width="64" height="64"/>
+	<SubTexture name="steel_clean_a.png" x="66" y="702" width="64" height="64"/>
+	<SubTexture name="steel_reinforced_a.png" x="131" y="702" width="64" height="64"/>
+	<SubTexture name="steel_reinforced_b.png" x="196" y="702" width="64" height="64"/>
+	<SubTexture name="steel_riveted_b.png" x="261" y="702" width="64" height="64"/>
+	<SubTexture name="ui_alt_char_A.png" x="1" y="824" width="16" height="16"/>
+	<SubTexture name="ui_alt_char_B.png" x="18" y="824" width="16" height="16"/>
+	<SubTexture name="ui_alt_char_C.png" x="35" y="824" width="16" height="16"/>
+	<SubTexture name="ui_alt_char_D.png" x="52" y="824" width="16" height="16"/>
+	<SubTexture name="ui_alt_char_E.png" x="69" y="824" width="16" height="16"/>
+	<SubTexture name="ui_alt_char_F.png" x="86" y="824" width="16" height="16"/>
+	<SubTexture name="ui_alt_char_G.png" x="103" y="824" width="16" height="16"/>
+	<SubTexture name="ui_alt_char_H.png" x="120" y="824" width="16" height="16"/>
+	<SubTexture name="ui_alt_char_I.png" x="137" y="824" width="16" height="16"/>
+	<SubTexture name="ui_alt_char_J.png" x="154" y="824" width="16" height="16"/>
+	<SubTexture name="ui_alt_char_K.png" x="171" y="824" width="16" height="16"/>
+	<SubTexture name="ui_alt_char_L.png" x="188" y="824" width="16" height="16"/>
+	<SubTexture name="ui_alt_char_M.png" x="205" y="824" width="16" height="16"/>
+	<SubTexture name="ui_alt_char_N.png" x="222" y="824" width="16" height="16"/>
+	<SubTexture name="ui_alt_char_O.png" x="239" y="824" width="16" height="16"/>
+	<SubTexture name="ui_alt_char_P.png" x="256" y="824" width="16" height="16"/>
+	<SubTexture name="ui_alt_char_Q.png" x="273" y="824" width="16" height="16"/>
+	<SubTexture name="ui_alt_char_R.png" x="290" y="824" width="16" height="16"/>
+	<SubTexture name="ui_alt_char_S.png" x="307" y="824" width="16" height="16"/>
+	<SubTexture name="ui_alt_char_T.png" x="324" y="824" width="16" height="16"/>
+	<SubTexture name="ui_alt_char_U.png" x="341" y="824" width="16" height="16"/>
+	<SubTexture name="ui_alt_char_V.png" x="358" y="824" width="16" height="16"/>
+	<SubTexture name="ui_alt_char_W.png" x="375" y="824" width="16" height="16"/>
+	<SubTexture name="ui_alt_char_X.png" x="392" y="824" width="16" height="16"/>
+	<SubTexture name="ui_alt_char_Y.png" x="409" y="824" width="16" height="16"/>
+	<SubTexture name="ui_alt_char_Z.png" x="426" y="824" width="16" height="16"/>
+	<SubTexture name="ui_alt_digit_0.png" x="443" y="824" width="16" height="16"/>
+	<SubTexture name="ui_alt_digit_1.png" x="460" y="824" width="16" height="16"/>
+	<SubTexture name="ui_alt_digit_2.png" x="477" y="824" width="16" height="16"/>
+	<SubTexture name="ui_alt_digit_3.png" x="494" y="824" width="16" height="16"/>
+	<SubTexture name="ui_alt_digit_4.png" x="511" y="824" width="16" height="16"/>
+	<SubTexture name="ui_alt_digit_5.png" x="528" y="824" width="16" height="16"/>
+	<SubTexture name="ui_alt_digit_6.png" x="545" y="824" width="16" height="16"/>
+	<SubTexture name="ui_alt_digit_7.png" x="562" y="824" width="16" height="16"/>
+	<SubTexture name="ui_alt_digit_8.png" x="579" y="824" width="16" height="16"/>
+	<SubTexture name="ui_alt_digit_9.png" x="596" y="824" width="16" height="16"/>
+	<SubTexture name="ui_char_A.png" x="613" y="824" width="16" height="16"/>
+	<SubTexture name="ui_char_B.png" x="630" y="824" width="16" height="16"/>
+	<SubTexture name="ui_char_C.png" x="647" y="824" width="16" height="16"/>
+	<SubTexture name="ui_char_D.png" x="664" y="824" width="16" height="16"/>
+	<SubTexture name="ui_char_E.png" x="681" y="824" width="16" height="16"/>
+	<SubTexture name="ui_char_F.png" x="698" y="824" width="16" height="16"/>
+	<SubTexture name="ui_char_G.png" x="715" y="824" width="16" height="16"/>
+	<SubTexture name="ui_char_H.png" x="732" y="824" width="16" height="16"/>
+	<SubTexture name="ui_char_I.png" x="749" y="824" width="16" height="16"/>
+	<SubTexture name="ui_char_J.png" x="766" y="824" width="16" height="16"/>
+	<SubTexture name="ui_char_K.png" x="783" y="824" width="16" height="16"/>
+	<SubTexture name="ui_char_L.png" x="800" y="824" width="16" height="16"/>
+	<SubTexture name="ui_char_M.png" x="817" y="824" width="16" height="16"/>
+	<SubTexture name="ui_char_N.png" x="834" y="824" width="16" height="16"/>
+	<SubTexture name="ui_char_O.png" x="851" y="824" width="16" height="16"/>
+	<SubTexture name="ui_char_P.png" x="868" y="824" width="16" height="16"/>
+	<SubTexture name="ui_char_Q.png" x="885" y="824" width="16" height="16"/>
+	<SubTexture name="ui_char_R.png" x="902" y="824" width="16" height="16"/>
+	<SubTexture name="ui_char_S.png" x="919" y="824" width="16" height="16"/>
+	<SubTexture name="ui_char_T.png" x="936" y="824" width="16" height="16"/>
+	<SubTexture name="ui_char_U.png" x="953" y="824" width="16" height="16"/>
+	<SubTexture name="ui_char_V.png" x="970" y="824" width="16" height="16"/>
+	<SubTexture name="ui_char_W.png" x="987" y="824" width="16" height="16"/>
+	<SubTexture name="ui_char_X.png" x="1004" y="824" width="16" height="16"/>
+	<SubTexture name="ui_char_Y.png" x="1" y="841" width="16" height="16"/>
+	<SubTexture name="ui_char_Z.png" x="18" y="841" width="16" height="16"/>
+	<SubTexture name="ui_digit_0.png" x="35" y="841" width="16" height="16"/>
+	<SubTexture name="ui_digit_1.png" x="52" y="841" width="16" height="16"/>
+	<SubTexture name="ui_digit_2.png" x="69" y="841" width="16" height="16"/>
+	<SubTexture name="ui_digit_3.png" x="86" y="841" width="16" height="16"/>
+	<SubTexture name="ui_digit_4.png" x="103" y="841" width="16" height="16"/>
+	<SubTexture name="ui_digit_5.png" x="120" y="841" width="16" height="16"/>
+	<SubTexture name="ui_digit_6.png" x="137" y="841" width="16" height="16"/>
+	<SubTexture name="ui_digit_7.png" x="154" y="841" width="16" height="16"/>
+	<SubTexture name="ui_digit_8.png" x="171" y="841" width="16" height="16"/>
+	<SubTexture name="ui_digit_9.png" x="188" y="841" width="16" height="16"/>
+	<SubTexture name="ui_minus.png" x="205" y="841" width="16" height="16"/>
+	<SubTexture name="ui_percent.png" x="222" y="841" width="16" height="16"/>
+	<SubTexture name="ui_plus.png" x="239" y="841" width="16" height="16"/>
+	<SubTexture name="water_frame_1.png" x="326" y="702" width="64" height="64"/>
+	<SubTexture name="water_frame_2.png" x="391" y="702" width="64" height="64"/>
+	<SubTexture name="water_frame_3.png" x="456" y="702" width="64" height="64"/>
+	<SubTexture name="water_frame_4.png" x="521" y="702" width="64" height="64"/>
 </TextureAtlas>

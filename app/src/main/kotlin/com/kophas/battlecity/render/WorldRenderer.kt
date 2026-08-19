@@ -309,6 +309,8 @@ class WorldRenderer(
                 drawDashTrail(batch, tank, centerX, centerY, spriteSize, timeSeconds)
             }
 
+            // 탱크 그림은 무채색이다. 고른 색을 여기서 곱한다. COM 은 단일 색이다.
+            val color = catalog.palette.colorOf(tank.colorSlot)
             batch.draw(
                 region = catalog.tankSprite(tank),
                 x = centerX - spriteSize * 0.5f,
@@ -316,6 +318,9 @@ class WorldRenderer(
                 width = spriteSize,
                 height = spriteSize,
                 layer = Constants.Layer.ENTITY,
+                red = red(color),
+                green = green(color),
+                blue = blue(color),
                 alpha = alpha,
             )
 
@@ -345,7 +350,7 @@ class WorldRenderer(
     ) {
         val marker = catalog.slotMarker
         val size = bodySize * marker.sizeRatio
-        val color = marker.colorOf(tank.colorSlot)
+        val color = catalog.palette.colorOf(tank.colorSlot)
         batch.draw(
             region = marker.region,
             x = centerX - size * 0.5f,

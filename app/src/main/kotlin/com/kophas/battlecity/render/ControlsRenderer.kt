@@ -25,9 +25,9 @@ import com.kophas.battlecity.input.TouchControls
  */
 class ControlsRenderer(private val catalog: SpriteCatalog) {
 
-    fun render(batch: SpriteBatch, controls: TouchControls, tank: Tank?) {
+    fun render(batch: SpriteBatch, controls: TouchControls, tank: Tank?, timeSeconds: Float) {
         drawStick(batch, controls)
-        drawButtons(batch, controls, tank)
+        drawButtons(batch, controls, tank, timeSeconds)
     }
 
     private fun drawStick(batch: SpriteBatch, controls: TouchControls) {
@@ -63,7 +63,12 @@ class ControlsRenderer(private val catalog: SpriteCatalog) {
         )
     }
 
-    private fun drawButtons(batch: SpriteBatch, controls: TouchControls, tank: Tank?) {
+    private fun drawButtons(
+        batch: SpriteBatch,
+        controls: TouchControls,
+        tank: Tank?,
+        timeSeconds: Float,
+    ) {
         val state = controls.state
         val radius = controls.buttonRadius()
         val size = radius * 2f
@@ -82,50 +87,78 @@ class ControlsRenderer(private val catalog: SpriteCatalog) {
         // 고장 난 것으로 보인다.
         if (tank == null || tank.special == BalanceConfig.Special.NONE) return
 
-        val ready = tank.specialReadyRatio >= 1f
+        drawSpecial(batch, controls, tank, timeSeconds)
+    }
+
+    /**
+     * 특수기 버튼이 곧 쿨타임 표시다.
+     *
+     * 예전에는 고리 그림을 따로 얹었는데, 버튼과 고리가 겹쳐 무엇을 보는지 헷갈렸다.
+     * 이제 **버튼 자체**를 쓴다. 어둡게 깐 위에 차오른 만큼만 밝게 덧그린다.
+     * 다 차면 잠깐 숨을 쉬듯 커졌다 작아져서 쓸 수 있게 된 것을 알린다.
+     */
+    private fun drawSpecial(
+        batch: SpriteBatch,
+        controls: TouchControls,
+        tank: Tank,
+        timeSeconds: Float,
+    ) {
+        val ratio = tank.specialReadyRatio
+        val ready = ratio >= 1f
         val centerX = controls.specialCenterX()
         val centerY = controls.specialCenterY()
-        val specialRadius = controls.specialRadius()
-        val specialSize = specialRadius * 2f
+        val region = if (state(controls)) catalog.specialButtonPressed else catalog.specialButton
+
+        // 다 찼을 때만 아주 살짝 맥동한다. 쿨타임 중에 흔들면 조바심만 난다.
+        val pulse = if (ready) {
+            1f + PULSE_DEPTH * kotlin.math.sin(timeSeconds * PULSE_SPEED)
+        } else {
+            1f
+        }
+        val radius = controls.specialRadius() * pulse
+        val size = radius * 2f
 
         batch.draw(
-            region = if (state.specialPressed) {
-                catalog.specialButtonPressed
-            } else {
-                catalog.specialButton
-            },
-            x = centerX - specialRadius,
-            y = centerY - specialRadius,
-            width = specialSize,
-            height = specialSize,
+            region = region,
+            x = centerX - radius,
+            y = centerY - radius,
+            width = size,
+            height = size,
             layer = Constants.Layer.HUD,
-            // 아직 못 쓰면 어둡게. 쓸 수 있게 되면 밝아진다.
-            red = if (ready) 1f else DIM,
-            green = if (ready) 1f else DIM,
-            blue = if (ready) 1f else DIM,
-            alpha = if (ready) 1f else ACTIVE_ALPHA,
+            red = DIM,
+            green = DIM,
+            blue = DIM,
+            alpha = if (ready) 1f else CHARGING_ALPHA,
         )
+        if (ratio <= 0f) return
 
-        // 차오르는 고리를 버튼 위에 겹쳐 남은 시간을 보여 준다.
-        if (ready) return
-        val ring = catalog.cooldownRing
-        val filled = ring.bottomBand(tank.specialReadyRatio)
-        val height = specialSize * tank.specialReadyRatio
+        // 아래에서 위로 차오른다. 남은 시간이 눈에 보인다.
+        val filled = region.bottomBand(ratio)
+        val height = size * ratio
         batch.draw(
             region = filled,
-            x = centerX - specialRadius,
-            y = centerY - specialRadius + (specialSize - height),
-            width = specialSize,
+            x = centerX - radius,
+            y = centerY - radius + (size - height),
+            width = size,
             height = height,
             layer = Constants.Layer.HUD,
-            alpha = 0.9f,
+            alpha = 1f,
         )
     }
+
+    private fun state(controls: TouchControls): Boolean = controls.state.specialPressed
 
     private companion object {
         const val KNOB_RATIO = 0.46f
         const val IDLE_ALPHA = 0.4f
         const val ACTIVE_ALPHA = 0.8f
-        const val DIM = 0.45f
+
+        /** 아직 안 찬 부분의 밝기. */
+        const val DIM = 0.35f
+        const val CHARGING_ALPHA = 0.75f
+
+        /** 다 찼을 때의 맥동. 너무 크면 누르기 어려워진다. */
+        const val PULSE_DEPTH = 0.05f
+        const val PULSE_SPEED = 4.5f
     }
 }

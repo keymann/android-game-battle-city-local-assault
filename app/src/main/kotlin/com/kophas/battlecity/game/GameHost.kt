@@ -75,10 +75,13 @@ class GameHost(private val assetManager: AssetManager) : GameLoop.Callbacks {
     private fun handleLobbyTap(x: Float, y: Float) {
         val lobby = lobbyScene ?: return
         val driver = netDriver ?: return
-        when (lobby.onTap(x, y)) {
-            LobbyScene.Action.TOGGLE_READY -> driver.toggleReady()
-            LobbyScene.Action.START -> driver.startMatch(scene)
-            LobbyScene.Action.NONE -> Unit
+        when (val action = lobby.onTap(x, y)) {
+            LobbyScene.Action.ToggleReady -> driver.toggleReady()
+            LobbyScene.Action.Start -> driver.startMatch(scene)
+            LobbyScene.Action.CycleType -> driver.cycleTankType()
+            LobbyScene.Action.CycleColor -> driver.cycleColor()
+            is LobbyScene.Action.SetName -> driver.setName(action.name)
+            LobbyScene.Action.None -> Unit
         }
     }
     private val viewport = Viewport(DEFAULT_LOGICAL, DEFAULT_LOGICAL)
@@ -96,7 +99,7 @@ class GameHost(private val assetManager: AssetManager) : GameLoop.Callbacks {
     /** Client 로 붙을 때 직접 지정한 Host 주소. null 이면 브로드캐스트로 찾는다. */
     var hostAddress: String? = null
 
-    var playerName: String = "PLAYER"
+    var playerName: String = ""
 
     private var netDriver: NetDriver? = null
 
@@ -193,7 +196,12 @@ class GameHost(private val assetManager: AssetManager) : GameLoop.Callbacks {
             currentScene.render(batch, viewport)
             // 조작 UI 는 맵 위에, 화면 픽셀 좌표로 그린다. 맵과 함께 늘었다 줄었다
             // 하면 안 된다. 손가락 크기는 해상도가 아니라 기기 크기를 따르기 때문이다.
-            controlsRenderer?.render(batch, touch, currentScene.tankOfSlot(localSlot()))
+            controlsRenderer?.render(
+                batch,
+                touch,
+                currentScene.tankOfSlot(localSlot()),
+                currentScene.elapsed,
+            )
         }
         batch.end()
 
@@ -247,12 +255,13 @@ class GameHost(private val assetManager: AssetManager) : GameLoop.Callbacks {
         val loaded = GameAssets.load(source, renderer)
         assets = loaded
 
+        val catalog = SpriteCatalog(loaded)
+
         // 세션을 먼저 연다. 자리 배정이 씬보다 앞서야 사람이 잡은 자리에 AI 가 안 붙는다.
-        val driver = NetDriver(netRole, playerName, hostAddress)
+        val driver = NetDriver(netRole, playerName, hostAddress, catalog.palette.size)
         // 이 기기를 쥔 사람의 자리에도 AI 를 붙이지 않는다.
         driver.humanSlots += driver.localSlot
         netDriver = driver
-        val catalog = SpriteCatalog(loaded)
         controlsRenderer = ControlsRenderer(catalog)
         lobbyScene = LobbyScene(catalog).apply { resize(command.width, command.height) }
 

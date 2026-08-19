@@ -94,11 +94,22 @@ def build_terrain(entries):
 
 
 def build_tanks(entries):
+    """탱크를 **무채색**으로 넣는다.
+
+    사람마다 색을 고르기 때문이다(로비에서 고른다). 색이 박힌 그림에 다른 색을
+    곱하면 탁해진다. 무채색으로 두고 그릴 때 곱하면 어떤 색이든 깨끗하게 나온다.
+
+    색공간을 Gray 로 바꾼 뒤 반드시 sRGB 로 되돌린다. Gray 로 남겨 두면 나중에
+    색을 곱해도 회색으로 뭉개진다.
+    """
     sheet = A.sheet_of("tanks")
     boxes = A.find_cells(sheet)
     for name, box in zip(A.names_of("tanks"), boxes):
         out = f"{A.SPRITES}/{name}.png"
         A.make_tank(sheet, box, out, TANK_BODY, TANK_CANVAS)
+        A.run(["magick", out, "-colorspace", "Gray", "-colorspace", "sRGB",
+               # 살짝 밝혀 둔다. 색을 곱하면 어두워지기 때문이다.
+               "-level", "0%,92%", "-depth", "8", out])
         entries.append((name, out))
 
 
@@ -130,10 +141,16 @@ def build_effects(entries):
         entries.append((name, out))
 
 
+#: 쓰지 않는 아이콘. 쿨타임은 SPECIAL 버튼 자체에 표현하므로 따로 둘 것이 없다.
+SKIP_ICONS = {"cooldown_25", "cooldown_75"}
+
+
 def build_icons(entries, src, prefix, size):
     """아이콘 묶음. 개별 파일은 잘림이 제각각이라 한 번 더 다듬는다."""
     for filename in sorted(os.listdir(src)):
         if not filename.endswith(".png"):
+            continue
+        if filename[:-4] in SKIP_ICONS:
             continue
         name = f"{prefix}{filename[:-4]}"
         out = f"{A.SPRITES}/{name}.png"
