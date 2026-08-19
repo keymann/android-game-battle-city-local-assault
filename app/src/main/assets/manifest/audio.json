@@ -1,0 +1,70 @@
+{
+  "version": 1,
+  "comment": "게임에서 일어난 일과 소리를 잇는다. (계획서 §34) 파일 이름을 코드에 두지 않는다. 음원은 assets/audio 의 자체 제작 리소스이고, 런타임에는 OGG 만 담는다. WAV 원본은 28MB 라 APK 에 넣을 이유가 없다.",
+
+  "bgm": {
+    "path": "audio/bgm",
+    "volume": 0.55,
+    "comment": "판이 무르익으면 곡을 바꾼다. 남은 COM 이 이 비율 아래로 떨어지면 finalWave 로 넘어간다.",
+    "finalWaveRatio": 0.25,
+    "tracks": {
+      "lobby": "lobby_waiting_theme",
+      "battle": "battle_theme",
+      "finalWave": "final_wave_theme",
+      "menu": "main_menu_theme"
+    }
+  },
+
+  "sfx": {
+    "path": "audio/sfx",
+    "comment": "볼륨은 0~1. 같은 소리가 한꺼번에 겹치면 시끄러우므로 minIntervalMs 안에는 다시 내지 않는다.",
+    "maxStreams": 12,
+    "events": {
+      "TANK_FIRE":        { "clip": "tank_fire",         "volume": 0.55, "minIntervalMs": 40 },
+      "SPECIAL_PIERCING": { "clip": "special_piercing",  "volume": 0.8 },
+      "SPECIAL_SHIELD":   { "clip": "special_shield",    "volume": 0.7 },
+      "SPECIAL_DASH":     { "clip": "special_dash",      "volume": 0.7 },
+      "BULLET_HIT_BRICK": { "clip": "bullet_hit_brick",  "volume": 0.45, "minIntervalMs": 60 },
+      "BULLET_HIT_STEEL": { "clip": "bullet_hit_steel",  "volume": 0.5,  "minIntervalMs": 60 },
+      "BRICK_DESTROY":    { "clip": "brick_destroy",     "volume": 0.5,  "minIntervalMs": 60 },
+      "TANK_EXPLOSION":   { "clip": "tank_explosion",    "volume": 0.85 },
+      "PLAYER_DEATH":     { "clip": "player_death",      "volume": 0.9 },
+      "ENEMY_SPAWN":      { "clip": "enemy_spawn",       "volume": 0.45, "minIntervalMs": 120 },
+      "BASE_DESTROY":     { "clip": "base_destroy",      "volume": 1.0 },
+      "VICTORY":          { "clip": "victory",           "volume": 0.9 },
+      "GAME_OVER":        { "clip": "game_over",         "volume": 0.9 },
+      "UI_READY":         { "clip": "ui_ready",          "volume": 0.7 },
+      "COUNTDOWN_TICK":   { "clip": "countdown_tick",    "volume": 0.8 },
+      "COUNTDOWN_GO":     { "clip": "countdown_go",      "volume": 0.9 },
+      "NETWORK_LOST":     { "clip": "network_disconnect","volume": 0.8 }
+    },
+    "loops": {
+      "comment": "계속 도는 소리. 조건이 사라지면 멈춘다.",
+      "TANK_MOVE":    { "clip": "tank_move_loop",     "volume": 0.28 },
+      "BASE_WARNING": { "clip": "base_warning_loop",  "volume": 0.5 }
+    }
+  },
+
+  "haptics": {
+    "comment": "진동. 길이는 ms, 세기는 0~255. 안드로이드가 세기를 못 받으면 길이만 쓴다.",
+    "enabled": true,
+    "events": {
+      "TANK_FIRE":      { "ms": 12,  "amplitude": 60 },
+      "SPECIAL":        { "ms": 40,  "amplitude": 140 },
+      "TAKE_DAMAGE":    { "ms": 30,  "amplitude": 120 },
+      "PLAYER_DEATH":   { "ms": 120, "amplitude": 200 },
+      "BASE_DESTROY":   { "ms": 260, "amplitude": 255 },
+      "UI_TAP":         { "ms": 8,   "amplitude": 40 }
+    }
+  },
+
+  "quality": {
+    "comment": "저사양 기기에서 줄일 것. (계획서 §24)",
+    "lowRam": {
+      "maxStreams": 6,
+      "bgmEnabled": false,
+      "dashTrail": false,
+      "maxExplosions": 16
+    }
+  }
+}

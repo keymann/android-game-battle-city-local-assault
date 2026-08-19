@@ -16,3 +16,4 @@
 | `phase55_asset_refresh.png` | Phase 5.5 — 자체 에셋 팩 전면 적용, 16:9 화면 |
 | `phase7_controls.png` | Phase 7 — 가상 조이스틱과 FIRE/SPECIAL 버튼 |
 | `phase7_lobby.png` | Phase 7 — 로비 화면 |
+| `phase8_polish.png` | Phase 8 — 사운드·이펙트까지 얹은 최종 화면 |

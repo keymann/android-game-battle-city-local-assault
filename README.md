@@ -257,7 +257,8 @@ app/src/main/
     └── manifest/
         ├── assets.json       게임 의미 <-> 리소스 매핑
         ├── balance.json      게임 규칙과 능력치
-        └── mapgen.json       랜덤 맵 생성 규칙
+        ├── mapgen.json       랜덤 맵 생성 규칙
+        └── audio.json        사건 <-> 소리 · 진동 · 저사양 설정
 ```
 
 ---
@@ -268,7 +269,8 @@ app/src/main/
 [docs/ASSET_SELECTION.md](./docs/ASSET_SELECTION.md),
 스테이지 랜덤 생성 설계는 [docs/STAGE_GENERATION.md](./docs/STAGE_GENERATION.md),
 COM AI 설계는 [docs/AI.md](./docs/AI.md),
-로컬 멀티플레이 설계는 [docs/NETWORK.md](./docs/NETWORK.md) 를 참고하세요.
+로컬 멀티플레이 설계는 [docs/NETWORK.md](./docs/NETWORK.md),
+사운드·진동·저사양 대응은 [docs/AUDIO.md](./docs/AUDIO.md) 를 참고하세요.
 
 크레딧은 [CREDITS.md](./CREDITS.md) 에 있습니다.
 
@@ -288,7 +290,7 @@ COM AI 설계는 [docs/AI.md](./docs/AI.md),
 | Phase 5.5 | 에셋 리팩터링 — 자체 에셋 팩 전면 적용, 아틀라스 1장, 16:9, 룰 기반 맵 생성 | ✅ 완료 |
 | Phase 6 | 로컬 멀티플레이 — Host, Join, Lobby, 상태 동기화, Disconnect 처리 | ✅ 완료 |
 | Phase 7 | 모바일 UI — Virtual Joystick, Fire/Special, HUD, 로비 화면 | ✅ 완료 |
-| Phase 8 | 최종화 — 사운드, 이펙트, 진동, 최적화, 저사양/Tablet/Fold/해상도 테스트 | 예정 |
+| Phase 8 | 최종화 — 사운드, 이펙트, 진동, 최적화, 저사양/Tablet/Fold/해상도 테스트 | ✅ 완료 |
 
 ### MVP 순서
 

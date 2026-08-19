@@ -1,8 +1,13 @@
 package com.kophas.battlecity.game
 
+import android.app.ActivityManager
+import android.content.Context
 import android.content.res.AssetManager
 import android.util.Log
 import android.view.Surface
+import com.kophas.battlecity.audio.AndroidPlayback
+import com.kophas.battlecity.audio.AudioDirector
+import com.kophas.battlecity.audio.AudioSettings
 import com.kophas.battlecity.core.Direction
 import com.kophas.battlecity.core.GameLoop
 import com.kophas.battlecity.gameplay.BalanceConfig
@@ -24,7 +29,11 @@ import java.util.concurrent.atomic.AtomicReference
  * Vulkan / EGL 컨텍스트는 생성한 스레드에 묶이므로, 서피스 이벤트를 UI 스레드에서
  * 즉시 처리하지 않고 명령으로 쌓아 두었다가 **게임 루프 스레드에서** 소비한다.
  */
-class GameHost(private val assetManager: AssetManager) : GameLoop.Callbacks {
+class GameHost(
+    private val assetManager: AssetManager,
+    /** 소리와 진동에 필요하다. 없으면 조용히 돌아간다. */
+    private val context: Context? = null,
+) : GameLoop.Callbacks {
 
     private sealed interface SurfaceCommand {
         data class Attach(val surface: Surface, val width: Int, val height: Int) : SurfaceCommand
@@ -42,6 +51,8 @@ class GameHost(private val assetManager: AssetManager) : GameLoop.Callbacks {
 
     private var controlsRenderer: ControlsRenderer? = null
     private var lobbyScene: LobbyScene? = null
+    private var audio: AudioDirector? = null
+    private var playback: AndroidPlayback? = null
     private var tick = 0L
 
     /** 로비를 보여 줄 차례인가. 혼자 하는 판에는 로비가 없다. */
@@ -75,8 +86,12 @@ class GameHost(private val assetManager: AssetManager) : GameLoop.Callbacks {
     private fun handleLobbyTap(x: Float, y: Float) {
         val lobby = lobbyScene ?: return
         val driver = netDriver ?: return
+        audio?.vibrate(AudioDirector.Haptic.UI_TAP)
         when (val action = lobby.onTap(x, y)) {
-            LobbyScene.Action.ToggleReady -> driver.toggleReady()
+            LobbyScene.Action.ToggleReady -> {
+                driver.toggleReady()
+                audio?.play(AudioDirector.Event.UI_READY)
+            }
             LobbyScene.Action.Start -> driver.startMatch(scene)
             LobbyScene.Action.CycleType -> driver.cycleTankType()
             LobbyScene.Action.CycleColor -> driver.cycleColor()
@@ -124,9 +139,16 @@ class GameHost(private val assetManager: AssetManager) : GameLoop.Callbacks {
         drainCommands()
     }
 
-    fun onPause() = loop.pause()
+    fun onPause() {
+        loop.pause()
+        // 화면이 꺼졌는데 소리가 계속 나면 안 된다.
+        audio?.setMuted(true)
+    }
 
-    fun onResume() = loop.resume()
+    fun onResume() {
+        loop.resume()
+        audio?.setMuted(false)
+    }
 
     fun setInsets(insets: Viewport.Insets) {
         this.insets = insets
@@ -136,6 +158,9 @@ class GameHost(private val assetManager: AssetManager) : GameLoop.Callbacks {
         loop.stop()
         netDriver?.close()
         netDriver = null
+        playback?.release()
+        playback = null
+        audio = null
         renderer.detachSurface()
         renderer.close()
     }
@@ -148,6 +173,7 @@ class GameHost(private val assetManager: AssetManager) : GameLoop.Callbacks {
         val driver = netDriver
         // 로비에서는 조종 입력을 보내지 않는다. 아직 탱크가 없다.
         if (currentScene != null && driver != null && !inLobby()) {
+            currentScene.localSlot = driver.localSlot
             driver.submitLocalInput(currentScene, readTouch())
         }
 
@@ -233,6 +259,10 @@ class GameHost(private val assetManager: AssetManager) : GameLoop.Callbacks {
                 netDriver = null
                 controlsRenderer = null
                 lobbyScene = null
+                audio?.stopAllLoops()
+                playback?.release()
+                playback = null
+                audio = null
                 renderer.detachSurface()
                 assets = null
                 scene = null
@@ -241,6 +271,16 @@ class GameHost(private val assetManager: AssetManager) : GameLoop.Callbacks {
     }
 
     private fun localSlot(): Int = netDriver?.localSlot ?: 0
+
+    /**
+     * 기기가 힘겨워할 만한지. (계획서 §24)
+     *
+     * 안드로이드가 직접 알려 주는 값이라 우리가 램을 재서 짐작하는 것보다 낫다.
+     * 제조사가 저사양으로 표시한 기기에서는 시스템도 같은 기준으로 움직인다.
+     */
+    private fun isLowRamDevice(): Boolean = runCatching {
+        context?.getSystemService(ActivityManager::class.java)?.isLowRamDevice == true
+    }.getOrDefault(false)
 
     private fun attach(command: SurfaceCommand.Attach) {
         val backend = renderer.attachSurface(command.surface, preferVulkan)
@@ -265,6 +305,23 @@ class GameHost(private val assetManager: AssetManager) : GameLoop.Callbacks {
         controlsRenderer = ControlsRenderer(catalog)
         lobbyScene = LobbyScene(catalog).apply { resize(command.width, command.height) }
 
+        // 소리는 있으면 좋고 없어도 게임은 돈다. 컨텍스트가 없는 자리(테스트 등)에서는
+        // 통째로 건너뛴다.
+        val settings = AudioSettings.load(source)
+        val lowRam = isLowRamDevice()
+        if (lowRam) Log.i(TAG, "저사양 기기로 판단해 연출을 줄인다")
+        context?.let { ctx ->
+            val streams = if (lowRam) settings.lowRam.maxStreams else settings.maxStreams
+            val output = AndroidPlayback(ctx, assetManager, settings, streams)
+            playback = output
+            audio = AudioDirector(
+                settings = settings,
+                playback = output,
+                clock = System::currentTimeMillis,
+                musicEnabled = !lowRam || settings.lowRam.bgmEnabled,
+            )
+        }
+
         // 밸런스 값은 코드가 아니라 balance.json 에서 온다. (계획서 §41-19)
         val newScene = BattleScene(
             assets = loaded,
@@ -273,7 +330,13 @@ class GameHost(private val assetManager: AssetManager) : GameLoop.Callbacks {
             humanSlots = driver.humanSlots,
         )
         driver.attachScene(newScene)
+        newScene.reducedEffects = lowRam && !settings.lowRam.dashTrail
+        newScene.audio = audio
+        newScene.localSlot = driver.localSlot
         scene = newScene
+
+        // 로비에 머무는 동안에는 대기 곡을 틀어 둔다.
+        audio?.setTrack(if (netRole == NetRole.LOCAL) null else AudioDirector.Track.LOBBY)
         viewport.resizeWorld(newScene.logicalWidth, newScene.logicalHeight)
     }
 
