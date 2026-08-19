@@ -48,6 +48,9 @@ class LobbyScene(private val catalog: SpriteCatalog) {
 
         /** 방 설정을 연다. 방장이 아니면 소리 크기만 바꿀 수 있다. (계획서 §44.2) */
         data object OpenSettings : Action
+
+        /** 방을 나가 메인 메뉴로 돌아간다. (계획서 §27) */
+        data object Back : Action
     }
 
     val view = View()
@@ -55,6 +58,7 @@ class LobbyScene(private val catalog: SpriteCatalog) {
     private var width = 0f
     private var height = 0f
     private var startPressed = false
+    private var backPressed = false
 
     /** 이름을 고치는 중인가. 그동안은 글자판이 화면을 덮는다. */
     private var editingName = false
@@ -69,6 +73,10 @@ class LobbyScene(private val catalog: SpriteCatalog) {
         if (editingName) return tapKeyboard(x, y)
 
         if (hitsSettings(x, y)) return Action.OpenSettings
+        if (hitsBack(x, y)) {
+            backPressed = true
+            return Action.Back
+        }
         if (hitsStart(x, y)) {
             startPressed = true
             return if (canStart()) Action.Start else Action.None
@@ -90,6 +98,7 @@ class LobbyScene(private val catalog: SpriteCatalog) {
 
     fun onRelease() {
         startPressed = false
+        backPressed = false
     }
 
     // -----------------------------------------------------------------------
@@ -111,6 +120,7 @@ class LobbyScene(private val catalog: SpriteCatalog) {
         drawChoices(batch, unit)
         drawStart(batch, unit)
         drawSettingsButton(batch)
+        drawBackButton(batch, unit)
         drawStatus(batch, unit)
     }
 
@@ -237,6 +247,23 @@ class LobbyScene(private val catalog: SpriteCatalog) {
         val centerX = columnCenter(column)
         drawCentered(batch, title, centerX, y, size * 0.72f, LABEL_COLOR)
         drawCentered(batch, value, centerX, y + size * 1.15f, size, valueColor)
+    }
+
+    private fun drawBackButton(batch: SpriteBatch, unit: Float) {
+        val rect = backRect()
+        batch.draw(
+            region = catalog.lobbySecondary,
+            x = rect[0],
+            y = rect[1],
+            width = rect[2],
+            height = rect[3],
+            layer = Constants.Layer.HUD,
+            alpha = if (backPressed) 0.65f else 1f,
+        )
+        drawInPlate(
+            batch, "MAIN MENU", rect[0], rect[1], rect[2], rect[3],
+            unit * 0.5f, BACK_TEXT_CENTER, 0.72f,
+        )
     }
 
     /** 방 설정 단추. 로비 오른쪽 위에 둔다. 시작 단추와 멀어야 잘못 누르지 않는다. */
@@ -410,6 +437,23 @@ class LobbyScene(private val catalog: SpriteCatalog) {
         return y in top..bottom && x in (centerX - halfWidth)..(centerX + halfWidth)
     }
 
+    /**
+     * 방을 나가는 단추. 오른쪽 아래에 둔다.
+     *
+     * 시작 단추와 멀리 떨어뜨린다. 다 모여서 시작하려는 순간에 잘못 눌러 방을
+     * 나가 버리면 남은 사람들까지 기다리게 된다.
+     */
+    private fun backRect(): FloatArray {
+        val h = height * UNIT_RATIO * 1.9f
+        val w = width * BACK_WIDTH
+        return floatArrayOf(width * 0.96f - w, height * BACK_TOP, w, h)
+    }
+
+    private fun hitsBack(x: Float, y: Float): Boolean {
+        val rect = backRect()
+        return x in rect[0]..(rect[0] + rect[2]) && y in rect[1]..(rect[1] + rect[3])
+    }
+
     private fun settingsRect(): FloatArray {
         val size = height * UNIT_RATIO * 2.0f
         return floatArrayOf(width * 0.94f - size, height * 0.04f, size, size)
@@ -548,6 +592,10 @@ class LobbyScene(private val catalog: SpriteCatalog) {
         //   버튼    주황 면이 0.17 ~ 0.59        -> 가운데 0.38
         const val TITLE_TEXT_CENTER = 0.61f
         const val TITLE_TEXT_WIDTH = 0.72f
+        const val BACK_TOP = 0.855f
+        const val BACK_WIDTH = 0.17f
+        const val BACK_TEXT_CENTER = 0.46f
+
         const val START_TEXT_CENTER = 0.38f
         const val START_TEXT_WIDTH = 0.68f
 

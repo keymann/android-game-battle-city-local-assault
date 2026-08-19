@@ -277,6 +277,7 @@ class GameHost(
             LobbyScene.Action.CycleType -> driver.cycleTankType()
             LobbyScene.Action.CycleColor -> driver.cycleColor()
             LobbyScene.Action.OpenSettings -> openSettings()
+            LobbyScene.Action.Back -> returnToMenu()
             is LobbyScene.Action.SetName -> {
                 driver.setName(action.name)
                 playerName = action.name
@@ -315,10 +316,7 @@ class GameHost(
 
             ResultScene.Action.MainMenu -> {
                 driver?.setResultPresence(false)
-                closeRoom()
-                screen = Screen.MENU
-                openScanner()
-                audio?.setTrack(AudioDirector.Track.MENU)
+                returnToMenu()
             }
 
             ResultScene.Action.None -> Unit
@@ -326,6 +324,16 @@ class GameHost(
     }
 
     private fun tap() = audio?.vibrate(AudioDirector.Haptic.UI_TAP)
+
+    /** 방을 닫고 메인 메뉴로. 로비와 결과 화면이 함께 쓴다. */
+    private fun returnToMenu() {
+        closeRoom()
+        settingsOpen = false
+        screen = Screen.MENU
+        openScanner()
+        audio?.stopAllLoops()
+        audio?.setTrack(AudioDirector.Track.MENU)
+    }
 
     // -----------------------------------------------------------------------
     // 화면 전환

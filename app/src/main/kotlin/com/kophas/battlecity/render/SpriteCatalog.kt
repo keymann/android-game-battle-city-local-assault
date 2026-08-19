@@ -243,6 +243,9 @@ class SpriteCatalog(private val assets: GameAssets) {
 
     val lobbyWifiWeak: TextureRegion = lobby("wifiWeak", "lobby_wifi_weak")
 
+    /** 로비에서 메인 메뉴로 나가는 단추. (계획서 §27) */
+    val lobbySecondary: TextureRegion = lobby("secondary", "lobby_secondary_button")
+
     /** 로비에서 방 설정을 여는 단추. 방장만 쓸모가 있다. (계획서 §44.2) */
     val lobbySettings: TextureRegion = lobby("settings", "lobby_settings_button")
 
@@ -264,8 +267,6 @@ class SpriteCatalog(private val assets: GameAssets) {
         val secondaryPressed: TextureRegion,
         val settings: TextureRegion,
         val settingsPressed: TextureRegion,
-        val createIcon: TextureRegion,
-        val joinIcon: TextureRegion,
         val profile: TextureRegion,
         val playerIcon: TextureRegion,
         val netStrong: TextureRegion,
@@ -284,8 +285,6 @@ class SpriteCatalog(private val assets: GameAssets) {
         secondaryPressed = screen("menu", "secondaryPressed", "menu_secondary_button_pressed"),
         settings = screen("menu", "settings", "menu_settings_button_normal"),
         settingsPressed = screen("menu", "settingsPressed", "menu_settings_button_pressed"),
-        createIcon = screen("menu", "createIcon", "menu_create_room_icon"),
-        joinIcon = screen("menu", "joinIcon", "menu_join_room_icon"),
         profile = screen("menu", "profile", "menu_profile_badge"),
         playerIcon = screen("menu", "playerIcon", "menu_player_icon"),
         netStrong = screen("menu", "netStrong", "menu_network_strong"),

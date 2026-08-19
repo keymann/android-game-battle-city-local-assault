@@ -149,8 +149,12 @@ def build_effects(entries):
 #: 쓰지 않는 아이콘.
 #:  - 쿨타임은 SPECIAL 버튼 자체에 표현하므로 따로 둘 것이 없다.
 #:  - speaker_on 은 BGM / SFX 아이콘이 이미 켜짐 상태를 말한다. 같은 자리에 둘을
-#:    겹칠 수 없어 아틀라스에 넣지 않는다. 원본은 assets 에 그대로 있다.
-SKIP_ICONS = {"cooldown_25", "cooldown_75", "speaker_on"}
+#:    겹칠 수 없어 아틀라스에 넣지 않는다.
+#:  - create_room_icon / join_room_icon 은 버튼 글자 옆에 붙여 뒀다가 걷어냈다.
+#:    "CREATE GAME" 이라고 쓰여 있는데 그림을 하나 더 얹으니 어색했다.
+#: 원본은 모두 assets 에 그대로 있다.
+SKIP_ICONS = {"cooldown_25", "cooldown_75", "speaker_on",
+              "create_room_icon", "join_room_icon"}
 
 
 def build_icons(entries, src, prefix, size):

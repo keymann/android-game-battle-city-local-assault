@@ -89,29 +89,7 @@ class MainMenuScene(private val catalog: SpriteCatalog) {
             },
             rect,
         )
-        // 아이콘은 글자 왼쪽에 둔다. 무엇을 하는 버튼인지 읽기 전에 알아본다.
-        val iconSize = rect.height * 0.62f
-        val iconCenter = rect.x + rect.width * ICON_INSET
-        ui.icon(
-            batch,
-            if (primary) catalog.menu.createIcon else catalog.menu.joinIcon,
-            iconCenter,
-            rect.centerY,
-            iconSize,
-        )
-        // 글자는 버튼 한가운데가 아니라 **아이콘 오른쪽 남은 자리**의 가운데에 놓는다.
-        // 버튼 기준으로 가운데를 잡으면 아이콘 쪽으로 붙어 겹쳐 보인다.
-        val textLeft = iconCenter + iconSize * 0.7f
-        val textRight = rect.x + rect.width * (1f - ICON_INSET * 0.6f)
-        val size = TextLayout.fit(label, rect.height * 0.32f, textRight - textLeft)
-        ui.centered(
-            batch,
-            label,
-            (textLeft + textRight) * 0.5f,
-            rect.y + rect.height * BUTTON_TEXT_CENTER - size * 0.5f,
-            size,
-            color,
-        )
+        ui.label(batch, label, rect, rect.height * 0.32f, color, BUTTON_TEXT_CENTER, 0.66f)
     }
 
     private fun drawProfile(batch: SpriteBatch, unit: Float) {
@@ -194,7 +172,6 @@ class MainMenuScene(private val catalog: SpriteCatalog) {
         const val TITLE_LINE1 = 0.42f
         const val TITLE_LINE2 = 0.70f
         const val BUTTON_TEXT_CENTER = 0.47f
-        const val ICON_INSET = 0.13f
         const val PROFILE_ASPECT = 2.4f
     }
 }
