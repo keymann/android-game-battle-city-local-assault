@@ -1,0 +1,134 @@
+package com.kophas.battlecity.net
+
+import com.kophas.battlecity.core.Direction
+import com.kophas.battlecity.gameplay.GameWorld
+import com.kophas.battlecity.gameplay.MatchState
+import com.kophas.battlecity.gameplay.Tank
+
+/**
+ * 게임 상태와 패킷 사이를 옮긴다. (계획서 §35)
+ *
+ * Host 는 [capture] 로 지금 상태를 담고, Client 는 [apply] 로 받은 상태를 자기
+ * [GameWorld] 에 얹는다. Client 는 규칙을 굴리지 않는다. 받은 것을 그리기만 한다.
+ *
+ * 맵은 오가지 않는다. seed 가 같으면 어느 기기에서나 같은 맵이 나오기 때문이다.
+ * 그래서 여기서 다루는 것은 **움직이는 것**뿐이다.
+ */
+object SnapshotBridge {
+
+    fun capture(world: GameWorld, match: MatchState, tick: Long): Messages.Snapshot =
+        Messages.Snapshot(
+            tick = tick,
+            phase = match.phase.ordinal,
+            enemiesRemaining = match.enemiesRemaining,
+            baseDestroyed = world.map.baseDestroyed,
+            tanks = world.tanks.filter { it.alive }.map { tank ->
+                Messages.TankState(
+                    id = tank.id,
+                    slot = tank.ownerSlot,
+                    faction = tank.faction.ordinal,
+                    type = tank.type.ordinal,
+                    x = tank.x,
+                    y = tank.y,
+                    direction = tank.direction.ordinal,
+                    hp = tank.hp.coerceIn(0, 255),
+                    specialActive = tank.specialActive,
+                )
+            },
+            projectiles = world.projectiles.active.filter { it.active }.map { projectile ->
+                Messages.ProjectileState(
+                    id = projectile.id,
+                    x = projectile.x,
+                    y = projectile.y,
+                    direction = projectile.direction.ordinal,
+                    piercing = projectile.piercing,
+                )
+            },
+            scores = match.players.map { slot ->
+                Messages.ScoreState(slot.index, slot.kills, slot.lives, slot.eliminated)
+            },
+        )
+
+    /**
+     * 받은 상태를 세계에 얹는다.
+     *
+     * [previous] 가 있으면 그 사이를 [alpha] 만큼 메워 그린다. 상태는 20Hz 로 오는데
+     * 화면은 60Hz 라 그대로 놓으면 초당 스무 번씩 뚝뚝 끊긴다.
+     *
+     * 세계의 탱크 목록을 스냅샷에 맞춰 늘리고 줄인다. Host 에서 부서진 탱크는
+     * 스냅샷에서 빠지므로 여기서도 사라진다.
+     */
+    fun apply(
+        world: GameWorld,
+        latest: Messages.Snapshot,
+        previous: Messages.Snapshot?,
+        alpha: Float,
+    ) {
+        val before = previous?.tanks?.associateBy { it.id }.orEmpty()
+
+        val seen = HashSet<Int>()
+        for (state in latest.tanks) {
+            seen += state.id
+            val tank = world.tanks.firstOrNull { it.id == state.id }
+                ?: spawnGhost(world, state)
+                ?: continue
+            val old = before[state.id]
+            tank.x = blend(old?.x, state.x, alpha)
+            tank.y = blend(old?.y, state.y, alpha)
+            tank.direction = Direction.VALUES[state.direction.coerceIn(0, 3)]
+            tank.hp = state.hp
+            tank.specialActiveRemaining = if (state.specialActive) 1f else 0f
+            tank.alive = true
+        }
+
+        // 스냅샷에 없는 탱크는 Host 에서 사라진 것이다.
+        for (tank in world.tanks.toList()) {
+            if (tank.id !in seen) world.despawn(tank)
+        }
+
+        applyProjectiles(world, latest, previous, alpha)
+    }
+
+    private fun applyProjectiles(
+        world: GameWorld,
+        latest: Messages.Snapshot,
+        previous: Messages.Snapshot?,
+        alpha: Float,
+    ) {
+        val before = previous?.projectiles?.associateBy { it.id }.orEmpty()
+        // 포탄은 수가 자주 바뀐다. 전부 걷어내고 다시 놓는 편이 짝을 맞추는 것보다 싸다.
+        for (projectile in world.projectiles.active.toList()) projectile.active = false
+        world.projectiles.releaseIf { !it.active }
+
+        for (state in latest.projectiles) {
+            val projectile = world.projectiles.obtain() ?: break
+            val old = before[state.id]
+            projectile.launch(
+                fromX = blend(old?.x, state.x, alpha),
+                fromY = blend(old?.y, state.y, alpha),
+                direction = Direction.VALUES[state.direction.coerceIn(0, 3)],
+                owner = null,
+                speed = 0f,
+                power = 0,
+                piercing = state.piercing,
+            )
+        }
+    }
+
+    private fun blend(from: Float?, to: Float, alpha: Float): Float =
+        if (from == null) to else from + (to - from) * alpha.coerceIn(0f, 1f)
+
+    private fun spawnGhost(world: GameWorld, state: Messages.TankState): Tank? {
+        val faction = Tank.Faction.entries[state.faction.coerceIn(0, 1)]
+        val type = Tank.Type.entries[state.type.coerceIn(0, Tank.Type.entries.lastIndex)]
+        return world.adoptRemoteTank(
+            id = state.id,
+            faction = faction,
+            type = type,
+            ownerSlot = state.slot,
+            x = state.x,
+            y = state.y,
+            direction = Direction.VALUES[state.direction.coerceIn(0, 3)],
+        )
+    }
+}

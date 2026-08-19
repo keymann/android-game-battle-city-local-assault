@@ -10,6 +10,8 @@ import com.kophas.battlecity.gameplay.MatchState
 import com.kophas.battlecity.gameplay.Tank
 import com.kophas.battlecity.map.Rng
 import com.kophas.battlecity.map.StageGenerator
+import com.kophas.battlecity.net.Messages
+import com.kophas.battlecity.net.SnapshotBridge
 import com.kophas.battlecity.render.GameAssets
 import com.kophas.battlecity.render.HudRenderer
 import com.kophas.battlecity.render.SpriteBatch
@@ -27,11 +29,26 @@ import com.kophas.battlecity.render.WorldRenderer
  * Phase 7 에서 사람이 조종간을 잡으면 그 자리에 사람 입력이 들어올 뿐, 규칙은
  * 하나도 달라지지 않는다.
  */
+/** 이 기기가 판에서 맡은 역할. (계획서 §4.2 Authority) */
+enum class NetRole {
+    /** 혼자 돌린다. 규칙도 여기서 굴린다. */
+    LOCAL,
+
+    /** 방을 열었다. 규칙을 굴리고 결과를 내려보낸다. */
+    HOST,
+
+    /** 방에 들어갔다. 입력만 올리고 받은 상태를 그린다. */
+    CLIENT,
+}
+
 class BattleScene(
     assets: GameAssets,
     private val balance: BalanceConfig,
-    private val playerCount: Int = DEFAULT_PLAYERS,
+    private var playerCount: Int = DEFAULT_PLAYERS,
     startSeed: Long = DEFAULT_SEED,
+    private val role: NetRole = NetRole.LOCAL,
+    /** 사람이 원격에서 조종하는 자리. 여기에는 AI 를 붙이지 않는다. */
+    private val remoteSlots: Set<Int> = emptySet(),
 ) {
     private val catalog = SpriteCatalog(assets)
     private val generator = StageGenerator(assets.manifest, assets.mapGen)
@@ -108,13 +125,60 @@ class BattleScene(
 
         slotOfTank[tank.id] = slot.index
         match.onPlayerSpawned(slot.index, tank.id)
-        director.attach(tank)
+        // 사람이 잡은 자리에는 AI 를 붙이지 않는다. 붙이면 조종간이 둘이 된다.
+        if (slot.index !in remoteSlots) director.attach(tank)
+    }
+
+    // -----------------------------------------------------------------------
+    // 네트워크 (계획서 §35)
+    // -----------------------------------------------------------------------
+
+    val stageGridHash: Long get() = world.stage.gridHash
+
+    /** Host 가 정한 seed 로 판을 다시 연다. Client 가 START 를 받았을 때 부른다. */
+    fun beginStage(seed: Long, stageIndex: Int, playerCount: Int) {
+        this.seed = seed
+        this.stageIndex = stageIndex
+        this.playerCount = playerCount
+        buildStage()
+    }
+
+    /** Client 가 올린 조종 입력을 그 자리의 탱크에 그대로 먹인다. */
+    fun applyRemoteInput(slot: Int, input: Messages.Input) {
+        val tank = world.tanks.firstOrNull { it.ownerSlot == slot && it.alive } ?: return
+        if (input.direction != Messages.Input.NO_DIRECTION) {
+            world.steer(tank, Direction.VALUES[input.direction.coerceIn(0, 3)])
+        }
+        tank.moving = input.moving
+        if (input.fire) world.fire(tank)
+        if (input.special) world.activateSpecial(tank)
+    }
+
+    fun captureSnapshot(tick: Long): Messages.Snapshot =
+        SnapshotBridge.capture(world, match, tick)
+
+    /** Host 가 보낸 상태를 그대로 얹는다. 규칙은 굴리지 않는다. */
+    fun applySnapshot(latest: Messages.Snapshot, previous: Messages.Snapshot?, alpha: Float) {
+        SnapshotBridge.apply(world, latest, previous, alpha)
+        match.applyRemote(
+            phaseOrdinal = latest.phase,
+            enemiesRemaining = latest.enemiesRemaining,
+            scores = latest.scores.map {
+                MatchState.RemoteScore(it.slot, it.kills, it.lives, it.eliminated)
+            },
+        )
     }
 
     // -----------------------------------------------------------------------
 
     fun update(tickSeconds: Float) {
         elapsedSeconds += tickSeconds
+
+        // Client 는 규칙을 굴리지 않는다. 폭발 같은 연출만 흘려보낸다. (계획서 §4.2)
+        if (role == NetRole.CLIENT) {
+            world.updateEffectsOnly(tickSeconds)
+            return
+        }
 
         director.update(world, match, tickSeconds)
         world.update(tickSeconds)

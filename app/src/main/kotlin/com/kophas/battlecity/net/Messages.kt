@@ -1,0 +1,282 @@
+package com.kophas.battlecity.net
+
+/**
+ * 주고받는 내용. (계획서 §35)
+ *
+ * 값 객체와 인코딩을 한곳에 둔다. 읽는 쪽과 쓰는 쪽이 떨어져 있으면 필드 하나를
+ * 더할 때 한쪽만 고치는 일이 생기고, 그런 어긋남은 실행해 봐야 드러난다.
+ */
+object Messages {
+
+    // --- 방 찾기 ----------------------------------------------------------
+
+    data class Announce(
+        val hostName: String,
+        val players: Int,
+        val maxPlayers: Int,
+        val started: Boolean,
+    )
+
+    fun writeAnnounce(writer: PacketWriter, value: Announce): PacketWriter =
+        Protocol.header(writer, Protocol.Type.ANNOUNCE)
+            .text(value.hostName)
+            .byte(value.players)
+            .byte(value.maxPlayers)
+            .bool(value.started)
+
+    fun readAnnounce(reader: PacketReader) = Announce(
+        hostName = reader.text(),
+        players = reader.byte(),
+        maxPlayers = reader.byte(),
+        started = reader.bool(),
+    )
+
+    // --- 입장 -------------------------------------------------------------
+
+    data class Join(val name: String, val tankType: Int)
+
+    fun writeJoin(writer: PacketWriter, value: Join): PacketWriter =
+        Protocol.header(writer, Protocol.Type.JOIN).text(value.name).byte(value.tankType)
+
+    fun readJoin(reader: PacketReader) = Join(reader.text(), reader.byte())
+
+    data class JoinAck(val slot: Int, val tankType: Int)
+
+    fun writeJoinAck(writer: PacketWriter, value: JoinAck): PacketWriter =
+        Protocol.header(writer, Protocol.Type.JOIN_ACK).byte(value.slot).byte(value.tankType)
+
+    fun readJoinAck(reader: PacketReader) = JoinAck(reader.byte(), reader.byte())
+
+    // --- 로비 -------------------------------------------------------------
+
+    data class LobbySlot(
+        val index: Int,
+        val name: String,
+        val tankType: Int,
+        val ready: Boolean,
+        val connected: Boolean,
+        val host: Boolean,
+    )
+
+    data class LobbyUpdate(val slots: List<LobbySlot>, val countdownTicks: Int)
+
+    fun writeLobby(writer: PacketWriter, value: LobbyUpdate): PacketWriter {
+        Protocol.header(writer, Protocol.Type.LOBBY)
+            .short(value.countdownTicks)
+            .byte(value.slots.size)
+        for (slot in value.slots) {
+            writer.byte(slot.index)
+                .text(slot.name)
+                .byte(slot.tankType)
+                .byte(flags(slot.ready, slot.connected, slot.host))
+        }
+        return writer
+    }
+
+    fun readLobby(reader: PacketReader): LobbyUpdate {
+        val countdown = reader.short()
+        val count = reader.byte()
+        val slots = ArrayList<LobbySlot>(count)
+        repeat(count) {
+            val index = reader.byte()
+            val name = reader.text()
+            val type = reader.byte()
+            val flags = reader.byte()
+            slots += LobbySlot(
+                index = index,
+                name = name,
+                tankType = type,
+                ready = flags and 1 != 0,
+                connected = flags and 2 != 0,
+                host = flags and 4 != 0,
+            )
+        }
+        return LobbyUpdate(slots, countdown)
+    }
+
+    data class Ready(val ready: Boolean, val tankType: Int)
+
+    fun writeReady(writer: PacketWriter, value: Ready): PacketWriter =
+        Protocol.header(writer, Protocol.Type.READY).bool(value.ready).byte(value.tankType)
+
+    fun readReady(reader: PacketReader) = Ready(reader.bool(), reader.byte())
+
+    // --- 시작 -------------------------------------------------------------
+
+    /**
+     * 맵은 보내지 않는다. seed 만 있으면 어느 기기에서나 같은 맵이 나온다.
+     * [gridHash] 는 정말 같은 맵이 나왔는지 대조하는 값이다.
+     */
+    data class Start(
+        val seed: Long,
+        val stageIndex: Int,
+        val playerCount: Int,
+        val gridHash: Long,
+        val startTick: Long,
+    )
+
+    fun writeStart(writer: PacketWriter, value: Start): PacketWriter =
+        Protocol.header(writer, Protocol.Type.START)
+            .long(value.seed)
+            .short(value.stageIndex)
+            .byte(value.playerCount)
+            .long(value.gridHash)
+            .long(value.startTick)
+
+    fun readStart(reader: PacketReader) = Start(
+        seed = reader.long(),
+        stageIndex = reader.short(),
+        playerCount = reader.byte(),
+        gridHash = reader.long(),
+        startTick = reader.long(),
+    )
+
+    // --- 조종 입력 --------------------------------------------------------
+
+    /** 방향은 0~3, 없으면 4. (계획서 §35 Client -> Host) */
+    data class Input(
+        val tick: Long,
+        val direction: Int,
+        val moving: Boolean,
+        val fire: Boolean,
+        val special: Boolean,
+    ) {
+        companion object {
+            const val NO_DIRECTION = 4
+        }
+    }
+
+    fun writeInput(writer: PacketWriter, value: Input): PacketWriter =
+        Protocol.header(writer, Protocol.Type.INPUT)
+            .long(value.tick)
+            .byte(value.direction)
+            .byte(flags(value.moving, value.fire, value.special))
+
+    fun readInput(reader: PacketReader): Input {
+        val tick = reader.long()
+        val direction = reader.byte()
+        val flags = reader.byte()
+        return Input(
+            tick = tick,
+            direction = direction,
+            moving = flags and 1 != 0,
+            fire = flags and 2 != 0,
+            special = flags and 4 != 0,
+        )
+    }
+
+    // --- 게임 상태 --------------------------------------------------------
+
+    data class TankState(
+        val id: Int,
+        val slot: Int,
+        val faction: Int,
+        val type: Int,
+        val x: Float,
+        val y: Float,
+        val direction: Int,
+        val hp: Int,
+        val specialActive: Boolean,
+    )
+
+    data class ProjectileState(
+        val id: Int,
+        val x: Float,
+        val y: Float,
+        val direction: Int,
+        val piercing: Boolean,
+    )
+
+    data class ScoreState(val slot: Int, val kills: Int, val lives: Int, val eliminated: Boolean)
+
+    data class Snapshot(
+        val tick: Long,
+        val phase: Int,
+        val enemiesRemaining: Int,
+        val baseDestroyed: Boolean,
+        val tanks: List<TankState>,
+        val projectiles: List<ProjectileState>,
+        val scores: List<ScoreState>,
+    )
+
+    fun writeSnapshot(writer: PacketWriter, value: Snapshot): PacketWriter {
+        Protocol.header(writer, Protocol.Type.SNAPSHOT)
+            .long(value.tick)
+            .byte(value.phase)
+            .short(value.enemiesRemaining)
+            .bool(value.baseDestroyed)
+            .byte(value.tanks.size)
+        for (tank in value.tanks) {
+            writer.short(tank.id)
+                .byte((tank.slot + 1) or (tank.faction shl 4) or (tank.type shl 5))
+                .position(tank.x)
+                .position(tank.y)
+                .byte(tank.direction or (if (tank.specialActive) 0x10 else 0))
+                .byte(tank.hp)
+        }
+        writer.byte(value.projectiles.size)
+        for (projectile in value.projectiles) {
+            writer.short(projectile.id)
+                .position(projectile.x)
+                .position(projectile.y)
+                .byte(projectile.direction or (if (projectile.piercing) 0x10 else 0))
+        }
+        writer.byte(value.scores.size)
+        for (score in value.scores) {
+            writer.byte(score.slot).short(score.kills).byte(score.lives).bool(score.eliminated)
+        }
+        return writer
+    }
+
+    fun readSnapshot(reader: PacketReader): Snapshot {
+        val tick = reader.long()
+        val phase = reader.byte()
+        val enemies = reader.short()
+        val baseDestroyed = reader.bool()
+
+        val tankCount = reader.byte()
+        val tanks = ArrayList<TankState>(tankCount)
+        repeat(tankCount) {
+            val id = reader.short()
+            val packed = reader.byte()
+            val x = reader.position()
+            val y = reader.position()
+            val heading = reader.byte()
+            val hp = reader.byte()
+            tanks += TankState(
+                id = id,
+                slot = (packed and 0xF) - 1,
+                faction = (packed ushr 4) and 0x1,
+                type = (packed ushr 5) and 0x7,
+                x = x,
+                y = y,
+                direction = heading and 0xF,
+                hp = hp,
+                specialActive = heading and 0x10 != 0,
+            )
+        }
+
+        val projectileCount = reader.byte()
+        val projectiles = ArrayList<ProjectileState>(projectileCount)
+        repeat(projectileCount) {
+            val id = reader.short()
+            val x = reader.position()
+            val y = reader.position()
+            val heading = reader.byte()
+            projectiles += ProjectileState(id, x, y, heading and 0xF, heading and 0x10 != 0)
+        }
+
+        val scoreCount = reader.byte()
+        val scores = ArrayList<ScoreState>(scoreCount)
+        repeat(scoreCount) {
+            scores += ScoreState(reader.byte(), reader.short(), reader.byte(), reader.bool())
+        }
+
+        return Snapshot(tick, phase, enemies, baseDestroyed, tanks, projectiles, scores)
+    }
+
+    // ---------------------------------------------------------------------
+
+    private fun flags(a: Boolean, b: Boolean, c: Boolean): Int =
+        (if (a) 1 else 0) or (if (b) 2 else 0) or (if (c) 4 else 0)
+}

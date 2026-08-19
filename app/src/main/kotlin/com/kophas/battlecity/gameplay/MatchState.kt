@@ -179,6 +179,26 @@ class MatchState(
         }
     }
 
+    /** Host 가 내려 준 점수 한 줄. 네트워크 타입을 여기까지 끌어오지 않으려고 따로 둔다. */
+    class RemoteScore(val slot: Int, val kills: Int, val lives: Int, val eliminated: Boolean)
+
+    /**
+     * Host 가 보낸 결과를 그대로 받아 적는다. (계획서 §35)
+     *
+     * Client 는 승패를 스스로 판정하지 않는다. "Host 가 게임의 최종 결과를 결정한다"
+     * 는 규칙을 코드로 지키려면, 여기서 계산하지 않고 받은 값을 쓰는 수밖에 없다.
+     */
+    fun applyRemote(phaseOrdinal: Int, enemiesRemaining: Int, scores: List<RemoteScore>) {
+        phase = Phase.entries.getOrElse(phaseOrdinal) { Phase.PLAYING }
+        enemiesDestroyed = (totalEnemies - enemiesRemaining).coerceIn(0, totalEnemies)
+        for (score in scores) {
+            val slot = players.getOrNull(score.slot) ?: continue
+            slot.kills = score.kills
+            slot.lives = score.lives
+            slot.eliminated = score.eliminated
+        }
+    }
+
     // -----------------------------------------------------------------------
     // 승패 판정 (계획서 §16, §17)
     // -----------------------------------------------------------------------

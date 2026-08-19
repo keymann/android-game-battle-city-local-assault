@@ -247,7 +247,7 @@ app/src/main/
 │   ├── render/               Viewport, SpriteBatch, TextureAtlas, GridAtlas,
 │   │                         AssetManifest, GameAssets, SpriteCatalog,
 │   │                         WorldRenderer, HudRenderer, NativeRenderer
-│   ├── game/                 GameHost, BattleScene
+│   ├── game/                 GameHost, BattleScene, NetDriver
 │   ├── util/                 Json (의존성 없는 파서)
 │   ├── MainActivity.kt
 │   └── GameSurfaceView.kt
@@ -267,7 +267,8 @@ app/src/main/
 인게임 그래픽은 자체 제작 에셋 팩(`assets/`)이고, HUD 폰트만 Kenney CC0 입니다. 적용 방식과 전체 매핑표는
 [docs/ASSET_SELECTION.md](./docs/ASSET_SELECTION.md),
 스테이지 랜덤 생성 설계는 [docs/STAGE_GENERATION.md](./docs/STAGE_GENERATION.md),
-COM AI 설계는 [docs/AI.md](./docs/AI.md) 를 참고하세요.
+COM AI 설계는 [docs/AI.md](./docs/AI.md),
+로컬 멀티플레이 설계는 [docs/NETWORK.md](./docs/NETWORK.md) 를 참고하세요.
 
 크레딧은 [CREDITS.md](./CREDITS.md) 에 있습니다.
 
@@ -285,7 +286,7 @@ COM AI 설계는 [docs/AI.md](./docs/AI.md) 를 참고하세요.
 | Phase 4.5 | 환경 아트 교체 — 지형·구조물·환경 오브젝트를 자체 리소스로 전면 교체 | ✅ 완료 |
 | Phase 5 | COM — Spawn, 타입별 AI, State Machine, 20 × Player 수 생성 | ✅ 완료 |
 | Phase 5.5 | 에셋 리팩터링 — 자체 에셋 팩 전면 적용, 아틀라스 1장, 16:9, 룰 기반 맵 생성 | ✅ 완료 |
-| Phase 6 | 로컬 멀티플레이 — Host, Join, Lobby, 상태 동기화, Disconnect 처리 | 예정 |
+| Phase 6 | 로컬 멀티플레이 — Host, Join, Lobby, 상태 동기화, Disconnect 처리 | ✅ 완료 |
 | Phase 7 | 모바일 UI — Virtual Joystick, Fire/Special, HUD, Player Status | 예정 |
 | Phase 8 | 최종화 — 사운드, 이펙트, 진동, 최적화, 저사양/Tablet/Fold/해상도 테스트 | 예정 |
 

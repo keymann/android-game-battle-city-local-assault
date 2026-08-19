@@ -25,11 +25,15 @@ class Projectile(val id: Int) {
     val centerX: Float get() = x + SIZE * 0.5f
     val centerY: Float get() = y + SIZE * 0.5f
 
+    /**
+     * @param owner 쏜 탱크. Client 에서 Host 가 보낸 포탄을 그대로 얹을 때는 null 이다.
+     *   그때 이 포탄은 판정에 쓰이지 않고 그려지기만 한다.
+     */
     fun launch(
         fromX: Float,
         fromY: Float,
         direction: Direction,
-        owner: Tank,
+        owner: Tank?,
         speed: Float,
         power: Int,
         piercing: Boolean,
@@ -37,8 +41,8 @@ class Projectile(val id: Int) {
         this.x = fromX
         this.y = fromY
         this.direction = direction
-        this.ownerId = owner.id
-        this.ownerFaction = owner.faction
+        this.ownerId = owner?.id ?: -1
+        this.ownerFaction = owner?.faction ?: Tank.Faction.ENEMY
         this.speed = speed
         this.power = power
         this.piercing = piercing
