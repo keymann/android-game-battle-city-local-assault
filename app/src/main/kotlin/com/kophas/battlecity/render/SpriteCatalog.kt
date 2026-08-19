@@ -310,7 +310,6 @@ class SpriteCatalog(private val assets: GameAssets) {
         val reset: TextureRegion,
         val bgmIcon: TextureRegion,
         val sfxIcon: TextureRegion,
-        val speakerOn: TextureRegion,
         val speakerMuted: TextureRegion,
     )
 
@@ -329,7 +328,6 @@ class SpriteCatalog(private val assets: GameAssets) {
         reset = screen("settings", "reset", "set_reset_button"),
         bgmIcon = screen("settings", "bgmIcon", "set_bgm_icon"),
         sfxIcon = screen("settings", "sfxIcon", "set_sfx_icon"),
-        speakerOn = screen("settings", "speakerOn", "set_speaker_on"),
         speakerMuted = screen("settings", "speakerMuted", "set_speaker_muted"),
     )
 

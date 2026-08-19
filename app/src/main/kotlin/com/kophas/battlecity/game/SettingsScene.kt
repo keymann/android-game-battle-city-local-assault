@@ -44,6 +44,10 @@ class SettingsScene(private val catalog: SpriteCatalog) {
     /** 소리 크기가 바뀔 때마다 부른다. 슬라이더를 끄는 동안 바로 들려야 한다. */
     var onDeviceChanged: (DeviceSettings) -> Unit = {}
 
+    /** 끄기 직전의 크기. 다시 켤 때 여기로 돌아온다. */
+    private var mutedBgm = DeviceSettings().bgmVolume
+    private var mutedSfx = DeviceSettings().sfxVolume
+
     fun resize(width: Int, height: Int) = ui.resize(width, height)
 
     fun open(room: RoomSettings, device: DeviceSettings, editableRoom: Boolean) {
@@ -77,12 +81,10 @@ class SettingsScene(private val catalog: SpriteCatalog) {
     fun onMove(x: Float, y: Float) {
         when (dragging) {
             Handle.NONE -> return
-            Handle.ENEMIES -> {
-                val range = RoomSettings.MIN_ACTIVE_ENEMIES..RoomSettings.MAX_ACTIVE_ENEMIES
-                val value = range.first + (fraction(sliderRect(ROW_ENEMIES, LEFT), x) *
-                    (range.last - range.first)).roundToInt()
-                room = room.copy(maxActiveEnemies = value.coerceIn(range))
-            }
+            Handle.ENEMIES ->
+                room = room.copy(
+                    maxActiveEnemies = activeEnemiesAt(fraction(sliderRect(ROW_ENEMIES, LEFT), x)),
+                )
             Handle.BGM -> {
                 device = device.copy(bgmVolume = volumeAt(sliderRect(ROW_BGM, RIGHT), x))
                 onDeviceChanged(device)
@@ -147,6 +149,27 @@ class SettingsScene(private val catalog: SpriteCatalog) {
             if (editableRoom) room = room.copy(baseProtection = !room.baseProtection)
             Action.None
         }
+        // 껐다 켜면 끄기 직전 크기로 돌아온다. 슬라이더를 다시 맞추게 하지 않는다.
+        BTN_MUTE_BGM -> {
+            device = if (device.bgmVolume == 0) {
+                device.copy(bgmVolume = mutedBgm)
+            } else {
+                mutedBgm = device.bgmVolume
+                device.copy(bgmVolume = 0)
+            }
+            onDeviceChanged(device)
+            Action.None
+        }
+        BTN_MUTE_SFX -> {
+            device = if (device.sfxVolume == 0) {
+                device.copy(sfxVolume = mutedSfx)
+            } else {
+                mutedSfx = device.sfxVolume
+                device.copy(sfxVolume = 0)
+            }
+            onDeviceChanged(device)
+            Action.None
+        }
         in BTN_SIZE_FIRST..(BTN_SIZE_FIRST + 2) -> {
             if (editableRoom) {
                 room = room.copy(mapSize = RoomSettings.MapSize.entries[button - BTN_SIZE_FIRST])
@@ -175,6 +198,8 @@ class SettingsScene(private val catalog: SpriteCatalog) {
             ui.hits(diceRect(), x, y) -> BTN_DICE
             ui.hits(toggleRect(ROW_FRIENDLY, LEFT), x, y) -> BTN_FRIENDLY
             ui.hits(toggleRect(ROW_PROTECT, LEFT), x, y) -> BTN_PROTECT
+            ui.hits(muteRect(ROW_BGM), x, y) -> BTN_MUTE_BGM
+            ui.hits(muteRect(ROW_SFX), x, y) -> BTN_MUTE_SFX
             ui.hits(actionRect(0), x, y) -> BTN_RESET
             ui.hits(actionRect(1), x, y) -> BTN_CANCEL
             ui.hits(actionRect(2), x, y) -> BTN_APPLY
@@ -224,6 +249,13 @@ class SettingsScene(private val catalog: SpriteCatalog) {
     private fun diceRect(): ScreenUi.Rect {
         val base = controlRect(ROW_SEED, LEFT)
         return ScreenUi.Rect(base.x + base.width - base.height, base.y, base.height, base.height)
+    }
+
+    /** 소리 아이콘 자리. 눌러서 그 갈래만 껐다 켠다. */
+    private fun muteRect(row: Int): ScreenUi.Rect {
+        val slider = sliderRect(row, RIGHT)
+        val size = ui.unit * 1.1f
+        return ScreenUi.Rect(column(RIGHT) + ui.unit * 0.4f - size * 0.5f, slider.centerY - size * 0.5f, size, size)
     }
 
     /** 시드 값이 들어가는 칸. 눌러서 AUTO 와 고정값을 오간다. */
@@ -330,13 +362,16 @@ class SettingsScene(private val catalog: SpriteCatalog) {
         drawToggle(batch, toggleRect(ROW_PROTECT, LEFT), room.baseProtection, color)
 
         rowLabel(batch, "MAX COM", ROW_ENEMIES, LEFT, color)
-        val range = RoomSettings.MIN_ACTIVE_ENEMIES..RoomSettings.MAX_ACTIVE_ENEMIES
-        val active = if (room.maxActiveEnemies > 0) room.maxActiveEnemies else range.first
         drawSlider(
             batch,
             sliderRect(ROW_ENEMIES, LEFT),
-            (active - range.first).toFloat() / (range.last - range.first),
-            active.toString(),
+            activeEnemiesFraction(room.maxActiveEnemies),
+            // 0 은 "정하지 않았다" 는 뜻이다. 숫자로 보이면 그 값이 쓰이는 줄 안다.
+            if (room.maxActiveEnemies == RoomSettings.ACTIVE_ENEMIES_AUTO) {
+                "AUTO"
+            } else {
+                room.maxActiveEnemies.toString()
+            },
             color,
         )
     }
@@ -349,9 +384,11 @@ class SettingsScene(private val catalog: SpriteCatalog) {
         ui.icon(
             batch,
             if (device.bgmVolume == 0) art.speakerMuted else art.bgmIcon,
-            column(RIGHT) + unit * 0.4f,
+            muteRect(ROW_BGM).centerX,
             rowY(ROW_BGM) + unit * 0.55f,
             unit * 0.8f,
+            if (device.bgmVolume == 0) ScreenUi.DIM else ScreenUi.WHITE,
+            alpha = if (pressedButton == BTN_MUTE_BGM) PRESSED_ALPHA else 1f,
         )
         drawSlider(
             batch,
@@ -365,9 +402,11 @@ class SettingsScene(private val catalog: SpriteCatalog) {
         ui.icon(
             batch,
             if (device.sfxVolume == 0) art.speakerMuted else art.sfxIcon,
-            column(RIGHT) + unit * 0.4f,
+            muteRect(ROW_SFX).centerX,
             rowY(ROW_SFX) + unit * 0.55f,
             unit * 0.8f,
+            if (device.sfxVolume == 0) ScreenUi.DIM else ScreenUi.WHITE,
+            alpha = if (pressedButton == BTN_MUTE_SFX) PRESSED_ALPHA else 1f,
         )
         drawSlider(
             batch,
@@ -377,14 +416,6 @@ class SettingsScene(private val catalog: SpriteCatalog) {
             ScreenUi.WHITE,
         )
 
-        ui.icon(
-            batch,
-            if (device.bgmVolume == 0 && device.sfxVolume == 0) art.speakerMuted else art.speakerOn,
-            column(RIGHT) + columnWidth() * 0.5f,
-            rowY(ROW_SPEAKER) + unit * 0.9f,
-            unit * 1.6f,
-            if (device.bgmVolume == 0 && device.sfxVolume == 0) ScreenUi.DIM else ScreenUi.GREEN,
-        )
     }
 
     private fun drawActions(batch: SpriteBatch) {
@@ -441,10 +472,12 @@ class SettingsScene(private val catalog: SpriteCatalog) {
             thumb,
             color,
         )
-        ui.centered(
+        // 값은 눈금 오른쪽에 왼쪽맞춤으로 쓴다. 가운데맞춤이면 글자 수에 따라
+        // 눈금 위로 밀고 들어온다 (AUTO 처럼 긴 값).
+        ui.text(
             batch,
             value,
-            rect.x + rect.width + ui.unit * 0.7f,
+            rect.x + rect.width + ui.unit * 0.35f,
             rect.centerY - ui.unit * 0.25f,
             ui.unit * 0.5f,
             color,
@@ -458,6 +491,30 @@ class SettingsScene(private val catalog: SpriteCatalog) {
          * 손가락으로 1 단위를 맞출 수는 없다. 끊어 두면 같은 자리를 다시 짚었을 때
          * 같은 값이 나온다.
          */
+        /**
+         * 동시 COM 슬라이더. 맨 왼쪽 칸이 AUTO 고 그 뒤가 8 ~ 12 다. (계획서 §44.2)
+         *
+         * AUTO 를 칸 하나로 둔 이유는, 손으로 한 번 정하고 나면 "인원에 맞춰 알아서"
+         * 로 되돌릴 길이 없어지기 때문이다. 숫자 사이에 끼워 넣을 수 없으니 끝에 둔다.
+         */
+        fun activeEnemiesAt(fraction: Float): Int {
+            val step = (fraction.coerceIn(0f, 1f) * ACTIVE_ENEMY_STOPS).roundToInt()
+            return if (step == 0) {
+                RoomSettings.ACTIVE_ENEMIES_AUTO
+            } else {
+                (RoomSettings.MIN_ACTIVE_ENEMIES + step - 1)
+                    .coerceAtMost(RoomSettings.MAX_ACTIVE_ENEMIES)
+            }
+        }
+
+        /** 값이 놓일 슬라이더 자리. [activeEnemiesAt] 의 역이다. */
+        fun activeEnemiesFraction(value: Int): Float {
+            if (value < RoomSettings.MIN_ACTIVE_ENEMIES) return 0f
+            val step = value.coerceAtMost(RoomSettings.MAX_ACTIVE_ENEMIES) -
+                RoomSettings.MIN_ACTIVE_ENEMIES + 1
+            return step / ACTIVE_ENEMY_STOPS.toFloat()
+        }
+
         fun quantizeVolume(fraction: Float): Int {
             val step = DeviceSettings.VOLUME_STEP
             val raw = fraction.coerceIn(0f, 1f) * DeviceSettings.MAX_VOLUME
@@ -477,8 +534,6 @@ class SettingsScene(private val catalog: SpriteCatalog) {
         // 오른쪽 칸은 항목이 적어 아래를 비운다. 스피커 그림으로 채운다.
         private const val ROW_BGM = 1
         private const val ROW_SFX = 2
-        private const val ROW_SPEAKER = 4
-
         private const val PANEL_UNITS = 12.6f
         private const val PANEL_WIDTH = 0.88f
 
@@ -490,6 +545,10 @@ class SettingsScene(private val catalog: SpriteCatalog) {
         /** 소리 칸은 아이콘을 왼쪽에 두므로 글자를 그만큼 민다. */
         private const val ICON_INDENT = 1.0f
 
+        /** AUTO 를 뺀 눈금 수. 8 · 9 · 10 · 11 · 12 로 다섯이다. */
+        private const val ACTIVE_ENEMY_STOPS =
+            RoomSettings.MAX_ACTIVE_ENEMIES - RoomSettings.MIN_ACTIVE_ENEMIES + 1
+
         private const val BTN_RESET = 100
         private const val BTN_CANCEL = 101
         private const val BTN_APPLY = 102
@@ -497,6 +556,8 @@ class SettingsScene(private val catalog: SpriteCatalog) {
         private const val BTN_FRIENDLY = 104
         private const val BTN_PROTECT = 105
         private const val BTN_SEED = 106
+        private const val BTN_MUTE_BGM = 107
+        private const val BTN_MUTE_SFX = 108
         private const val BTN_SIZE_FIRST = 0
 
         private const val PRESSED_ALPHA = 0.65f

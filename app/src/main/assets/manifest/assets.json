@@ -253,8 +253,7 @@
       "reset": "set_reset_button",
       "bgmIcon": "set_bgm_icon",
       "sfxIcon": "set_sfx_icon",
-      "speakerOn": "set_speaker_on",
-      "speakerMuted": "set_speaker_muted"
+        "speakerMuted": "set_speaker_muted"
     },
 
     "result": {

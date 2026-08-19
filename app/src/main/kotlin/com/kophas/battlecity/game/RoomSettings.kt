@@ -15,8 +15,13 @@ data class RoomSettings(
     val randomSeed: Long = 0L,
     /** 아군 포탄에도 맞는가. 끄면 같은 편끼리는 통과한다. */
     val friendlyFire: Boolean = true,
-    /** 동시에 나올 수 있는 COM 수. 0 이면 balance.json 값을 쓴다. */
-    val maxActiveEnemies: Int = 0,
+    /**
+     * 동시에 나올 수 있는 COM 수. [ACTIVE_ENEMIES_AUTO] 면 balance.json 값을 쓴다.
+     *
+     * 총 COM 수(플레이어당 20)와는 다른 것이다. 80기를 한꺼번에 내보내지 않고
+     * 이 수만큼만 필드에 세워 둔다. (계획서 §9, §44.2)
+     */
+    val maxActiveEnemies: Int = ACTIVE_ENEMIES_AUTO,
     /** 본진이 첫 포탄을 한 번 막아 내는가. (계획서 §14 protected) */
     val baseProtection: Boolean = true,
 ) {
@@ -39,9 +44,19 @@ data class RoomSettings(
         const val MIN_GRID_PLAYERS = 2
         const val MAX_GRID_PLAYERS = 4
 
-        /** 동시 COM 수를 손으로 정할 때의 범위. 설정 화면의 슬라이더가 쓴다. */
-        const val MIN_ACTIVE_ENEMIES = 6
+        /**
+         * 동시 COM 수를 손으로 정할 때의 범위. 계획서 §44.2 가 정한 8~12 다.
+         *
+         * balance.json 은 인원별로 2인 8 · 3인 10 · 4인 12 를 준다. 손으로 정하는
+         * 값도 그 폭을 넘지 않게 둔다. 더 줄이면 판이 늘어지고 더 늘리면 화면이
+         * COM 으로 덮인다.
+         */
+        const val MIN_ACTIVE_ENEMIES = 8
+
         const val MAX_ACTIVE_ENEMIES = 12
+
+        /** 정하지 않았다는 뜻. 인원에 맞는 balance.json 값을 그대로 쓴다. */
+        const val ACTIVE_ENEMIES_AUTO = 0
     }
 }
 

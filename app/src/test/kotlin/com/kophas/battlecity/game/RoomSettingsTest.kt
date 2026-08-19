@@ -51,6 +51,35 @@ class RoomSettingsTest {
     }
 
     @Test
+    fun `동시 COM 슬라이더는 AUTO 와 8에서 12 사이만 고른다`() {
+        // 맨 왼쪽 한 칸은 AUTO 다. 손으로 정하고 나서 되돌릴 길이 있어야 한다.
+        assertEquals(RoomSettings.ACTIVE_ENEMIES_AUTO, SettingsScene.activeEnemiesAt(0f))
+        assertEquals(RoomSettings.MAX_ACTIVE_ENEMIES, SettingsScene.activeEnemiesAt(1f))
+        // 계획서 §44.2 가 정한 폭 밖으로는 나가지 않는다.
+        for (step in 0..20) {
+            val value = SettingsScene.activeEnemiesAt(step / 20f)
+            assertTrue(
+                "범위 밖 값 $value",
+                value == RoomSettings.ACTIVE_ENEMIES_AUTO ||
+                    value in RoomSettings.MIN_ACTIVE_ENEMIES..RoomSettings.MAX_ACTIVE_ENEMIES,
+            )
+        }
+    }
+
+    @Test
+    fun `슬라이더 자리와 값은 서로 되돌릴 수 있다`() {
+        val values = listOf(RoomSettings.ACTIVE_ENEMIES_AUTO) +
+            (RoomSettings.MIN_ACTIVE_ENEMIES..RoomSettings.MAX_ACTIVE_ENEMIES)
+        for (value in values) {
+            assertEquals(
+                "자리로 옮겼다 돌아오면 같은 값이어야 한다",
+                value,
+                SettingsScene.activeEnemiesAt(SettingsScene.activeEnemiesFraction(value)),
+            )
+        }
+    }
+
+    @Test
     fun `PLAY AGAIN 은 방장만 누르고 남은 사람이 있어야 한다`() {
         assertTrue(ResultScene.playAgainAllowed(isHost = true, peersPresent = 1))
         // 방장이라도 다른 사람이 모두 결과 화면을 떠나면 못 누른다.
