@@ -280,6 +280,7 @@ Kenney CC0 에셋 2종을 사용합니다. 선별 근거와 전체 매핑표는
 | Phase 3 | 플레이어 시스템 — 3종 탱크, 능력치, HP, Life, 사망, 점수 | ✅ 완료 |
 | Phase 3.5 | 아트 리워크 — 픽셀아트 월드 통일, 지형·환경 대폭 보강, 비트맵 폰트 HUD | ✅ 완료 |
 | Phase 4 | 특수기 — 관통탄, 방어막, 대시, 쿨타임, UI | ✅ 완료 |
+| Phase 4.5 | 환경 아트 교체 — 지형·구조물·환경 오브젝트를 자체 리소스로 전면 교체 | ✅ 완료 |
 | Phase 5 | COM — Spawn, 타입별 AI, State Machine, 20 × Player 수 생성 | 예정 |
 | Phase 6 | 로컬 멀티플레이 — Host, Join, Lobby, 상태 동기화, Disconnect 처리 | 예정 |
 | Phase 7 | 모바일 UI — Virtual Joystick, Fire/Special, HUD, Player Status | 예정 |
@@ -341,7 +342,8 @@ seed 로 생성된 4인용 4:3 스테이지(24×18 블록). 지형·도로 오�
 벽돌·석재 구조물, 환경 오브젝트, 본진이 모두 랜덤 배치됩니다.
 월드는 16px 픽셀아트, 회전하는 탱크만 벡터풍 팩을 씁니다.
 
-![Phase 4](docs/images/phase4_specials.png)
+![Phase 4.5](docs/images/phase45_environment.png)
 
+지형·구조물·환경 오브젝트는 자체 리소스(`assets/renewal.png`)에서 잘라 쓰고,
+회전하는 유닛(탱크·포탄·폭발)만 Kenney Top-down Tanks Redux 를 유지합니다.
 좌측 HUD 는 비트맵 폰트로 `P1 ♥♥♥ 0` / `ENEMY 80` 과 특수기 쿨타임 게이지를 표시합니다.
-녹색 탱크에 걸린 청록 오라가 방어형의 방어막입니다.

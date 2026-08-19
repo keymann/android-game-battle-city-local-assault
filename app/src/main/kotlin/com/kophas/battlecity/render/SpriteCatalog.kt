@@ -15,19 +15,13 @@ class SpriteCatalog(private val assets: GameAssets) {
 
     // --- 타일 -------------------------------------------------------------
 
-    val water: TextureRegion = assets[manifest.tileSprite("WATER") ?: "battle_037"]
+    /** 물결 프레임. 3장이라 프레임 교대만으로 넘실거린다. */
+    val waterFrames: List<TextureRegion> =
+        manifest.tileFrames("WATER").ifEmpty { listOf("env_water_0") }.map { assets[it] }
 
-    val waterAnimFps: Float = manifest.tile("WATER")?.get("animFps")?.asFloat ?: 0.5f
+    val waterAnimFps: Float = manifest.tile("WATER")?.get("animFps")?.asFloat ?: 3f
 
-    /**
-     * 물결 세기.
-     *
-     * 잔디가 섞이지 않은 열린 수면 타일이 하나뿐이라 프레임 교대로는 물결을
-     * 만들 수 없다. 대신 밝기를 셀 위치에 따라 흔들어 잔물결처럼 보이게 한다.
-     */
-    val waterShimmer: Float = manifest.tile("WATER")?.get("shimmer")?.asFloat ?: 0.1f
-
-    val ice: TextureRegion = assets[manifest.tileSprite("ICE") ?: "battle_037"]
+    val ice: TextureRegion = assets[manifest.tileSprite("ICE") ?: "env_water_0"]
 
     val iceTint: Int = parseColor(manifest.tile("ICE")?.get("tint")?.asString, 0xDFF6FFCC.toInt())
 

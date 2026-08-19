@@ -1,7 +1,7 @@
 {
   "version": 2,
-  "credits": "Kenney (www.kenney.nl) — Top-down Tanks Redux / Tiny Battle / Tiny Town / Tiny Dungeon / Desert Shooter Pack, 모두 CC0 1.0",
-  "comment": "월드(지형·구조물·환경·HUD)는 16px 픽셀아트로 통일하고, 회전하는 유닛(탱크·포탄·폭발)만 Top-down Tanks Redux 를 쓴다. 유닛은 몸체와 포신이 분리돼 있어 표현력이 앞선다. 스프라이트 이름 접두사가 출처다: battle/town/dungeon/ui/fx = 픽셀, 그 외 = 유닛 아틀라스.",
+  "credits": "환경 오브젝트는 프로젝트 자체 리소스(assets/renewal.png), 유닛은 Kenney Top-down Tanks Redux (CC0), HUD 폰트는 Kenney Desert Shooter Pack (CC0)",
+  "comment": "지형과 환경 오브젝트는 renewal.png 에서 잘라 낸 env_* 를 쓴다. 회전하는 유닛(탱크·포탄·폭발)만 Top-down Tanks Redux, HUD 폰트와 게이지는 Desert Shooter 를 유지한다. 아틀라스는 tools/build_tile_atlas.sh 가 만든다.",
   "atlases": {
     "tiles": {
       "image": "atlas/tiles.png",
@@ -27,67 +27,29 @@
     "comment": "block = 지형 타일 1장 = 탱크 1대. cell = BRICK/STEEL 파괴 최소 단위."
   },
   "terrain": {
-    "comment": "지형은 충돌에 관여하지 않는 배경 레이어다.",
+    "comment": "지형은 충돌에 관여하지 않는 배경 레이어다. 도로는 직선만 중앙선을 넣고 모서리·분기는 민무늬 아스팔트로 둔다. 새 시트에 16-mask 오토타일 세트가 없다.",
     "grass": {
       "base": [
-        "town_000"
-      ],
-      "accents": [
-        "town_001",
-        "town_001",
-        "town_001",
-        "town_002"
-      ],
-      "accentChance": 0.12,
-      "comment": "장식 잔디는 낮은 확률로만 섞고, 그중에서도 꽃(town_002)은 드물게 나오도록 가중치를 둔다."
+        "env_ground_grass"
+      ]
     },
     "dirt": {
       "base": [
-        "town_039",
-        "town_040",
-        "town_041",
-        "town_042"
+        "env_ground_dirt"
       ]
     },
     "gravel": {
       "base": [
-        "town_043"
+        "env_ground_sand"
       ]
     },
-    "dirtPatch": {
-      "comment": "흙 구역의 3x3 나인슬라이스. 키는 잔디와 맞닿은 방향이다.",
-      "NW": "town_012",
-      "N": "town_013",
-      "NE": "town_014",
-      "W": "town_024",
-      "C": "town_025",
-      "E": "town_026",
-      "SW": "town_036",
-      "S": "town_037",
-      "SE": "town_038"
-    },
     "road": {
-      "comment": "이웃 비트마스크 N=1 E=2 S=4 W=8 -> 타일. 16가지가 모두 대응된다.",
-      "0": "battle_108",
-      "1": "battle_162",
-      "2": "battle_109",
-      "3": "battle_163",
-      "4": "battle_126",
-      "5": "battle_144",
-      "6": "battle_127",
-      "7": "battle_145",
-      "8": "battle_111",
-      "9": "battle_165",
-      "10": "battle_110",
-      "11": "battle_164",
-      "12": "battle_129",
-      "13": "battle_147",
-      "14": "battle_128",
-      "15": "battle_146"
-    },
-    "bridge": {
-      "deck": "battle_130",
-      "water": "battle_148"
+      "straightVertical": "env_road_line",
+      "straightHorizontal": "env_road_line_h",
+      "plain": [
+        "env_road_0",
+        "env_road_1"
+      ]
     }
   },
   "tiles": {
@@ -103,18 +65,11 @@
       "hp": 1,
       "renderLayer": "object",
       "sprites": [
-        "town_052",
-        "town_053",
-        "town_054",
-        "town_064",
-        "town_065",
-        "town_066",
-        "town_072",
-        "town_073",
-        "town_075",
-        "dungeon_066"
+        "env_brick_0",
+        "env_brick_1",
+        "env_brick_2"
       ],
-      "comment": "붉은 벽돌벽과 목재벽. 원작의 벽돌 감각에 가장 가까운 조합이다."
+      "comment": "붉은 벽돌 벽 3종. 셀 단위로 부서진다."
     },
     "STEEL": {
       "collision": "block",
@@ -123,39 +78,25 @@
       "hp": 3,
       "renderLayer": "object",
       "sprites": [
-        "dungeon_036",
-        "dungeon_037",
-        "dungeon_038",
-        "dungeon_039",
-        "dungeon_040",
-        "dungeon_041",
-        "dungeon_057",
-        "dungeon_058",
-        "dungeon_059",
-        "town_048",
-        "town_049",
-        "town_050",
-        "town_060",
-        "town_061",
-        "town_062",
-        "dungeon_069",
-        "dungeon_070",
-        "dungeon_071",
-        "dungeon_079",
-        "dungeon_080",
-        "dungeon_081"
+        "env_steel_0",
+        "env_steel_1",
+        "env_steel_2",
+        "env_steel_3"
       ],
-      "comment": "석재벽과 철창. 관통탄으로만 부술 수 있다."
+      "comment": "석재/철판 벽 4종. 관통탄으로만 부술 수 있다."
     },
     "WATER": {
       "collision": "block",
       "bulletPass": true,
       "destructible": false,
       "renderLayer": "ground",
-      "sprite": "battle_037",
-      "animFps": 0.5,
-      "shimmer": 0.1,
-      "comment": "Tiny Battle 물 타일 30종 중 잔디가 전혀 섞이지 않은 열린 수면은 이것뿐이다."
+      "frames": [
+        "env_water_0",
+        "env_water_1",
+        "env_water_2"
+      ],
+      "animFps": 3.0,
+      "comment": "물결 프레임이 3장이라 밝기 보정 없이 프레임 교대로 넘실거린다."
     },
     "FOREST": {
       "collision": "none",
@@ -163,38 +104,15 @@
       "conceal": true,
       "renderLayer": "canopy",
       "sprites": [
-        "town_003",
-        "town_004",
-        "town_005",
-        "town_006",
-        "town_007",
-        "town_008",
-        "town_009",
-        "town_010",
-        "town_011",
-        "town_015",
-        "town_016",
-        "town_017",
-        "town_018",
-        "town_019",
-        "town_020",
-        "town_021",
-        "town_022",
-        "town_023",
-        "town_027",
-        "town_028",
-        "town_030",
-        "town_031",
-        "town_032",
-        "town_033",
-        "town_034",
-        "town_035"
+        "env_tree_0",
+        "env_tree_1",
+        "env_bush"
       ],
       "litter": [
-        "town_029",
-        "town_092",
-        "dungeon_009",
-        "dungeon_012"
+        "env_stump_0",
+        "env_stump_1",
+        "env_flower",
+        "env_bush"
       ],
       "comment": "나무 26종. 탱크 위 캐노피로 그려 원작의 숲 은폐를 재현한다."
     },
@@ -203,14 +121,9 @@
       "bulletPass": true,
       "friction": 0.12,
       "renderLayer": "ground",
-      "sprite": "battle_037",
+      "sprite": "env_water_0",
       "tint": "#DFF6FFCC",
-      "decal": {
-        "sprites": [
-          "dungeon_060",
-          "dungeon_062"
-        ]
-      }
+      "comment": "새 시트에 얼음 타일이 없어 물 타일을 밝게 물들여 쓴다."
     },
     "BASE": {
       "collision": "block",
@@ -425,23 +338,24 @@
     }
   },
   "props": {
-    "comment": "EMPTY 블록에 확률 배치. explosive=파괴 시 연쇄 폭발, solid=충돌, decor=충돌 없음",
+    "comment": "EMPTY 블록에 확률 배치. kind=explosive 파괴 시 연쇄 폭발 / solid 충돌 / decor 충돌 없음. layout=line 은 선형 배치, block 은 블록(2x2 셀) 전체를 차지한다.",
     "groups": {
-      "explosiveBarrel": {
+      "fuelBarrel": {
         "kind": "explosive",
         "blastCells": 3,
         "sprites": [
-          "town_105",
-          "dungeon_029"
+          "env_barrel_red",
+          "env_barrel_yellow",
+          "env_barrel_fuel"
         ]
       },
-      "fuelBarrel": {
+      "supplyBarrel": {
         "kind": "explosive",
         "blastCells": 2,
         "sprites": [
-          "town_130",
-          "dungeon_073",
-          "dungeon_082"
+          "env_barrel_blue",
+          "env_barrel_green",
+          "env_barrel_wood"
         ]
       },
       "supplyCrate": {
@@ -449,95 +363,98 @@
         "destructible": true,
         "hp": 1,
         "sprites": [
-          "dungeon_089",
-          "dungeon_090",
-          "dungeon_091",
-          "town_104",
-          "town_107"
+          "env_crate_0",
+          "env_crate_1",
+          "env_crate_broken",
+          "env_supply_blue",
+          "env_supply_medic"
         ]
       },
-      "armorBlock": {
-        "kind": "solid",
-        "destructible": false,
-        "sprites": [
-          "town_120",
-          "town_121",
-          "town_122",
-          "dungeon_054",
-          "dungeon_055"
-        ]
-      },
-      "woodFence": {
+      "sandbagLine": {
         "kind": "solid",
         "destructible": true,
         "hp": 1,
         "layout": "line",
         "sprites": [
-          "town_044",
-          "town_045",
-          "town_046",
-          "town_047",
-          "town_080",
-          "town_081",
-          "town_082"
+          "env_sandbag_0",
+          "env_sandbag_1"
         ]
       },
-      "ironFence": {
+      "barricadeLine": {
+        "kind": "solid",
+        "destructible": true,
+        "hp": 1,
+        "layout": "line",
+        "sprites": [
+          "env_barricade_0",
+          "env_barricade_1"
+        ]
+      },
+      "fenceLine": {
         "kind": "solid",
         "destructible": false,
         "layout": "line",
         "sprites": [
-          "dungeon_069",
-          "dungeon_070",
-          "dungeon_071",
-          "dungeon_079",
-          "dungeon_080",
-          "dungeon_081"
+          "env_fence_0",
+          "env_fence_1"
         ]
       },
-      "haystack": {
+      "roadBarrier": {
         "kind": "solid",
         "destructible": true,
-        "hp": 1,
+        "hp": 2,
+        "layout": "line",
         "sprites": [
-          "town_092",
-          "town_093",
-          "town_094"
+          "env_barrier_yellow",
+          "env_barrier_red"
+        ]
+      },
+      "building": {
+        "kind": "solid",
+        "destructible": false,
+        "layout": "block",
+        "sprites": [
+          "env_building_house",
+          "env_building_blue",
+          "env_building_office",
+          "env_building_radar"
+        ]
+      },
+      "watchtower": {
+        "kind": "solid",
+        "destructible": false,
+        "layout": "block",
+        "sprites": [
+          "env_tower_wood",
+          "env_tower_green",
+          "env_tower_light"
         ]
       },
       "rubble": {
         "kind": "decor",
         "sprites": [
-          "dungeon_009",
-          "dungeon_012",
-          "dungeon_024",
-          "dungeon_025"
+          "env_brick_rubble_0",
+          "env_brick_rubble_1",
+          "env_steel_rubble",
+          "env_crater"
         ]
       },
-      "toolShed": {
+      "streetProp": {
         "kind": "decor",
         "sprites": [
-          "town_115",
-          "town_116",
-          "town_128",
-          "town_129",
-          "town_131"
+          "env_lamp",
+          "env_sign",
+          "env_flag_red",
+          "env_flag_blue"
         ]
       },
-      "groundMark": {
+      "junk": {
         "kind": "decor",
         "sprites": [
-          "dungeon_060",
-          "dungeon_061",
-          "dungeon_062"
-        ]
-      },
-      "flora": {
-        "kind": "decor",
-        "sprites": [
-          "town_029",
-          "town_017",
-          "town_005"
+          "env_tire",
+          "env_tire_stack",
+          "env_well",
+          "env_crops"
         ]
       }
     }

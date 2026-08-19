@@ -60,8 +60,11 @@ class AssetManifestTest {
     }
 
     @Test
-    fun `나무는 20종 이상이다`() {
-        assertTrue("숲이 단조로우면 안 된다", manifest.tileSprites("FOREST").size >= 20)
+    fun `숲은 나무와 덤불을 섞어 쓴다`() {
+        val trees = manifest.tileSprites("FOREST")
+        assertTrue("숲 스프라이트가 부족하다", trees.size >= 3)
+        assertTrue("모두 환경 시트에서 와야 한다", trees.all { it.startsWith("env_") })
+        assertTrue("바닥 장식도 있어야 한다", manifest.tile("FOREST")?.get("litter")?.asStringList.orEmpty().size >= 3)
     }
 
     @Test
@@ -79,18 +82,41 @@ class AssetManifestTest {
     }
 
     @Test
-    fun `환경 오브젝트 그룹이 11개 있다`() {
-        assertEquals(11, manifest.propGroupIds.size)
+    fun `환경 오브젝트 그룹이 12개 있다`() {
+        assertEquals(12, manifest.propGroupIds.size)
         assertTrue(
             manifest.propGroupIds.containsAll(
-                listOf("explosiveBarrel", "woodFence", "ironFence", "haystack", "rubble"),
+                listOf("fuelBarrel", "supplyCrate", "fenceLine", "building", "watchtower", "rubble"),
             ),
         )
     }
 
     @Test
+    fun `큰 구조물은 블록 단위로 놓인다`() {
+        // 건물과 감시탑은 한 칸에 넣으면 그림이 잘린다.
+        for (id in listOf("building", "watchtower")) {
+            assertEquals("block", manifest.propGroup(id)?.get("layout")?.asString)
+        }
+    }
+
+    @Test
+    fun `지형과 환경 오브젝트가 모두 환경 시트에서 온다`() {
+        val fromSheet = buildList {
+            for (type in listOf("BRICK", "STEEL", "FOREST")) addAll(manifest.tileSprites(type))
+            addAll(manifest.tileFrames("WATER"))
+            for (group in manifest.propGroupIds) {
+                addAll(manifest.propGroup(group)?.get("sprites")?.asStringList.orEmpty())
+            }
+            for (key in listOf("grass", "dirt", "gravel")) addAll(manifest.terrainBase(key))
+        }
+        assertTrue(fromSheet.size > 40)
+        val stray = fromSheet.filterNot { it.startsWith("env_") }
+        assertEquals("환경 시트 밖 스프라이트가 남아 있다: $stray", emptyList<String>(), stray)
+    }
+
+    @Test
     fun `폭발성 프롭은 폭발 반경을 가진다`() {
-        for (id in listOf("explosiveBarrel", "fuelBarrel")) {
+        for (id in listOf("fuelBarrel", "supplyBarrel")) {
             val group = manifest.propGroup(id)!!
             assertEquals("explosive", group["kind"]?.asString)
             assertTrue("$id 폭발 반경이 없다", (group["blastCells"]?.asInt ?: 0) > 0)
@@ -134,19 +160,16 @@ class AssetManifestTest {
     }
 
     @Test
-    fun `도로 오토타일은 16가지 비트마스크를 모두 채운다`() {
-        val road = manifest.terrain("road")?.asObject.orEmpty()
-        for (mask in 0..15) {
-            assertNotNull("마스크 $mask 에 대응하는 도로 타일이 없다", road[mask.toString()]?.asString)
-        }
-    }
-
-    @Test
-    fun `흙 구역 나인슬라이스가 9조각 모두 있다`() {
-        val patch = manifest.terrain("dirtPatch")?.asObject.orEmpty()
-        for (key in listOf("NW", "N", "NE", "W", "C", "E", "SW", "S", "SE")) {
-            assertNotNull("$key 조각이 없다", patch[key]?.asString)
-        }
+    fun `도로는 직선과 민무늬 타일을 가진다`() {
+        // 새 타일 시트에는 16-mask 오토타일 세트가 없다. 직선만 중앙선을 넣는다.
+        val road = manifest.terrain("road")!!
+        assertNotNull(road["straightVertical"]?.asString)
+        assertNotNull(road["straightHorizontal"]?.asString)
+        assertTrue(road["plain"]?.asStringList.orEmpty().isNotEmpty())
+        assertTrue(
+            "세로/가로 직선 타일은 서로 달라야 한다",
+            road["straightVertical"]?.asString != road["straightHorizontal"]?.asString,
+        )
     }
 
     @Test
@@ -165,8 +188,17 @@ class AssetManifestTest {
     }
 
     @Test
-    fun `물과 얼음은 열린 수면 타일 하나를 쓴다`() {
-        assertEquals("battle_037", manifest.tileSprite("WATER"))
-        assertEquals("battle_037", manifest.tileSprite("ICE"))
+    fun `물은 프레임 3장으로 넘실거린다`() {
+        val frames = manifest.tileFrames("WATER")
+        assertEquals(3, frames.size)
+        assertEquals("프레임이 서로 달라야 한다", frames.size, frames.toSet().size)
+        assertTrue((manifest.tile("WATER")?.get("animFps")?.asFloat ?: 0f) > 0f)
+    }
+
+    @Test
+    fun `얼음은 물 타일에 틴트를 얹어 만든다`() {
+        // 새 시트에 얼음 타일이 없다.
+        assertEquals("env_water_0", manifest.tileSprite("ICE"))
+        assertNotNull(manifest.tile("ICE")?.get("tint")?.asString)
     }
 }

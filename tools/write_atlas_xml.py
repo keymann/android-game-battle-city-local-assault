@@ -9,12 +9,14 @@
     ui_                          16px 인터페이스 (폰트는 사람이 읽는 이름)
     fx_                          24px 이펙트
     base_                        본진 파괴 애니메이션
+    env_                         환경 오브젝트 (지형 / 구조물 / 소품)
 
 사용법:
   write_atlas_xml.py <출력> <16px열수> <24px열수> <16px높이> <24px높이>
-                     <본진가로> <본진세로> <본진장수>
+                     <본진가로> <본진세로> <본진장수> <환경layout.json>
 """
 
+import json
 import sys
 
 # 16px 구역에 들어가는 팩과 장수. 합친 순서와 같아야 한다.
@@ -45,7 +47,7 @@ def ui_names() -> dict:
 
 
 def main() -> int:
-    if len(sys.argv) != 9:
+    if len(sys.argv) != 10:
         print(__doc__)
         return 1
 
@@ -53,6 +55,7 @@ def main() -> int:
     cols16, cols24 = int(sys.argv[2]), int(sys.argv[3])
     part16_h, part24_h = int(sys.argv[4]), int(sys.argv[5])
     base_w, base_h, base_count = int(sys.argv[6]), int(sys.argv[7]), int(sys.argv[8])
+    env_layout_path = sys.argv[9]
 
     special = ui_names()
     entries = []
@@ -72,6 +75,13 @@ def main() -> int:
     base_y = part16_h + part24_h
     for local in range(base_count):
         entries.append((f"base_{local}", local * base_w, base_y, base_w, base_h))
+
+    env_y = base_y + base_h
+    with open(env_layout_path, encoding="utf-8") as f:
+        layout = json.load(f)
+    for sprite in layout["sprites"]:
+        entries.append((sprite["name"], sprite["x"], env_y + sprite["y"],
+                        sprite["w"], sprite["h"]))
 
     with open(out_path, "w", encoding="utf-8") as f:
         f.write('<?xml version="1.0" encoding="UTF-8"?>\n')

@@ -8,15 +8,21 @@
 | 팩 | 사용 범위 | 원본 |
 |---|---|---|
 | **Top-down Tanks Redux** | 탱크(몸체+포신), 포탄, 폭발, 궤도자국 | `assets/asset1` |
-| **Tiny Battle** (1.0) | 물, 도로 오토타일, 본진 깃발, 하트 | `assets/asset2` |
-| **Tiny Town** (1.1) | 잔디·흙·자갈, 나무 26종, 벽돌벽, 울타리, 프롭 | `assets/kenney_tiny-town` |
-| **Tiny Dungeon** (1.0) | 석재벽, 철창, 배럴, 상자, 바닥 자국 | `assets/kenney_tiny-dungeon` |
 | **Desert Shooter Pack** (1.0) | 비트맵 폰트(A~Z, 0~9), 게이지 바, UI 아이콘 | `assets/kenney_desert-shooter-pack_1.0` |
+
+한때 지형을 담당했으나 자체 환경 시트로 교체된 팩 (아틀라스에는 남아 있으나 미참조):
+
+| 팩 | 원본 |
+|---|---|
+| **Tiny Battle** (1.0) | `assets/asset2` |
+| **Tiny Town** (1.1) | `assets/kenney_tiny-town` |
+| **Tiny Dungeon** (1.0) | `assets/kenney_tiny-dungeon` |
 
 ## 프로젝트 자체 리소스
 
 | 파일 | 사용 범위 |
 |---|---|
+| `assets/renewal.png` | **지형·구조물·환경 오브젝트 전부** (63장) |
 | `assets/custom/본진_건물.png` | 본진 건물 정상 / 손상 / 심한 손상 / 폭발 4프레임 |
 
 Kenney 팩이 아닌 프로젝트에 직접 추가한 리소스입니다.

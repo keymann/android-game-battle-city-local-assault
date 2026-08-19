@@ -24,6 +24,13 @@ class StageData(
     val decor: List<Decor>,
     /** 폭발성 프롭이 놓인 셀 인덱스. 파괴되면 연쇄 폭발한다. */
     val explosiveCells: Set<Int>,
+    /**
+     * 스프라이트를 사분면으로 쪼개지 않고 통째로 그릴 셀.
+     *
+     * 벽은 블록에 한 장을 걸쳐 놓고 셀마다 자기 사분면을 그리지만, 드럼통처럼
+     * 한 칸짜리 물건은 그러면 4분의 1만 보인다. 그런 셀을 여기 표시한다.
+     */
+    val wholeSpriteCells: Set<Int> = emptySet(),
     /** 본진 블록 인덱스. */
     val baseBlock: Int,
     val comSpawnBlocks: IntArray,

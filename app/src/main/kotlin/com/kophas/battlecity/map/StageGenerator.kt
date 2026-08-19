@@ -89,6 +89,9 @@ class StageGenerator(private val manifest: AssetManifest) {
         private val decor = ArrayList<StageData.Decor>()
         private val explosive = HashSet<Int>()
 
+        /** 사분면으로 쪼개지 않고 통째로 그릴 셀. 한 칸짜리 소품이 여기 들어간다. */
+        private val wholeSprite = HashSet<Int>()
+
         private val spriteIds = LinkedHashMap<String, Short>()
         private val groundIds = LinkedHashMap<String, Short>()
 
@@ -107,12 +110,19 @@ class StageGenerator(private val manifest: AssetManifest) {
             if (!inBounds(cellX, cellY)) TileType.STEEL
             else TileType.fromId(cells[index(cellX, cellY)])
 
-        private fun setCell(cellX: Int, cellY: Int, type: TileType, sprite: String? = null) {
+        private fun setCell(
+            cellX: Int,
+            cellY: Int,
+            type: TileType,
+            sprite: String? = null,
+            whole: Boolean = false,
+        ) {
             if (!inBounds(cellX, cellY)) return
             val i = index(cellX, cellY)
             cells[i] = type.id
             cellSprite[i] = sprite?.let { spriteId(it) } ?: -1
             if (type != TileType.BRICK) explosive.remove(i)
+            if (whole) wholeSprite += i else wholeSprite -= i
         }
 
         // -------------------------------------------------------------------
@@ -225,9 +235,6 @@ class StageGenerator(private val manifest: AssetManifest) {
             val dirt = BooleanArray(blocksX * blocksY)
             plotDirt(theme.biome, dirt)
 
-            fun isDirt(bx: Int, by: Int): Boolean =
-                bx in 0 until blocksX && by in 0 until blocksY && dirt[by * blocksX + bx]
-
             for (by in 0 until blocksY) {
                 for (bx in 0 until blocksX) {
                     val i = by * blocksX + bx
@@ -238,15 +245,10 @@ class StageGenerator(private val manifest: AssetManifest) {
                             if (bx < blocksX - 1 && road[i + 1]) mask = mask or AutoTiler.EAST
                             if (by < blocksY - 1 && road[i + blocksX]) mask = mask or AutoTiler.SOUTH
                             if (bx > 0 && road[i - 1]) mask = mask or AutoTiler.WEST
-                            tiler.roadTile(mask) ?: tiler.grassTile()
+                            tiler.roadTile(mask)
                         }
 
-                        dirt[i] -> tiler.dirtTile(
-                            openN = !isDirt(bx, by - 1),
-                            openE = !isDirt(bx + 1, by),
-                            openS = !isDirt(bx, by + 1),
-                            openW = !isDirt(bx - 1, by),
-                        )
+                        dirt[i] -> tiler.dirtTile()
 
                         // 가끔 자갈을 섞어 잔디가 단조로워지지 않게 한다.
                         rng.chance(GRAVEL_CHANCE) -> tiler.gravelTile()
@@ -544,14 +546,14 @@ class StageGenerator(private val manifest: AssetManifest) {
                 val sprites = group["sprites"]?.asStringList.orEmpty()
                 if (sprites.isEmpty()) continue
 
+                val destructible = group["destructible"]?.asBoolean ?: true
                 when (group["kind"]?.asString) {
                     "explosive" -> scatterExplosive(sprites, anchors)
-                    "solid" ->
-                        if (group["layout"]?.asString == "line") {
-                            scatterLine(sprites, group["destructible"]?.asBoolean ?: true, anchors)
-                        } else {
-                            scatterSolid(sprites, group["destructible"]?.asBoolean ?: true, anchors)
-                        }
+                    "solid" -> when (group["layout"]?.asString) {
+                        "line" -> scatterLine(sprites, destructible, anchors)
+                        "block" -> scatterBlock(sprites, destructible, anchors)
+                        else -> scatterSolid(sprites, destructible, anchors)
+                    }
                     else -> scatterDecor(sprites)
                 }
             }
@@ -572,7 +574,7 @@ class StageGenerator(private val manifest: AssetManifest) {
                     val tx = cx + (i % Constants.CELLS_PER_BLOCK)
                     val ty = cy + (i / Constants.CELLS_PER_BLOCK)
                     if (typeAt(tx, ty) != TileType.EMPTY) return@repeat
-                    setCell(tx, ty, TileType.BRICK, rng.pick(sprites))
+                    setCell(tx, ty, TileType.BRICK, rng.pick(sprites), whole = true)
                     explosive += index(tx, ty)
                 }
             }
@@ -588,7 +590,36 @@ class StageGenerator(private val manifest: AssetManifest) {
                     val cx = bx * Constants.CELLS_PER_BLOCK + rng.nextInt(Constants.CELLS_PER_BLOCK)
                     val cy = by * Constants.CELLS_PER_BLOCK + rng.nextInt(Constants.CELLS_PER_BLOCK)
                     if (typeAt(cx, cy) != TileType.EMPTY) continue
-                    setCell(cx, cy, type, rng.pick(sprites))
+                    setCell(cx, cy, type, rng.pick(sprites), whole = true)
+                }
+            }
+        }
+
+        /**
+         * 건물이나 감시탑처럼 큰 구조물. 블록(2x2 셀) 전체를 같은 스프라이트로 채운다.
+         * 네 칸이 모두 같으면 렌더러가 블록 하나로 합쳐 그리므로 그림이 온전히 보인다.
+         */
+        private fun scatterBlock(sprites: List<String>, destructible: Boolean, anchors: Anchors) {
+            val type = if (destructible) TileType.BRICK else TileType.STEEL
+            val count = rng.nextInt(2, 6)
+            repeat(count) {
+                val bx = rng.nextInt(1, blocksX - 1)
+                val by = rng.nextInt(1, blocksY - 1)
+                if (isProtected(anchors, bx, by, SPAWN_CLEAR_RADIUS)) return@repeat
+
+                val cx = bx * Constants.CELLS_PER_BLOCK
+                val cy = by * Constants.CELLS_PER_BLOCK
+                for (dy in 0 until Constants.CELLS_PER_BLOCK) {
+                    for (dx in 0 until Constants.CELLS_PER_BLOCK) {
+                        if (typeAt(cx + dx, cy + dy) != TileType.EMPTY) return@repeat
+                    }
+                }
+
+                val sprite = rng.pick(sprites)
+                for (dy in 0 until Constants.CELLS_PER_BLOCK) {
+                    for (dx in 0 until Constants.CELLS_PER_BLOCK) {
+                        setCell(cx + dx, cy + dy, type, sprite)
+                    }
                 }
             }
         }
@@ -609,7 +640,7 @@ class StageGenerator(private val manifest: AssetManifest) {
                         typeAt(cx, cy) == TileType.EMPTY &&
                         !isProtected(anchors, bx, by, SPAWN_CLEAR_RADIUS)
                     ) {
-                        setCell(cx, cy, type, sprite)
+                        setCell(cx, cy, type, sprite, whole = true)
                     }
                     if (horizontal) cx++ else cy++
                 }
@@ -768,6 +799,7 @@ class StageGenerator(private val manifest: AssetManifest) {
             groundNames = groundIds.keys.toTypedArray(),
             decor = decor,
             explosiveCells = explosive,
+            wholeSpriteCells = wholeSprite,
             baseBlock = anchors.baseBlock,
             comSpawnBlocks = anchors.comSpawnBlocks,
             playerSpawnBlocks = anchors.playerSpawnBlocks,
