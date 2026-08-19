@@ -21,6 +21,27 @@ data class TextureRegion(
 ) {
     val aspect: Float get() = width.toFloat() / height
 
+    /**
+     * 이 영역을 [cols] x [rows] 로 쪼갠 조각.
+     *
+     * 벽돌/강철을 셀 단위로 부술 때 쓴다. 스프라이트 한 장을 블록에 걸쳐 놓고
+     * 살아남은 셀만 자기 사분면을 그리면, 원작처럼 일부만 무너진 벽이 된다.
+     */
+    fun sub(col: Int, row: Int, cols: Int, rows: Int): TextureRegion {
+        require(col in 0 until cols && row in 0 until rows) { "조각 좌표가 범위를 벗어났다" }
+        val stepU = (u1 - u0) / cols
+        val stepV = (v1 - v0) / rows
+        return copy(
+            name = "$name#$col$row",
+            width = width / cols,
+            height = height / rows,
+            u0 = u0 + stepU * col,
+            v0 = v0 + stepV * row,
+            u1 = u0 + stepU * (col + 1),
+            v1 = v0 + stepV * (row + 1),
+        )
+    }
+
     companion object {
         const val DEFAULT_INSET_TEXELS: Float = 0.5f
 

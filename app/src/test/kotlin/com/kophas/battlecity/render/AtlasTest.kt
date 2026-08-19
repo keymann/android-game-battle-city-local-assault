@@ -155,10 +155,12 @@ class AtlasTest {
         }
 
         val terrain = manifest.root["terrain"]?.asObject.orEmpty()
-        for ((_, group) in terrain) {
+        // tint 는 스프라이트 이름이 아니라 색상 값이다.
+        for ((groupName, group) in terrain) {
+            if (groupName == "tint") continue
             addAll(group["base"]?.asStringList.orEmpty())
             for ((key, value) in group.asObject) {
-                if (key == "atlas" || key == "base") continue
+                if (key == "atlas" || key == "base" || key == "comment") continue
                 value.asString?.let { add(it) }
             }
         }

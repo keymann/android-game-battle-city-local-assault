@@ -32,7 +32,8 @@ public:
 
     void renderFrame(float clearR, float clearG, float clearB,
                      const float* sprites, int32_t spriteCount,
-                     const int32_t* runs, int32_t runCount) override;
+                     const int32_t* runs, int32_t runCount,
+                     int32_t opaqueCount) override;
 
     int32_t surfaceWidth() const override { return static_cast<int32_t>(extent_.width); }
     int32_t surfaceHeight() const override { return static_cast<int32_t>(extent_.height); }
@@ -107,6 +108,8 @@ private:
     VkDescriptorPool descriptorPool_ = VK_NULL_HANDLE;
     VkPipelineLayout pipelineLayout_ = VK_NULL_HANDLE;
     VkPipeline pipeline_ = VK_NULL_HANDLE;
+    /** 지형처럼 불투명한 스프라이트 전용. 블렌딩을 꺼서 fill rate 를 아낀다. */
+    VkPipeline pipelineOpaque_ = VK_NULL_HANDLE;
     VkSampler sampler_ = VK_NULL_HANDLE;
     VkCommandPool commandPool_ = VK_NULL_HANDLE;
 

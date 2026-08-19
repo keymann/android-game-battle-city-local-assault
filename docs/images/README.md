@@ -9,3 +9,4 @@
 | `ref_asset1_terrain.png` | asset1 지형 타일 40종 |
 | `ref_asset2_index.png` | asset2 198 타일 전체 인덱스 (0~197) |
 | `phase1_vulkan.png` | Phase 1 실기 렌더 결과 (Vulkan 백엔드, Pixel 9 Pro 에뮬레이터) |
+| `phase2_stage.png` | Phase 2 랜덤 스테이지 (4:3, 4인용 24x18 블록) |

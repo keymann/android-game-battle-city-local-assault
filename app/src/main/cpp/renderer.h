@@ -32,9 +32,11 @@ public:
 
     // 프레임. sprites 는 kFloatsPerSprite 간격의 float 배열,
     // runs 는 [textureId, count] 쌍의 int 배열.
+    // opaqueCount 는 앞에서부터 블렌딩 없이 그려도 되는 스프라이트 수다(지형 레이어).
     virtual void renderFrame(float clearR, float clearG, float clearB,
                              const float* sprites, int32_t spriteCount,
-                             const int32_t* runs, int32_t runCount) = 0;
+                             const int32_t* runs, int32_t runCount,
+                             int32_t opaqueCount) = 0;
 
     virtual int32_t surfaceWidth() const = 0;
     virtual int32_t surfaceHeight() const = 0;

@@ -54,13 +54,33 @@ cell  = 32 logical px   → BRICK / STEEL 파괴 최소 단위 (원작의 8px �
 | `EMPTY` | 통과 | 통과 | `tileGrass1/2`, `tileSand1/2` + 도로 36종 오토타일 | asset1 |
 | `BRICK` | 차단 | **파괴** (HP 1) | `crateWood`, `crateWood_side`, `barricadeWood`, `sandbagBeige/Brown`, `sandbag*_open` | asset1 |
 | `STEEL` | 차단 | **관통탄만 파괴** (HP 3) | `crateMetal`, `crateMetal_side`, `barricadeMetal`, `fenceRed`, `fenceYellow` | asset1 |
-| `WATER` | 차단 | **통과** | tiny `#37`, `#38` (2프레임 애니), 다리 `#148`/`#130` | asset2 |
+| `WATER` | 차단 | **통과** | tiny `#37`, `#91` (2프레임 애니), 다리 `#148`/`#130` | asset2 |
 | `FOREST` | 통과 | 통과 | `treeGreen_large/small`, `treeBrown_large/small` (+ 낙엽 4종) — **은폐** | asset1 |
-| `ICE` | 통과(관성) | 통과 | tiny `#37` + `#DFF6FF` 틴트 + `tracksSmall` 데칼 | asset2 + asset1 |
+| `ICE` | 통과(관성) | 통과 | tiny `#91` + `#DFF6FF` 틴트 + `tracksSmall` 데칼 | asset2 + asset1 |
 | `BASE` | 차단 | 파괴 → GAME OVER | tiny `#70`(정지) / `#71`(펄럭임) → 파괴 시 `#194` **백기** | asset2 |
 | `SPAWN` | 통과 | 통과 | 스폰 연출 `explosionSmoke1~5` 역재생 | asset1 |
 
+> asset2 물 타일 중 잔디가 섞이지 않은 **열린 수면**은 `#37` 과 `#91` 뿐이다.
+> 나머지는 해안 전이 타일이라 연못 안쪽에 쓰면 잔디 띠가 생긴다.
+
 > `BASE` 파괴 시 적기(赤旗)가 백기로 바뀌는 연출은 리소스만으로 "항복 = GAME OVER"를 즉시 읽히게 한다.
+
+---
+
+## 4-1. 지형과 탱크 색 분리
+
+잔디(초록)와 모래(베이지)는 각각 **초록 탱크 / 샌드 탱크**와 색이 겹친다.
+그대로 두면 자기 탱크가 배경에 묻힌다. 두 가지로 갈라 놓는다.
+
+| 방법 | 내용 |
+|---|---|
+| 지형 틴트 | 지형은 배경이므로 곱연산으로 눌러 어둡게 한다. 잔디 `#5C7350`, 모래 `#9E8F78`, 바닥 장식 `#B4B4B4` |
+| 탱크 실루엣 | 탱크 뒤에 `*_outline` 스프라이트를 1.08배로 `#0D0D12` 어둡게 깐다 |
+
+틴트는 스프라이트 이름(`tileGrass*` / `tileSand*`)으로 고르므로 두 바이옴이 섞인
+`MIXED` 맵에서도 타일마다 정확히 적용된다. 값은 전부 `assets.json` 의 `terrain.tint` 에 있다.
+
+전경(탱크·포탄·이펙트)은 원색을 유지하므로 명도 차이로 항상 분리된다.
 
 ---
 

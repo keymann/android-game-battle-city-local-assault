@@ -88,6 +88,12 @@
       "E_dirt": "tileGrass_roadTransitionE_dirt",
       "S_dirt": "tileGrass_roadTransitionS_dirt",
       "W_dirt": "tileGrass_roadTransitionW_dirt"
+    },
+    "tint": {
+      "comment": "지형은 배경이므로 어둡게 눌러 탱크 색상과 겹치지 않게 한다. 렌더 시 곱연산.",
+      "grass": "#5C7350",
+      "sand": "#9E8F78",
+      "decor": "#B4B4B4"
     }
   },
   "tiles": {
@@ -137,11 +143,12 @@
       "atlas": "tiny",
       "indices": [
         37,
-        38
+        91
       ],
       "animFps": 2,
       "bridgeIndex": 148,
-      "bridgeDeckIndex": 130
+      "bridgeDeckIndex": 130,
+      "comment": "37 / 91 만 잔디가 섞이지 않은 열린 수면이다"
     },
     "FOREST": {
       "collision": "none",
@@ -169,7 +176,7 @@
       "renderLayer": "ground",
       "atlas": "tiny",
       "indices": [
-        37
+        91
       ],
       "tint": "#DFF6FFCC",
       "decal": {
@@ -564,6 +571,12 @@
         "tint": "#FF5A3CFF",
         "pulseHz": 2,
         "note": "폭발성 프롭 점화 예고"
+      },
+      "silhouette": {
+        "target": "tank",
+        "tint": "#0D0D12E6",
+        "scale": 1.08,
+        "note": "탱크 뒤에 어두운 실루엣을 깔아 지형과 색이 겹쳐도 형태가 읽히게 한다"
       }
     }
   }
