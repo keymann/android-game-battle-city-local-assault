@@ -701,4 +701,8 @@
 	<SubTexture name="fx_037.png" x="216" y="528" width="24" height="24"/>
 	<SubTexture name="fx_038.png" x="240" y="528" width="24" height="24"/>
 	<SubTexture name="fx_039.png" x="264" y="528" width="24" height="24"/>
+	<SubTexture name="base_0.png" x="0" y="552" width="32" height="40"/>
+	<SubTexture name="base_1.png" x="32" y="552" width="32" height="40"/>
+	<SubTexture name="base_2.png" x="64" y="552" width="32" height="40"/>
+	<SubTexture name="base_3.png" x="96" y="552" width="32" height="40"/>
 </TextureAtlas>

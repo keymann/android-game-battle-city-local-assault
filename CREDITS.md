@@ -13,6 +13,16 @@
 | **Tiny Dungeon** (1.0) | 석재벽, 철창, 배럴, 상자, 바닥 자국 | `assets/kenney_tiny-dungeon` |
 | **Desert Shooter Pack** (1.0) | 비트맵 폰트(A~Z, 0~9), 게이지 바, UI 아이콘 | `assets/kenney_desert-shooter-pack_1.0` |
 
+## 프로젝트 자체 리소스
+
+| 파일 | 사용 범위 |
+|---|---|
+| `assets/custom/본진_건물.png` | 본진 건물 정상 / 손상 / 심한 손상 / 폭발 4프레임 |
+
+Kenney 팩이 아닌 프로젝트에 직접 추가한 리소스입니다.
+
+---
+
 미채택 팩 (팔레트·해상도가 맞지 않아 제외):
 
 | 팩 | 제외 사유 |

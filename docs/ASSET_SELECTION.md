@@ -49,7 +49,7 @@ Tiny 계열 유닛은 왼쪽 고정 방향 단일 스프라이트라 이 표현�
 
 | 파일 | 원본 | 크기 | 필터 | 내용 |
 |---|---|---:|---|---|
-| `atlas/tiles.png` + `tiles.xml` | Tiny Battle + Tiny Town + Tiny Dungeon + Desert Shooter | 352×552 | **NEAREST** | 16px 타일 660 + 24px 이펙트 40 |
+| `atlas/tiles.png` + `tiles.xml` | Tiny Battle + Tiny Town + Tiny Dungeon + Desert Shooter + 본진 시트 | 352×592 | **NEAREST** | 16px 타일 660 + 24px 이펙트 40 + 32×40 본진 4 |
 | `atlas/units.png` + `units.xml` | Top-down Tanks Redux (Retina) | 1124×1128 | **LINEAR** | 탱크·포탄·폭발 187 |
 
 `tiles` 는 `tools/build_tile_atlas.sh` 가 네 팩을 합쳐 만든다. 스프라이트 이름의 접두사가 출처다.
@@ -57,7 +57,8 @@ Tiny 계열 유닛은 왼쪽 고정 방향 단일 스프라이트라 이 표현�
 ```
 battle_037   Tiny Battle #37        town_052    Tiny Town #52
 dungeon_040  Tiny Dungeon #40       ui_char_A   Desert Shooter 폰트
-fx_025       Desert Shooter 버스트   tankBody_blue  Top-down Tanks Redux
+fx_025       Desert Shooter 버스트   base_0      본진 건물 (프로젝트 자체 리소스)
+tankBody_blue  Top-down Tanks Redux
 ```
 
 ### 필터를 나눈 이유
@@ -92,7 +93,7 @@ cell  = 32 logical px   → BRICK / STEEL 파괴 최소 단위 (원작의 8px �
 | `WATER` | 차단 | **통과** | `battle_037` |
 | `FOREST` | 통과 | 통과 | 나무 26종 — 엔티티 **위** 캐노피로 그려 은폐 |
 | `ICE` | 통과(관성) | 통과 | `battle_037` + `#DFF6FF` 틴트 |
-| `BASE` | 차단 | 파괴 → GAME OVER | 적기 `battle_070` → 파괴 시 **백기** `battle_194` |
+| `BASE` | 차단 | 파괴 → GAME OVER | 본진 건물 4프레임 `base_0~3` (아래 §5-1 참고) |
 
 ### 물 타일은 하나뿐이다
 
@@ -101,6 +102,32 @@ Tiny Battle 의 물 타일 30종 중 잔디·모래가 **전혀** 섞이지 않�
 픽셀 히스토그램으로 골라냈고, 같은 검사를 `WaterTileTest` 로 남겨 두었다.
 
 프레임이 하나뿐이라 물결은 셀 위치별 **밝기 위상차**로 만든다.
+
+### 본진 건물
+
+프로젝트에 직접 넣은 `assets/custom/본진_건물.png` 에서 뽑는다. 전달받은 파일은
+라벨·화살표·색상 변형·방향별 버전이 함께 든 **설명용 시트**라 게임에 필요한
+파괴 애니메이션 4프레임만 오려 낸다.
+
+| 프레임 | 상태 |
+|---|---|
+| `base_0` | 정상 |
+| `base_1` | 손상 |
+| `base_2` | 심한 손상 → **폭발 후 잔해로 남는다** |
+| `base_3` | 폭발 |
+
+프레임마다 경계 상자가 다르다(잔해가 밖으로 튄다). 그대로 쓰면 재생 중 건물이 흔들리므로
+**가로 중앙 + 바닥선**을 맞춘 공통 캔버스에 얹은 뒤 한 번에 32×40 으로 줄인다.
+미리 줄여서 합치면 프레임마다 반올림이 달라져 1px 씩 떨린다.
+
+프레임 사이에 안내용 화살표(▶)가 있어 경계를 넉넉히 잡으면 같이 딸려 온다.
+`tools/cut_base_frames.py` 의 좌표는 화살표를 피해 실측한 값이다.
+
+지형(16px)보다 촘촘한 32px 이지만, 본진은 화면에 하나뿐인 주인공 오브젝트라 허용한다.
+스프라이트가 블록보다 세로로 길어(깃발) **바닥을 블록 하단에 맞추고** 위로 삐져나오게 그린다.
+파괴 애니메이션은 게임 상태가 아니라 연출이므로 렌더러가 시간을 센다. (계획서 §41-1)
+
+---
 
 ### 도로는 16-mask 완전 세트
 
@@ -206,7 +233,8 @@ Desert Shooter 의 비트맵 폰트가 들어와 숫자뿐 아니라 **문자**�
 tools/build_tile_atlas.sh
 ```
 
-네 팩을 합쳐 `atlas/tiles.png` 와 `atlas/tiles.xml` 을 다시 만든다.
+네 팩과 본진 시트를 합쳐 `atlas/tiles.png` 와 `atlas/tiles.xml` 을 다시 만든다.
+본진 프레임 추출은 `tools/cut_base_frames.py`, 서술자 작성은 `tools/write_atlas_xml.py` 가 맡는다.
 배치가 바뀌어도 이름은 그대로라 매니페스트는 손대지 않아도 된다.
 
 ---

@@ -216,11 +216,17 @@
       "collision": "block",
       "bulletPass": false,
       "renderLayer": "object",
-      "intact": "battle_070",
-      "wave": "battle_071",
-      "destroyed": "battle_194",
+      "intact": "base_0",
+      "destroyFrames": [
+        "base_1",
+        "base_2",
+        "base_3"
+      ],
+      "destroyFps": 5,
+      "wreck": "base_2",
       "wallTile": "BRICK",
-      "wallShape": "U"
+      "wallShape": "U",
+      "comment": "본진 건물 4프레임. 파괴되면 손상 -> 심한 손상 -> 폭발 순으로 재생하고 잔해(base_2) 상태로 남는다. 스프라이트가 블록보다 세로로 길어 바닥을 블록 하단에 맞추고 깃발이 위로 삐져나오게 그린다."
     },
     "SPAWN": {
       "collision": "none",

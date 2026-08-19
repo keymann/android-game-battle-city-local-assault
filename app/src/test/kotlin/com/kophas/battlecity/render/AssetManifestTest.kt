@@ -150,11 +150,18 @@ class AssetManifestTest {
     }
 
     @Test
-    fun `본진은 파괴 시 다른 스프라이트로 바뀐다`() {
+    fun `본진은 파괴 애니메이션 프레임을 가진다`() {
         val base = manifest.tile("BASE")!!
-        assertNotNull(base["intact"]?.asString)
-        assertNotNull(base["destroyed"]?.asString)
-        assertTrue(base["intact"]?.asString != base["destroyed"]?.asString)
+        assertEquals("base_0", base["intact"]?.asString)
+
+        val frames = base["destroyFrames"]?.asStringList.orEmpty()
+        assertEquals("손상 -> 심한 손상 -> 폭발 3프레임", 3, frames.size)
+        assertEquals(frames.size, frames.toSet().size)
+        assertTrue("재생 속도가 있어야 한다", (base["destroyFps"]?.asFloat ?: 0f) > 0f)
+
+        // 폭발이 끝나면 잔해로 남는다. 정상 상태와 달라야 한다.
+        assertNotNull(base["wreck"]?.asString)
+        assertTrue(base["wreck"]?.asString != base["intact"]?.asString)
     }
 
     @Test

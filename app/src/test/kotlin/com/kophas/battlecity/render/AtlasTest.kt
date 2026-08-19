@@ -39,7 +39,7 @@ class AtlasTest {
     @Test
     fun `통합 아틀라스는 네 팩의 스프라이트를 모두 담는다`() {
         val atlas = atlas()
-        assertEquals(700, atlas.size)
+        assertEquals(704, atlas.size)
         assertEquals("tiles.png", atlas.imagePath)
 
         // 팩별 개수: Tiny Battle 198 / Tiny Town 132 / Tiny Dungeon 132 / Desert Shooter 198 + 40
@@ -47,6 +47,7 @@ class AtlasTest {
         assertEquals(132, atlas.names.count { it.startsWith("town_") })
         assertEquals(132, atlas.names.count { it.startsWith("dungeon_") })
         assertEquals(40, atlas.names.count { it.startsWith("fx_") })
+        assertEquals("본진 파괴 4프레임", 4, atlas.names.count { it.startsWith("base_") })
     }
 
     @Test
@@ -89,6 +90,9 @@ class AtlasTest {
         assertEquals(16, atlas["dungeon_040"].width)
         assertEquals(16, atlas["ui_char_A"].width)
         assertEquals(24, atlas["fx_025"].width)
+        // 본진은 블록보다 세로로 길다(깃발이 위로 나온다).
+        assertEquals(32, atlas["base_0"].width)
+        assertEquals(40, atlas["base_0"].height)
     }
 
     @Test
@@ -169,7 +173,7 @@ class AtlasTest {
 
     private companion object {
         const val ATLAS_WIDTH = 352
-        const val ATLAS_HEIGHT = 552
+        const val ATLAS_HEIGHT = 592
         const val UNITS_WIDTH = 1124
         const val UNITS_HEIGHT = 1128
 
@@ -177,6 +181,7 @@ class AtlasTest {
         val SPRITE_NAME = Regex(
             """(battle|town|dungeon|fx)_\d{3}""" +
                 """|ui_(char|digit)_[A-Z0-9]""" +
+                """|base_\d""" +
                 """|(tankBody|tank|bullet|shot|explosion|explosionSmoke|tracks|oilSpill)[A-Za-z0-9_]*""",
         )
     }

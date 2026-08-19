@@ -31,10 +31,18 @@ class SpriteCatalog(private val assets: GameAssets) {
 
     val iceTint: Int = parseColor(manifest.tile("ICE")?.get("tint")?.asString, 0xDFF6FFCC.toInt())
 
-    val baseIntact: TextureRegion = assets[manifest.tile("BASE")?.get("intact")?.asString ?: "battle_070"]
+    // 본진 건물. 파괴 애니메이션 프레임을 함께 들고 있다.
+    val baseIntact: TextureRegion = assets[manifest.tile("BASE")?.get("intact")?.asString ?: "base_0"]
 
-    val baseDestroyed: TextureRegion =
-        assets[manifest.tile("BASE")?.get("destroyed")?.asString ?: "battle_194"]
+    val baseDestroyFrames: List<TextureRegion> =
+        (manifest.tile("BASE")?.get("destroyFrames")?.asStringList ?: emptyList())
+            .map { assets[it] }
+            .ifEmpty { listOf(baseIntact) }
+
+    val baseDestroyFps: Float = manifest.tile("BASE")?.get("destroyFps")?.asFloat ?: 5f
+
+    /** 폭발이 끝난 뒤 남는 잔해. */
+    val baseWreck: TextureRegion = assets[manifest.tile("BASE")?.get("wreck")?.asString ?: "base_2"]
 
     // --- 탱크 -------------------------------------------------------------
     //

@@ -20,9 +20,13 @@ class WorldRenderer(
     private var groundRegions: Array<TextureRegion> = emptyArray()
     private var objectRegions: Array<TextureRegion> = emptyArray()
 
+    /** 본진이 파괴된 시각. 파괴 애니메이션은 게임 상태가 아니라 연출이라 여기서 센다. */
+    private var baseDestroyedAt: Float = -1f
+
     /** 스테이지가 바뀌면 스프라이트 이름을 다시 해석한다. */
     fun bind(stage: StageData) {
         this.stage = stage
+        baseDestroyedAt = -1f
         groundRegions = catalog.resolveAll(stage.groundNames)
         objectRegions = catalog.resolveAll(stage.spriteNames)
     }
@@ -32,7 +36,7 @@ class WorldRenderer(
         drawGround(stage, batch, viewport)
         drawDecor(stage, batch, viewport)
         drawCells(world, batch, viewport, timeSeconds)
-        drawBase(world, stage, batch, viewport)
+        drawBase(world, stage, batch, viewport, timeSeconds)
         drawTanks(world, batch, viewport)
         drawProjectiles(world, batch, viewport)
         drawExplosions(world, batch, viewport)
@@ -227,22 +231,40 @@ class WorldRenderer(
         }
     }
 
+    /**
+     * 본진 건물.
+     *
+     * 스프라이트가 블록보다 세로로 길다(깃발). 바닥을 블록 하단에 맞추고
+     * 위로 삐져나오게 그려야 건물이 땅에 서 있는 것처럼 보인다.
+     */
     private fun drawBase(
         world: GameWorld,
         stage: StageData,
         batch: SpriteBatch,
         viewport: Viewport,
+        timeSeconds: Float,
     ) {
         val (px, py) = stage.blockToPx(stage.baseBlock)
-        val size = viewport.worldToScreenLength(Constants.BLOCK_PX)
-        // 파괴되면 적기가 백기로 바뀐다. 규칙 변화가 그림 하나로 읽힌다.
-        val region = if (world.map.baseDestroyed) catalog.baseDestroyed else catalog.baseIntact
+        val width = viewport.worldToScreenLength(Constants.BLOCK_PX)
+
+        val region = if (world.map.baseDestroyed) {
+            if (baseDestroyedAt < 0f) baseDestroyedAt = timeSeconds
+            val frames = catalog.baseDestroyFrames
+            val index = ((timeSeconds - baseDestroyedAt) * catalog.baseDestroyFps).toInt()
+            // 재생이 끝나면 잔해로 남는다.
+            if (index >= frames.size) catalog.baseWreck else frames[index]
+        } else {
+            catalog.baseIntact
+        }
+
+        val height = width * (region.height.toFloat() / region.width)
         batch.draw(
             region = region,
             x = viewport.worldToScreenX(px),
-            y = viewport.worldToScreenY(py),
-            width = size,
-            height = size,
+            // 블록 하단에 바닥을 맞춘다.
+            y = viewport.worldToScreenY(py + Constants.BLOCK_PX) - height,
+            width = width,
+            height = height,
             layer = Constants.Layer.OBJECT,
         )
     }
