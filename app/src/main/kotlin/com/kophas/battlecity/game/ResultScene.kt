@@ -29,6 +29,7 @@ class ResultScene(private val catalog: SpriteCatalog) {
     private var victory = false
     private var winners: List<Int> = emptyList()
     private var enemiesDestroyed = 0
+    private var reason: MatchState.EndReason = MatchState.EndReason.NONE
     private var totalEnemies = 0
     private var stageNumber = 1
     private var localSlot = -1
@@ -62,6 +63,7 @@ class ResultScene(private val catalog: SpriteCatalog) {
         victory = match.phase == MatchState.Phase.VICTORY
         winners = if (victory) match.winners else emptyList()
         enemiesDestroyed = match.enemiesDestroyed
+        reason = match.endReason
         totalEnemies = match.totalEnemies
         stageNumber = stageIndex + 1
         this.localSlot = localSlot
@@ -148,16 +150,29 @@ class ResultScene(private val catalog: SpriteCatalog) {
             batch,
             if (victory) "VICTORY" else "GAME OVER",
             banner,
-            banner.height * 0.42f,
+            banner.height * 0.34f,
             if (victory) ScreenUi.ACCENT else ScreenUi.RED,
             BANNER_TEXT_CENTER,
-            0.62f,
+            0.58f,
         )
+
+        // 왜 끝났는지 한 줄 더 쓴다. 배너만 두면 본진이 깨진 것인지 다 죽은 것인지
+        // 알 수 없다. (계획서 §33) 배너 안에 넣는다 — 아래는 순위 줄이 바로 온다.
+        reasonText()?.let {
+            ui.label(batch, it, banner, banner.height * 0.18f, ScreenUi.DIM, REASON_TEXT_CENTER, 0.6f)
+        }
 
         drawWinner(batch)
         drawStageCard(batch)
         ranking.forEachIndexed { index, slot -> drawRow(batch, index, slot) }
         drawButtons(batch)
+    }
+
+    private fun reasonText(): String? = when (reason) {
+        MatchState.EndReason.BASE_DESTROYED -> "BASE DESTROYED"
+        MatchState.EndReason.ALL_PLAYERS_ELIMINATED -> "ALL PLAYERS DOWN"
+        MatchState.EndReason.ALL_ENEMIES_DESTROYED -> "ALL COM DESTROYED"
+        MatchState.EndReason.NONE -> null
     }
 
     private fun drawWinner(batch: SpriteBatch) {
@@ -352,7 +367,8 @@ class ResultScene(private val catalog: SpriteCatalog) {
         private const val ROW_HEIGHT = 1.3f
         private const val ROW_SPACING = 1.55f
 
-        private const val BANNER_TEXT_CENTER = 0.5f
+        private const val BANNER_TEXT_CENTER = 0.43f
+        private const val REASON_TEXT_CENTER = 0.72f
         private const val BUTTON_TEXT_CENTER = 0.46f
         private const val PRESSED_ALPHA = 0.65f
         private const val DISABLED_ALPHA = 0.35f
