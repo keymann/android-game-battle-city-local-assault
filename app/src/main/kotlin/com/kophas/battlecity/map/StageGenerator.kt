@@ -217,22 +217,41 @@ class StageGenerator(private val manifest: AssetManifest) {
         // -------------------------------------------------------------------
 
         fun paintGround(theme: StageTheme) {
-            val tiler = AutoTiler(manifest, rng, theme.biome)
+            val tiler = AutoTiler(manifest, rng)
+
             val road = BooleanArray(blocksX * blocksY)
             plotRoads(theme.roadStyle, road)
+
+            val dirt = BooleanArray(blocksX * blocksY)
+            plotDirt(theme.biome, dirt)
+
+            fun isDirt(bx: Int, by: Int): Boolean =
+                bx in 0 until blocksX && by in 0 until blocksY && dirt[by * blocksX + bx]
 
             for (by in 0 until blocksY) {
                 for (bx in 0 until blocksX) {
                     val i = by * blocksX + bx
-                    val name = if (road[i]) {
-                        var mask = 0
-                        if (by > 0 && road[i - blocksX]) mask = mask or AutoTiler.NORTH
-                        if (bx < blocksX - 1 && road[i + 1]) mask = mask or AutoTiler.EAST
-                        if (by < blocksY - 1 && road[i + blocksX]) mask = mask or AutoTiler.SOUTH
-                        if (bx > 0 && road[i - 1]) mask = mask or AutoTiler.WEST
-                        tiler.roadTile(mask) ?: tiler.groundTile(theme.biome, bx, by, blocksX)
-                    } else {
-                        tiler.groundTile(theme.biome, bx, by, blocksX)
+                    val name = when {
+                        road[i] -> {
+                            var mask = 0
+                            if (by > 0 && road[i - blocksX]) mask = mask or AutoTiler.NORTH
+                            if (bx < blocksX - 1 && road[i + 1]) mask = mask or AutoTiler.EAST
+                            if (by < blocksY - 1 && road[i + blocksX]) mask = mask or AutoTiler.SOUTH
+                            if (bx > 0 && road[i - 1]) mask = mask or AutoTiler.WEST
+                            tiler.roadTile(mask) ?: tiler.grassTile()
+                        }
+
+                        dirt[i] -> tiler.dirtTile(
+                            openN = !isDirt(bx, by - 1),
+                            openE = !isDirt(bx + 1, by),
+                            openS = !isDirt(bx, by + 1),
+                            openW = !isDirt(bx - 1, by),
+                        )
+
+                        // 가끔 자갈을 섞어 잔디가 단조로워지지 않게 한다.
+                        rng.chance(GRAVEL_CHANCE) -> tiler.gravelTile()
+
+                        else -> tiler.grassTile()
                     }
                     ground[i] = groundId(name)
                 }
@@ -268,17 +287,62 @@ class StageGenerator(private val manifest: AssetManifest) {
                 }
 
                 StageTheme.RoadStyle.GRID -> {
-                    val step = rng.nextInt(3, 5)
+                    // 간격을 넉넉히 두고 일부 줄은 통째로 건너뛴다.
+                    // 촘촘하면 도로가 화면을 지배해 전장이 보이지 않는다.
+                    val step = rng.nextInt(4, 8)
                     for (bx in 0 until blocksX) {
-                        if (bx % step != 1) continue
-                        // 일부 구간을 지워 격자가 너무 기계적으로 보이지 않게 한다.
-                        for (by in 0 until blocksY) if (rng.chance(0.85f)) mark(bx, by)
+                        if (bx % step != 1 || !rng.chance(0.6f)) continue
+                        for (by in 0 until blocksY) if (rng.chance(0.9f)) mark(bx, by)
                     }
                     for (by in 0 until blocksY) {
-                        if (by % step != 1) continue
-                        for (bx in 0 until blocksX) if (rng.chance(0.85f)) mark(bx, by)
+                        if (by % step != 1 || !rng.chance(0.6f)) continue
+                        for (bx in 0 until blocksX) if (rng.chance(0.9f)) mark(bx, by)
                     }
                 }
+            }
+        }
+
+        /** 흙 구역. 바이옴에 따라 덮는 넓이가 달라진다. */
+        private fun plotDirt(biome: StageTheme.Biome, dirt: BooleanArray) {
+            when (biome) {
+                StageTheme.Biome.GRASS -> repeat(rng.nextInt(2, 5)) { growBlob(dirt, true) }
+
+                StageTheme.Biome.DIRT -> {
+                    dirt.fill(true)
+                    // 흙 벌판에 잔디 섬을 남긴다.
+                    repeat(rng.nextInt(3, 7)) { growBlob(dirt, false) }
+                }
+
+                StageTheme.Biome.MIXED -> {
+                    for (by in 0 until blocksY) {
+                        for (bx in 0 until blocksX) {
+                            // 대각선으로 갈라 한쪽을 흙으로 만든다.
+                            val ratio = bx.toFloat() / blocksX + by.toFloat() / blocksY
+                            if (ratio >= 1f) dirt[by * blocksX + bx] = true
+                        }
+                    }
+                    repeat(2) { growBlob(dirt, true) }
+                }
+            }
+        }
+
+        /** 랜덤 워크로 유기적인 덩어리를 만든다. 직사각형보다 자연스럽다. */
+        private fun growBlob(map: BooleanArray, value: Boolean) {
+            var bx = rng.nextInt(blocksX)
+            var by = rng.nextInt(blocksY)
+            val size = rng.nextInt(6, 18)
+            repeat(size) {
+                for (dy in 0..1) {
+                    for (dx in 0..1) {
+                        val x = bx + dx
+                        val y = by + dy
+                        if (x in 0 until blocksX && y in 0 until blocksY) {
+                            map[y * blocksX + x] = value
+                        }
+                    }
+                }
+                if (rng.nextBoolean()) bx += if (rng.nextBoolean()) 1 else -1
+                else by += if (rng.nextBoolean()) 1 else -1
             }
         }
 
@@ -494,7 +558,7 @@ class StageGenerator(private val manifest: AssetManifest) {
         }
 
         private fun scatterExplosive(sprites: List<String>, anchors: Anchors) {
-            val clusters = rng.nextInt(3, 9)
+            val clusters = rng.nextInt(2, 6)
             repeat(clusters) {
                 val bx = rng.nextInt(1, blocksX - 1)
                 val by = rng.nextInt(1, blocksY - 1)
@@ -516,7 +580,7 @@ class StageGenerator(private val manifest: AssetManifest) {
 
         private fun scatterSolid(sprites: List<String>, destructible: Boolean, anchors: Anchors) {
             val type = if (destructible) TileType.BRICK else TileType.STEEL
-            val density = rng.nextFloat(0.04f, 0.08f)
+            val density = rng.nextFloat(0.02f, 0.05f)
             for (by in 1 until blocksY - 1) {
                 for (bx in 1 until blocksX - 1) {
                     if (!rng.chance(density)) continue
@@ -531,7 +595,7 @@ class StageGenerator(private val manifest: AssetManifest) {
 
         private fun scatterLine(sprites: List<String>, destructible: Boolean, anchors: Anchors) {
             val type = if (destructible) TileType.BRICK else TileType.STEEL
-            val lines = rng.nextInt(2, 6)
+            val lines = rng.nextInt(2, 5)
             repeat(lines) {
                 val length = rng.nextInt(3, 7)
                 val horizontal = rng.nextBoolean()
@@ -553,7 +617,7 @@ class StageGenerator(private val manifest: AssetManifest) {
         }
 
         private fun scatterDecor(sprites: List<String>) {
-            val density = rng.nextFloat(0.12f, 0.20f)
+            val density = rng.nextFloat(0.05f, 0.10f)
             for (by in 0 until blocksY) {
                 for (bx in 0 until blocksX) {
                     if (!rng.chance(density)) continue
@@ -561,7 +625,7 @@ class StageGenerator(private val manifest: AssetManifest) {
                     val cy = by * Constants.CELLS_PER_BLOCK
                     if (typeAt(cx, cy) != TileType.EMPTY) continue
 
-                    val size = Constants.BLOCK_PX * rng.nextFloat(0.35f, 0.7f)
+                    val size = Constants.BLOCK_PX * rng.nextFloat(0.4f, 0.65f)
                     decor += StageData.Decor(
                         spriteIndex = spriteId(rng.pick(sprites)),
                         x = bx * Constants.BLOCK_PX + rng.nextFloat(0f, Constants.BLOCK_PX - size),
@@ -716,6 +780,7 @@ class StageGenerator(private val manifest: AssetManifest) {
             const val HAZARD_CLEAR_RADIUS = 3
             const val EXPLOSIVE_CLEAR_RADIUS = 3
             const val TWO_PI = 6.2831855f
+            const val GRAVEL_CHANCE = 0.03f
 
             val NEIGHBOURS = arrayOf(
                 intArrayOf(0, -1),

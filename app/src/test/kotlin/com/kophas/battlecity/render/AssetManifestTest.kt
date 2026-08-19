@@ -18,21 +18,20 @@ class AssetManifestTest {
     private val manifest = AssetManifest.load(source)
 
     @Test
-    fun `아틀라스 두 장을 서술한다`() {
-        assertEquals(setOf("main", "tiny"), manifest.atlases.keys)
+    fun `아틀라스는 두 장이고 필터가 서로 다르다`() {
+        assertEquals(setOf("tiles", "units"), manifest.atlases.keys)
 
-        val main = manifest.atlases.getValue("main")
-        assertEquals("atlas/main.png", main.image)
-        assertEquals("atlas/main.xml", main.descriptor)
-        assertEquals(AssetManifest.AtlasSpec.TYPE_XML, main.type)
-        assertEquals(2f, main.sourceScale, 1e-6f)
+        val tiles = manifest.atlases.getValue("tiles")
+        assertEquals("atlas/tiles.png", tiles.image)
+        assertEquals("atlas/tiles.xml", tiles.descriptor)
+        assertEquals(16, tiles.sourceTile)
+        // 픽셀아트는 NEAREST 여야 도트가 산다.
+        assertEquals("nearest", tiles.filter)
 
-        val tiny = manifest.atlases.getValue("tiny")
-        assertTrue(tiny.isGrid)
-        assertEquals(16, tiny.tileSize)
-        assertEquals(18, tiny.columns)
-        assertEquals(11, tiny.rows)
-        assertEquals(0, tiny.spacing)
+        val units = manifest.atlases.getValue("units")
+        assertEquals("atlas/units.png", units.image)
+        // 회전하는 벡터풍 스프라이트는 LINEAR 여야 계단이 지지 않는다.
+        assertEquals("linear", units.filter)
     }
 
     @Test
@@ -61,6 +60,11 @@ class AssetManifestTest {
     }
 
     @Test
+    fun `나무는 20종 이상이다`() {
+        assertTrue("숲이 단조로우면 안 된다", manifest.tileSprites("FOREST").size >= 20)
+    }
+
+    @Test
     fun `숲은 통행을 막지 않고 은폐만 한다`() {
         val forest = manifest.tile("FOREST")!!
         assertEquals("none", forest["collision"]?.asString)
@@ -77,12 +81,16 @@ class AssetManifestTest {
     @Test
     fun `환경 오브젝트 그룹이 11개 있다`() {
         assertEquals(11, manifest.propGroupIds.size)
-        assertTrue(manifest.propGroupIds.containsAll(listOf("fuelDepot", "ordnance", "foliage")))
+        assertTrue(
+            manifest.propGroupIds.containsAll(
+                listOf("explosiveBarrel", "woodFence", "ironFence", "haystack", "rubble"),
+            ),
+        )
     }
 
     @Test
     fun `폭발성 프롭은 폭발 반경을 가진다`() {
-        for (id in listOf("fuelDepot", "ordnance")) {
+        for (id in listOf("explosiveBarrel", "fuelBarrel")) {
             val group = manifest.propGroup(id)!!
             assertEquals("explosive", group["kind"]?.asString)
             assertTrue("$id 폭발 반경이 없다", (group["blastCells"]?.asInt ?: 0) > 0)
@@ -90,33 +98,68 @@ class AssetManifestTest {
     }
 
     @Test
-    fun `플레이어 슬롯 4개가 서로 다른 색이다`() {
+    fun `플레이어 슬롯 4개가 서로 다른 색과 몸체를 쓴다`() {
         val slots = manifest.root["tanks"]?.get("playerSlots")?.asArray.orEmpty()
         assertEquals(4, slots.size)
-        val colors = slots.mapNotNull { it["color"]?.asString }
-        assertEquals(4, colors.toSet().size)
+        assertEquals(4, slots.mapNotNull { it["color"]?.asString }.toSet().size)
+        assertEquals(4, slots.mapNotNull { it["body"]?.asString }.toSet().size)
+        assertEquals(4, slots.mapNotNull { it["barrelPrefix"]?.asString }.toSet().size)
     }
 
     @Test
     fun `탱크 타입별 포신 등급이 정의돼 있다`() {
         val byType = manifest.root["tanks"]?.get("barrelByType")?.asObject.orEmpty()
         assertEquals(setOf("ATTACK", "DEFENSE", "SPEED"), byType.keys)
-        assertEquals(3, byType["ATTACK"]?.asInt)
+        assertEquals("공격형이 가장 굵은 포신을 쓴다", 3, byType["ATTACK"]?.asInt)
         assertEquals(1, byType["SPEED"]?.asInt)
     }
 
     @Test
-    fun `HUD 숫자는 0부터 9까지 10개다`() {
-        assertEquals(10, manifest.hudDigitIndices.size)
-        assertEquals(180, manifest.hudDigitIndices.first())
-        assertEquals(189, manifest.hudDigitIndices.last())
+    fun `유닛 스프라이트는 위를 향하므로 회전 보정이 없다`() {
+        assertEquals(0, manifest.root["tanks"]?.get("spriteRotationOffsetDegrees")?.asInt)
+    }
+
+    @Test
+    fun `HUD 는 비트맵 폰트 접두사를 서술한다`() {
+        assertEquals("ui_digit_", manifest.hudDigitPrefix)
+        assertEquals("ui_char_", manifest.hudCharPrefix)
+        assertEquals("battle_195", manifest.hudLifeSprite)
+    }
+
+    @Test
+    fun `지형은 잔디 흙 자갈 기본 타일을 가진다`() {
+        assertTrue(manifest.terrainBase("grass").isNotEmpty())
+        assertTrue(manifest.terrainBase("dirt").isNotEmpty())
+        assertTrue(manifest.terrainBase("gravel").isNotEmpty())
+    }
+
+    @Test
+    fun `도로 오토타일은 16가지 비트마스크를 모두 채운다`() {
+        val road = manifest.terrain("road")?.asObject.orEmpty()
+        for (mask in 0..15) {
+            assertNotNull("마스크 $mask 에 대응하는 도로 타일이 없다", road[mask.toString()]?.asString)
+        }
+    }
+
+    @Test
+    fun `흙 구역 나인슬라이스가 9조각 모두 있다`() {
+        val patch = manifest.terrain("dirtPatch")?.asObject.orEmpty()
+        for (key in listOf("NW", "N", "NE", "W", "C", "E", "SW", "S", "SE")) {
+            assertNotNull("$key 조각이 없다", patch[key]?.asString)
+        }
     }
 
     @Test
     fun `본진은 파괴 시 다른 스프라이트로 바뀐다`() {
         val base = manifest.tile("BASE")!!
-        assertNotNull(base["intactIndex"]?.asInt)
-        assertNotNull(base["destroyedIndex"]?.asInt)
-        assertTrue(base["intactIndex"]?.asInt != base["destroyedIndex"]?.asInt)
+        assertNotNull(base["intact"]?.asString)
+        assertNotNull(base["destroyed"]?.asString)
+        assertTrue(base["intact"]?.asString != base["destroyed"]?.asString)
+    }
+
+    @Test
+    fun `물과 얼음은 열린 수면 타일 하나를 쓴다`() {
+        assertEquals("battle_037", manifest.tileSprite("WATER"))
+        assertEquals("battle_037", manifest.tileSprite("ICE"))
     }
 }

@@ -27,7 +27,7 @@ public:
     void onSurfaceDestroyed() override;
 
     bool uploadTexture(int32_t textureId, int32_t width, int32_t height,
-                       const uint8_t* pixels) override;
+                       const uint8_t* pixels, bool nearest) override;
     void releaseTexture(int32_t textureId) override;
 
     void renderFrame(float clearR, float clearG, float clearB,
@@ -110,7 +110,10 @@ private:
     VkPipeline pipeline_ = VK_NULL_HANDLE;
     /** 지형처럼 불투명한 스프라이트 전용. 블렌딩을 꺼서 fill rate 를 아낀다. */
     VkPipeline pipelineOpaque_ = VK_NULL_HANDLE;
-    VkSampler sampler_ = VK_NULL_HANDLE;
+    /** 픽셀아트용. 도트가 뭉개지지 않는다. */
+    VkSampler samplerNearest_ = VK_NULL_HANDLE;
+    /** 벡터풍 스프라이트용. 회전해도 계단이 지지 않는다. */
+    VkSampler samplerLinear_ = VK_NULL_HANDLE;
     VkCommandPool commandPool_ = VK_NULL_HANDLE;
 
     VkBuffer indexBuffer_ = VK_NULL_HANDLE;

@@ -25,7 +25,7 @@ public:
     void onSurfaceDestroyed() override;
 
     bool uploadTexture(int32_t textureId, int32_t width, int32_t height,
-                       const uint8_t* pixels) override;
+                       const uint8_t* pixels, bool nearest) override;
     void releaseTexture(int32_t textureId) override;
 
     void renderFrame(float clearR, float clearG, float clearB,

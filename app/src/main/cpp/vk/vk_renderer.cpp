@@ -346,19 +346,27 @@ bool VulkanRenderer::createDescriptorInfra() {
     VK_FAIL(vkCreateDescriptorPool(device_, &poolInfo, nullptr, &descriptorPool_),
             "디스크립터 풀 생성 실패");
 
-    // 픽셀아트와 벡터풍 스프라이트가 섞여 있으므로 확대 시에는 LINEAR 를 쓰고
-    // 아틀라스 경계 번짐은 UV 인셋(Kotlin TextureAtlas)에서 처리한다.
+    // 픽셀아트 아틀라스와 벡터풍 유닛 아틀라스가 함께 있으므로 샘플러를 둘 만든다.
+    //   NEAREST : 16px 타일. LINEAR 를 쓰면 도트가 뭉개지고 여백 없는 격자에서
+    //             이웃 타일 색이 새어 나와 이음선이 생긴다.
+    //   LINEAR  : 탱크처럼 회전하는 벡터풍 스프라이트. NEAREST 면 계단이 진다.
     VkSamplerCreateInfo samplerInfo{};
     samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-    samplerInfo.magFilter = VK_FILTER_LINEAR;
-    samplerInfo.minFilter = VK_FILTER_LINEAR;
     samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
     samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
     samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
     samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
     samplerInfo.borderColor = VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK;
-    VK_FAIL(vkCreateSampler(device_, &samplerInfo, nullptr, &sampler_),
-            "샘플러 생성 실패");
+
+    samplerInfo.magFilter = VK_FILTER_NEAREST;
+    samplerInfo.minFilter = VK_FILTER_NEAREST;
+    VK_FAIL(vkCreateSampler(device_, &samplerInfo, nullptr, &samplerNearest_),
+            "NEAREST 샘플러 생성 실패");
+
+    samplerInfo.magFilter = VK_FILTER_LINEAR;
+    samplerInfo.minFilter = VK_FILTER_LINEAR;
+    VK_FAIL(vkCreateSampler(device_, &samplerInfo, nullptr, &samplerLinear_),
+            "LINEAR 샘플러 생성 실패");
     return true;
 }
 
@@ -684,7 +692,7 @@ void VulkanRenderer::endOneShot(VkCommandBuffer cmd) const {
 // ---------------------------------------------------------------------------
 
 bool VulkanRenderer::uploadTexture(int32_t textureId, int32_t width, int32_t height,
-                                   const uint8_t* pixels) {
+                                   const uint8_t* pixels, bool nearest) {
     if (device_ == VK_NULL_HANDLE || pixels == nullptr || width <= 0 || height <= 0) {
         return false;
     }
@@ -793,7 +801,7 @@ bool VulkanRenderer::uploadTexture(int32_t textureId, int32_t width, int32_t hei
     VkDescriptorImageInfo imageDesc{};
     imageDesc.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
     imageDesc.imageView = texture.view;
-    imageDesc.sampler = sampler_;
+    imageDesc.sampler = nearest ? samplerNearest_ : samplerLinear_;
 
     VkWriteDescriptorSet write{};
     write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -1113,7 +1121,12 @@ void VulkanRenderer::destroyEverything() {
             vkDestroyPipelineLayout(device_, pipelineLayout_, nullptr);
         }
         if (renderPass_ != VK_NULL_HANDLE) vkDestroyRenderPass(device_, renderPass_, nullptr);
-        if (sampler_ != VK_NULL_HANDLE) vkDestroySampler(device_, sampler_, nullptr);
+        if (samplerNearest_ != VK_NULL_HANDLE) {
+            vkDestroySampler(device_, samplerNearest_, nullptr);
+        }
+        if (samplerLinear_ != VK_NULL_HANDLE) {
+            vkDestroySampler(device_, samplerLinear_, nullptr);
+        }
         if (descriptorPool_ != VK_NULL_HANDLE) {
             vkDestroyDescriptorPool(device_, descriptorPool_, nullptr);
         }
@@ -1126,7 +1139,8 @@ void VulkanRenderer::destroyEverything() {
         pipelineOpaque_ = VK_NULL_HANDLE;
         pipelineLayout_ = VK_NULL_HANDLE;
         renderPass_ = VK_NULL_HANDLE;
-        sampler_ = VK_NULL_HANDLE;
+        samplerNearest_ = VK_NULL_HANDLE;
+        samplerLinear_ = VK_NULL_HANDLE;
         descriptorPool_ = VK_NULL_HANDLE;
         setLayout_ = VK_NULL_HANDLE;
         commandPool_ = VK_NULL_HANDLE;

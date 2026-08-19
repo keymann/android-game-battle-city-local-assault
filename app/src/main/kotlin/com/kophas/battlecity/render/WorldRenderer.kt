@@ -18,14 +18,12 @@ class WorldRenderer(
 ) {
     private var stage: StageData? = null
     private var groundRegions: Array<TextureRegion> = emptyArray()
-    private var groundTints: IntArray = IntArray(0)
     private var objectRegions: Array<TextureRegion> = emptyArray()
 
-    /** 스테이지가 바뀌면 스프라이트 이름과 지형 틴트를 다시 해석한다. */
+    /** 스테이지가 바뀌면 스프라이트 이름을 다시 해석한다. */
     fun bind(stage: StageData) {
         this.stage = stage
         groundRegions = catalog.resolveAll(stage.groundNames)
-        groundTints = IntArray(stage.groundNames.size) { catalog.groundTintFor(stage.groundNames[it]) }
         objectRegions = catalog.resolveAll(stage.spriteNames)
     }
 
@@ -47,7 +45,6 @@ class WorldRenderer(
         for (by in 0 until stage.blocksY) {
             for (bx in 0 until stage.blocksX) {
                 val index = stage.ground[by * stage.blocksX + bx].toInt()
-                val tint = groundTints[index]
                 batch.draw(
                     region = groundRegions[index],
                     x = viewport.worldToScreenX(bx * Constants.BLOCK_PX),
@@ -55,19 +52,13 @@ class WorldRenderer(
                     width = size,
                     height = size,
                     layer = Constants.Layer.GROUND,
-                    red = red(tint),
-                    green = green(tint),
-                    blue = blue(tint),
                 )
             }
         }
     }
 
     private fun drawDecor(stage: StageData, batch: SpriteBatch, viewport: Viewport) {
-        val tint = catalog.decorTint
         for (decor in stage.decor) {
-            // 캐노피(나무)는 전경이라 원색을 유지하고, 바닥 장식만 눌러 준다.
-            val muted = decor.layer == Constants.Layer.DECAL
             batch.draw(
                 region = objectRegions[decor.spriteIndex.toInt()],
                 x = viewport.worldToScreenX(decor.x),
@@ -76,9 +67,6 @@ class WorldRenderer(
                 height = viewport.worldToScreenLength(decor.height),
                 layer = decor.layer,
                 rotation = decor.rotation,
-                red = if (muted) red(tint) else 1f,
-                green = if (muted) green(tint) else 1f,
-                blue = if (muted) blue(tint) else 1f,
                 alpha = decor.alpha,
             )
         }
@@ -100,9 +88,7 @@ class WorldRenderer(
         val cellSize = viewport.worldToScreenLength(Constants.CELL_PX)
         val perBlock = Constants.CELLS_PER_BLOCK
 
-        val waterFrame = catalog.waterFrames[
-            ((timeSeconds * catalog.waterAnimFps).toInt()) % catalog.waterFrames.size,
-        ]
+        val waterFrame = catalog.water
         val iceAlpha = ((catalog.iceTint ushr 24) and 0xFF) / 255f
         val iceRed = ((catalog.iceTint ushr 16) and 0xFF) / 255f
         val iceGreen = ((catalog.iceTint ushr 8) and 0xFF) / 255f
@@ -207,7 +193,7 @@ class WorldRenderer(
             )
 
             TileType.ICE -> batch.draw(
-                region = catalog.iceFrame,
+                region = catalog.ice,
                 x = screenX,
                 y = screenY,
                 width = size,
@@ -273,14 +259,14 @@ class WorldRenderer(
 
             val screenX = viewport.worldToScreenX(tank.x)
             val screenY = viewport.worldToScreenY(tank.y)
-            val rotation = tank.direction.radians
+            val rotation = tank.direction.radians + catalog.tankRotationOffset
 
             val body = catalog.bodyOf(tank)
             val bodyHeight = size * (body.height.toFloat() / body.width)
 
-            // 지형과 탱크 색이 같은 계열이어도 형태가 읽히도록 어두운 실루엣을 깐다.
+            // 지형과 색이 겹쳐도 형태가 읽히도록 어두운 실루엣을 먼저 깐다.
             // 같은 레이어 / 같은 텍스처라 배치 안에서 삽입 순서가 그대로 유지된다.
-            catalog.outlineOf(body)?.let { outline ->
+            catalog.outlineOf(tank)?.let { outline ->
                 val scale = catalog.silhouetteScale
                 val outlineWidth = size * scale
                 val outlineHeight = bodyHeight * scale
@@ -296,7 +282,7 @@ class WorldRenderer(
                     red = red(silhouette),
                     green = green(silhouette),
                     blue = blue(silhouette),
-                    alpha = alpha * SILHOUETTE_ALPHA,
+                    alpha = alpha * catalog.silhouetteAlpha,
                 )
             }
 
@@ -312,12 +298,13 @@ class WorldRenderer(
             )
 
             // 몸체와 포신이 같은 점(탱크 중심)을 축으로 돌아야 어긋나지 않는다.
+            //   몸체: origin (0.5, 0.5)  포신: origin (0.5, 1.0) 으로 포미를 중심에 둔다
             val centerX = screenX + size * 0.5f
             val centerY = screenY + bodyHeight * 0.5f
             val barrel = catalog.barrelOf(tank)
-            val scale = size / body.width
-            val barrelWidth = barrel.width * scale
-            val barrelHeight = barrel.height * scale
+            val barrelScale = size / body.width
+            val barrelWidth = barrel.width * barrelScale
+            val barrelHeight = barrel.height * barrelScale
             batch.draw(
                 region = barrel,
                 x = centerX - barrelWidth * 0.5f,
@@ -332,20 +319,17 @@ class WorldRenderer(
             )
 
             // 스폰 무적 동안 깜빡인다.
-            if (tank.spawnGuardRemaining > 0f) {
-                val blink = ((tank.spawnGuardRemaining * 8f).toInt() % 2) == 0
-                if (blink) {
-                    batch.draw(
-                        region = body,
-                        x = screenX,
-                        y = screenY,
-                        width = size,
-                        height = bodyHeight,
-                        layer = Constants.Layer.OVERLAY,
-                        rotation = rotation,
-                        alpha = 0.45f,
-                    )
-                }
+            if (tank.spawnGuardRemaining > 0f && ((tank.spawnGuardRemaining * 8f).toInt() % 2) == 0) {
+                batch.draw(
+                    region = body,
+                    x = screenX,
+                    y = screenY,
+                    width = size,
+                    height = bodyHeight,
+                    layer = Constants.Layer.OVERLAY,
+                    rotation = rotation,
+                    alpha = 0.45f,
+                )
             }
         }
     }
@@ -355,7 +339,13 @@ class WorldRenderer(
         for (projectile in world.projectiles.active) {
             if (!projectile.active) continue
             val owner = world.tanks.firstOrNull { it.id == projectile.ownerId }
-            val region = owner?.let { catalog.bulletOf(it) } ?: continue
+
+            val region = if (projectile.piercing) {
+                catalog.piercingBullet
+            } else {
+                owner?.let { catalog.bulletOf(it) } ?: continue
+            }
+
             batch.draw(
                 region = region,
                 x = viewport.worldToScreenX(projectile.centerX) - size * 0.5f,
@@ -371,16 +361,13 @@ class WorldRenderer(
     private fun drawExplosions(world: GameWorld, batch: SpriteBatch, viewport: Viewport) {
         for (explosion in world.explosions.active) {
             if (!explosion.active) continue
-            val frameCount = catalog.explosionFrameCount(explosion.kind)
-            val index = if (explosion.kind == com.kophas.battlecity.gameplay.Explosion.Kind.SPAWN) {
-                // 스폰은 역재생이라 연기가 모여드는 것처럼 보인다.
-                frameCount - 1 - explosion.frameIndex.coerceIn(0, frameCount - 1)
-            } else {
-                explosion.frameIndex
-            }
+
+            val art = catalog.effectOf(explosion.kind)
+            val index = explosion.frameIndex.coerceIn(0, art.frames.lastIndex)
             val size = viewport.worldToScreenLength(explosion.size)
+
             batch.draw(
-                region = catalog.explosionFrame(explosion.kind, index),
+                region = art.frames[index],
                 x = viewport.worldToScreenX(explosion.x),
                 y = viewport.worldToScreenY(explosion.y),
                 width = size,
@@ -406,7 +393,6 @@ class WorldRenderer(
 
     private companion object {
         const val CONCEALED_ALPHA = 0.35f
-        const val SILHOUETTE_ALPHA = 0.85f
         const val TWO_PI = 6.2831855f
         const val RIPPLE_STEP = 0.55f
     }

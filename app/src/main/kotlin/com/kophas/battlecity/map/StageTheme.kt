@@ -15,7 +15,8 @@ data class StageTheme(
     val propPalette: List<String>,
     val mirrorX: Boolean,
 ) {
-    enum class Biome { GRASS, SAND, MIXED }
+    /** 바닥 구성. DIRT 는 흙이 넓게 깔린 개활지, MIXED 는 대각선으로 갈린다. */
+    enum class Biome { GRASS, DIRT, MIXED }
 
     enum class RoadStyle { NONE, CROSS, RING, GRID }
 
@@ -23,7 +24,7 @@ data class StageTheme(
         fun roll(rng: Rng, propGroupIds: List<String>): StageTheme {
             val biome = when (rng.nextInt(100)) {
                 in 0..44 -> Biome.GRASS
-                in 45..79 -> Biome.SAND
+                in 45..79 -> Biome.DIRT
                 else -> Biome.MIXED
             }
             val roadStyle = when (rng.nextInt(100)) {

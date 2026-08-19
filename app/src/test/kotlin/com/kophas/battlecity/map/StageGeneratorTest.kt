@@ -245,12 +245,12 @@ class StageGeneratorTest {
                 addAll(manifest.propGroup(group)?.get("sprites")?.asStringList.orEmpty())
             }
             val terrain = manifest.root["terrain"]?.asObject.orEmpty()
-            for ((groupName, node) in terrain) {
-                if (groupName == "tint") continue
-                addAll(node["base"]?.asStringList.orEmpty())
+            for ((_, node) in terrain) {
                 for ((key, value) in node.asObject) {
-                    if (key == "atlas" || key == "base" || key == "comment") continue
+                    if (key == "comment") continue
+                    // base / accents 처럼 배열인 항목과 도로 마스크처럼 문자열인 항목을 모두 받는다.
                     value.asString?.let { add(it) }
+                    addAll(value.asStringList)
                 }
             }
         }

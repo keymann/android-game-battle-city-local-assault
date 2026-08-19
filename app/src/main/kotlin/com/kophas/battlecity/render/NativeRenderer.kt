@@ -52,11 +52,21 @@ class NativeRenderer : AutoCloseable {
         backend = RendererBackend.NONE
     }
 
-    /** [pixels] 는 반드시 direct ByteBuffer(RGBA8888, tightly packed)여야 한다. */
-    fun uploadTexture(textureId: Int, width: Int, height: Int, pixels: ByteBuffer): Boolean {
+    /**
+     * [pixels] 는 반드시 direct ByteBuffer(RGBA8888, tightly packed)여야 한다.
+     *
+     * @param nearest 픽셀아트면 true. 회전하는 벡터풍 스프라이트는 false 로 둔다.
+     */
+    fun uploadTexture(
+        textureId: Int,
+        width: Int,
+        height: Int,
+        pixels: ByteBuffer,
+        nearest: Boolean,
+    ): Boolean {
         if (handle == 0L) return false
         require(pixels.isDirect) { "텍스처 픽셀은 direct ByteBuffer 여야 한다" }
-        return nativeUploadTexture(handle, textureId, width, height, pixels)
+        return nativeUploadTexture(handle, textureId, width, height, pixels, nearest)
     }
 
     fun releaseTexture(textureId: Int) {
@@ -101,6 +111,7 @@ class NativeRenderer : AutoCloseable {
         width: Int,
         height: Int,
         pixels: ByteBuffer,
+        nearest: Boolean,
     ): Boolean
 
     private external fun nativeReleaseTexture(handle: Long, textureId: Int)

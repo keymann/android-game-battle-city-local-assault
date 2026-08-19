@@ -253,7 +253,7 @@ app/src/main/
 │   └── GameSurfaceView.kt
 │
 └── assets/
-    ├── atlas/                main.png + main.xml, tiny.png
+    ├── atlas/                tiles.png(픽셀 월드) + units.png(탱크)
     └── manifest/
         ├── assets.json       게임 의미 <-> 리소스 매핑
         └── balance.json      게임 규칙과 능력치
@@ -278,6 +278,7 @@ Kenney CC0 에셋 2종을 사용합니다. 선별 근거와 전체 매핑표는
 | Phase 1 | 프로젝트 기반 — Android/Kotlin, Vulkan 초기화, 게임 루프, 고정 timestep, Sprite 렌더링 | ✅ 완료 |
 | Phase 2 | 원작 핵심 게임 — Tile Map, 타일 종류, 본진, 탱크 이동, 포탄, 충돌, 폭발 | ✅ 완료 |
 | Phase 3 | 플레이어 시스템 — 3종 탱크, 능력치, HP, Life, 사망, 점수 | ✅ 완료 |
+| Phase 3.5 | 아트 리워크 — 픽셀아트 월드 통일, 지형·환경 대폭 보강, 비트맵 폰트 HUD | ✅ 완료 |
 | Phase 4 | 특수기 — 관통탄, 방어막, 대시, 쿨타임, UI | 예정 |
 | Phase 5 | COM — Spawn, 타입별 AI, State Machine, 20 × Player 수 생성 | 예정 |
 | Phase 6 | 로컬 멀티플레이 — Host, Join, Lobby, 상태 동기화, Disconnect 처리 | 예정 |
@@ -336,11 +337,10 @@ Tank Explosion / Player Death / Enemy Spawn / Base Warning / Base Destroy / Vict
 
 ## 실행 화면
 
-seed 로 생성된 4인용 4:3 스테이지(24×18 블록). 지형·도로 오토타일, 물/숲/얼음,
-벽돌·강철 구조물, 환경 오브젝트, 본진과 ㄷ자 방벽이 모두 랜덤 배치됩니다.
+seed 로 생성된 4인용 4:3 스테이지(24×18 블록). 지형·도로 오토타일, 흙 구역,
+벽돌·석재 구조물, 환경 오브젝트, 본진이 모두 랜덤 배치됩니다.
+월드는 16px 픽셀아트, 회전하는 탱크만 벡터풍 팩을 씁니다.
 
-![Phase 2](docs/images/phase2_stage.png)
+![Phase 3.5](docs/images/phase35_world.png)
 
-Phase 1 렌더 파이프라인 검증 화면:
-
-![Phase 1](docs/images/phase1_vulkan.png)
+좌측 HUD 는 비트맵 폰트로 `P1 ♥♥♥ 0` / `ENEMY 80` 을 표시합니다.

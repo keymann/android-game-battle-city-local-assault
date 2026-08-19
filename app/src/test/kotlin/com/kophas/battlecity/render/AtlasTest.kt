@@ -2,14 +2,13 @@ package com.kophas.battlecity.render
 
 import java.io.File
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
  * 실제 선별 리소스로 검증한다.
- * `app/src/main/assets` 를 테스트 리소스 경로로 붙여 두었기 때문에
- * 런타임과 완전히 같은 파일을 읽는다.
+ * `app/src/main/assets` 를 그대로 읽으므로 런타임과 같은 파일을 본다.
  */
 class AtlasTest {
 
@@ -20,30 +19,57 @@ class AtlasTest {
 
     private val source = AssetSource.ofDirectory(assetsDir)
 
+    private val manifest = AssetManifest.load(source)
+
+    private fun atlas() = TextureAtlas.parse(
+        xml = source.readText("atlas/tiles.xml"),
+        textureId = 1,
+        textureWidth = ATLAS_WIDTH,
+        textureHeight = ATLAS_HEIGHT,
+        insetTexels = 0.02f,
+    )
+
+    private fun units() = TextureAtlas.parse(
+        xml = source.readText("atlas/units.xml"),
+        textureId = 2,
+        textureWidth = UNITS_WIDTH,
+        textureHeight = UNITS_HEIGHT,
+    )
+
     @Test
-    fun `main 아틀라스는 187개 스프라이트를 모두 읽는다`() {
-        val atlas = TextureAtlas.parse(
-            xml = source.readText("atlas/main.xml"),
-            textureId = 1,
-            textureWidth = 1124,
-            textureHeight = 1128,
-        )
-        assertEquals(187, atlas.size)
-        assertEquals("main.png", atlas.imagePath)
+    fun `통합 아틀라스는 네 팩의 스프라이트를 모두 담는다`() {
+        val atlas = atlas()
+        assertEquals(700, atlas.size)
+        assertEquals("tiles.png", atlas.imagePath)
+
+        // 팩별 개수: Tiny Battle 198 / Tiny Town 132 / Tiny Dungeon 132 / Desert Shooter 198 + 40
+        assertEquals(198, atlas.names.count { it.startsWith("battle_") })
+        assertEquals(132, atlas.names.count { it.startsWith("town_") })
+        assertEquals(132, atlas.names.count { it.startsWith("dungeon_") })
+        assertEquals(40, atlas.names.count { it.startsWith("fx_") })
+    }
+
+    @Test
+    fun `비트맵 폰트 글리프가 모두 들어 있다`() {
+        val atlas = atlas()
+        for (digit in 0..9) {
+            assertTrue("숫자 $digit 글리프가 없다", atlas.contains("ui_digit_$digit"))
+        }
+        for (char in 'A'..'Z') {
+            assertTrue("문자 $char 글리프가 없다", atlas.contains("ui_char_$char"))
+        }
     }
 
     @Test
     fun `스프라이트 이름에서 png 확장자가 떨어진다`() {
-        val atlas = mainAtlas()
-        assertTrue(atlas.contains("tankBody_blue"))
-        assertTrue(atlas.contains("tileGrass1"))
-        assertTrue(atlas.contains("explosion1"))
-        assertTrue("확장자가 남아 있으면 안 된다", !atlas.contains("tankBody_blue.png"))
+        val atlas = atlas()
+        assertTrue(atlas.contains("town_052"))
+        assertTrue("확장자가 남아 있으면 안 된다", !atlas.contains("town_052.png"))
     }
 
     @Test
-    fun `UV 는 0~1 안에 들어오고 half-texel 인셋이 적용된다`() {
-        val atlas = mainAtlas()
+    fun `UV 는 0~1 안에 들어오고 뒤집히지 않는다`() {
+        val atlas = atlas()
         for (name in atlas.names) {
             val r = atlas[name]
             assertTrue("$name u0", r.u0 in 0f..1f)
@@ -56,129 +82,102 @@ class AtlasTest {
     }
 
     @Test
+    fun `16px 타일과 24px 이펙트가 원본 크기 그대로다`() {
+        val atlas = atlas()
+        assertEquals(16, atlas["battle_037"].width)
+        assertEquals(16, atlas["town_000"].width)
+        assertEquals(16, atlas["dungeon_040"].width)
+        assertEquals(16, atlas["ui_char_A"].width)
+        assertEquals(24, atlas["fx_025"].width)
+    }
+
+    @Test
     fun `없는 스프라이트를 찾으면 실패한다`() {
-        val atlas = mainAtlas()
-        assertEquals(null, atlas.find("존재하지_않는_스프라이트"))
+        val atlas = atlas()
+        assertNull(atlas.find("존재하지_않는_스프라이트"))
         runCatching { atlas["존재하지_않는_스프라이트"] }
             .onSuccess { error("예외가 나야 한다") }
     }
 
     @Test
-    fun `tiny 격자 아틀라스는 198 타일을 인덱스로 매핑한다`() {
-        val tiny = tinyAtlas()
-        assertEquals(198, tiny.tileCount)
+    fun `블록 사분면으로 쪼개면 원본을 4등분한다`() {
+        val region = atlas()["town_052"]
+        val topLeft = region.sub(0, 0, 2, 2)
+        val bottomRight = region.sub(1, 1, 2, 2)
 
-        // 인덱스 0 = 좌상단
-        val first = tiny[0]
-        assertEquals(0, first.x)
-        assertEquals(0, first.y)
-
-        // 인덱스 18 = 두 번째 행 첫 칸
-        val secondRow = tiny[18]
-        assertEquals(0, secondRow.x)
-        assertEquals(16, secondRow.y)
-
-        // 인덱스 37 = 물 타일 (3행 2열)
-        val water = tiny[37]
-        assertEquals(16, water.x)
-        assertEquals(32, water.y)
+        assertEquals(8, topLeft.width)
+        assertEquals(8, topLeft.height)
+        assertEquals(region.u0, topLeft.u0, 1e-6f)
+        assertEquals(region.u1, bottomRight.u1, 1e-6f)
+        assertTrue(topLeft.u1 <= bottomRight.u0 + 1e-6f)
     }
 
     @Test
-    fun `범위 밖 타일 인덱스는 거부한다`() {
-        val tiny = tinyAtlas()
-        runCatching { tiny[198] }.onSuccess { error("예외가 나야 한다") }
-        runCatching { tiny[-1] }.onSuccess { error("예외가 나야 한다") }
-    }
-
-    @Test
-    fun `같은 인덱스를 다시 요청하면 캐시된 객체를 준다`() {
-        val tiny = tinyAtlas()
-        assertTrue(tiny[37] === tiny[37])
-    }
-
-    @Test
-    fun `매니페스트가 참조하는 모든 main 스프라이트가 아틀라스에 존재한다`() {
-        val manifest = AssetManifest.load(source)
-        val atlas = mainAtlas()
-
-        val referenced = collectMainSpriteNames(manifest)
-        assertTrue("참조 스프라이트를 하나도 못 찾았다", referenced.isNotEmpty())
-
-        val missing = referenced.filterNot { atlas.contains(it) }
-        assertEquals("아틀라스에 없는 스프라이트가 있다: $missing", emptyList<String>(), missing)
-    }
-
-    @Test
-    fun `매니페스트가 참조하는 모든 tiny 인덱스가 범위 안이다`() {
-        val manifest = AssetManifest.load(source)
-        val tiny = tinyAtlas()
-
-        val indices = buildList {
-            addAll(manifest.tileIndices("WATER"))
-            addAll(manifest.tileIndices("ICE"))
-            add(manifest.hudLifeIndex)
-            addAll(manifest.hudDigitIndices)
+    fun `유닛 아틀라스는 몸체와 포신이 분리돼 있다`() {
+        val units = units()
+        assertEquals(187, units.size)
+        for (color in listOf("blue", "green", "red", "sand")) {
+            assertTrue("tankBody_$color 가 없다", units.contains("tankBody_$color"))
+            assertTrue("tankBody_${color}_outline 이 없다", units.contains("tankBody_${color}_outline"))
         }
-        assertTrue(indices.isNotEmpty())
-        indices.forEach { assertNotNull(tiny[it]) }
-    }
-
-    private fun mainAtlas() = TextureAtlas.parse(
-        xml = source.readText("atlas/main.xml"),
-        textureId = 1,
-        textureWidth = 1124,
-        textureHeight = 1128,
-    )
-
-    private fun tinyAtlas() = GridAtlas(
-        textureId = 2,
-        tileSize = 16,
-        columns = 18,
-        rows = 11,
-        spacing = 0,
-    )
-
-    /** 매니페스트에서 main 아틀라스를 가리키는 스프라이트 이름을 모두 모은다. */
-    private fun collectMainSpriteNames(manifest: AssetManifest): List<String> = buildList {
-        for (type in listOf("BRICK", "STEEL", "FOREST")) {
-            addAll(manifest.tileSprites(type))
-        }
-        addAll(manifest.tile("FOREST")?.get("litter")?.asStringList.orEmpty())
-
-        for (groupId in manifest.propGroupIds) {
-            addAll(manifest.propGroup(groupId)?.get("sprites")?.asStringList.orEmpty())
-        }
-
-        for (effect in listOf("tankExplosion", "bulletHit", "brickBreak", "spawnPuff")) {
-            addAll(manifest.effectFrames(effect))
-        }
-
-        val terrain = manifest.root["terrain"]?.asObject.orEmpty()
-        // tint 는 스프라이트 이름이 아니라 색상 값이다.
-        for ((groupName, group) in terrain) {
-            if (groupName == "tint") continue
-            addAll(group["base"]?.asStringList.orEmpty())
-            for ((key, value) in group.asObject) {
-                if (key == "atlas" || key == "base" || key == "comment") continue
-                value.asString?.let { add(it) }
+        for (prefix in listOf("tankBlue", "tankGreen", "tankRed", "tankSand", "tankDark")) {
+            for (level in 1..3) {
+                assertTrue("${prefix}_barrel$level 이 없다", units.contains("${prefix}_barrel$level"))
             }
         }
+    }
 
-        val slots = manifest.root["tanks"]?.get("playerSlots")?.asArray.orEmpty()
-        for (slot in slots) {
-            slot["body"]?.asString?.let { add(it) }
-            slot["outline"]?.asString?.let { add(it) }
-            slot["preview"]?.asString?.let { add(it) }
-            slot["barrelPrefix"]?.asString?.let { prefix -> (1..3).forEach { add("$prefix$it") } }
-            slot["bulletPrefix"]?.asString?.let { prefix -> (1..3).forEach { add("$prefix$it") } }
-        }
+    @Test
+    fun `매니페스트가 참조하는 모든 스프라이트가 두 아틀라스 안에 있다`() {
+        val tiles = atlas()
+        val units = units()
+        val referenced = collectSpriteNames(manifest)
+        assertTrue("참조 스프라이트를 하나도 못 찾았다", referenced.size > 100)
 
-        val enemies = manifest.root["tanks"]?.get("enemy")?.asObject.orEmpty()
-        for ((_, enemy) in enemies) {
-            listOf("body", "barrel", "bullet", "preview").forEach { key ->
-                enemy[key]?.asString?.let { add(it) }
+        val missing = referenced.filterNot { tiles.contains(it) || units.contains(it) }
+        assertEquals("어느 아틀라스에도 없는 스프라이트가 있다: $missing", emptyList<String>(), missing)
+    }
+
+    /**
+     * 매니페스트 전체를 훑어 스프라이트 이름을 모은다.
+     *
+     * 포신/포탄은 접두사 + 등급(1~3)으로 조회하므로 펼쳐서 확인한다.
+     * 폰트 접두사(`ui_char_`)는 글자를 붙여 쓰는 것이라 여기서 제외한다.
+     */
+    private fun collectSpriteNames(manifest: AssetManifest): List<String> {
+        val result = LinkedHashSet<String>()
+
+        fun walk(key: String?, node: com.kophas.battlecity.util.JsonValue) {
+            when (node) {
+                is com.kophas.battlecity.util.JsonValue.Text -> {
+                    val value = node.value
+                    if (key == "barrelPrefix" || key == "bulletPrefix") {
+                        (1..3).forEach { result += "$value$it" }
+                    } else if (SPRITE_NAME.matches(value)) {
+                        result += value
+                    }
+                }
+                is com.kophas.battlecity.util.JsonValue.Arr -> node.items.forEach { walk(key, it) }
+                is com.kophas.battlecity.util.JsonValue.Obj ->
+                    node.fields.forEach { (childKey, child) -> walk(childKey, child) }
+                else -> Unit
             }
         }
+        walk(null, manifest.root)
+        return result.toList()
+    }
+
+    private companion object {
+        const val ATLAS_WIDTH = 352
+        const val ATLAS_HEIGHT = 552
+        const val UNITS_WIDTH = 1124
+        const val UNITS_HEIGHT = 1128
+
+        /** 픽셀 팩은 접두사 + 번호, 유닛 팩은 Kenney 원본 이름을 그대로 쓴다. */
+        val SPRITE_NAME = Regex(
+            """(battle|town|dungeon|fx)_\d{3}""" +
+                """|ui_(char|digit)_[A-Z0-9]""" +
+                """|(tankBody|tank|bullet|shot|explosion|explosionSmoke|tracks|oilSpill)[A-Za-z0-9_]*""",
+        )
     }
 }

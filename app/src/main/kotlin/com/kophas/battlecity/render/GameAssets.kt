@@ -7,61 +7,68 @@ import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
 /**
- * 선별된 두 장의 아틀라스를 디코드해 네이티브에 올린다.
- * (docs/ASSET_SELECTION.md §2 - 런타임 텍스처 2장)
+ * 인게임 아트를 디코드해 네이티브에 올린다. (docs/ASSET_SELECTION.md)
+ *
+ * 텍스처는 두 장이고 샘플링 방식이 다르다.
+ *  - `tiles`  16px 픽셀아트(지형·구조물·환경·HUD). **NEAREST** 로 도트를 살린다.
+ *  - `units`  Top-down Tanks Redux(탱크·포탄·폭발). 회전하므로 **LINEAR**.
+ *
+ * 스프라이트는 이름으로 조회하고, 이름 앞자리가 출처를 알려 준다.
+ *   `battle_` `town_` `dungeon_` `ui_` `fx_` = 픽셀 아틀라스, 그 외 = 유닛 아틀라스
  *
  * 반드시 렌더 스레드에서 호출해야 한다. EGL 컨텍스트가 스레드에 묶여 있기 때문이다.
  */
 class GameAssets private constructor(
     val manifest: AssetManifest,
-    val main: TextureAtlas,
-    val tiny: GridAtlas,
+    val tiles: TextureAtlas,
+    val units: TextureAtlas,
 ) {
+    /** 이름이 어느 아틀라스 것인지 몰라도 찾아 준다. */
+    operator fun get(name: String): TextureRegion =
+        tiles.find(name) ?: units.find(name)
+            ?: error("어느 아틀라스에도 '$name' 스프라이트가 없다")
+
+    fun find(name: String): TextureRegion? = tiles.find(name) ?: units.find(name)
+
     companion object {
         private const val TAG = "BattleCity"
 
-        const val TEXTURE_MAIN = 1
-        const val TEXTURE_TINY = 2
+        const val TEXTURE_TILES = 1
+        const val TEXTURE_UNITS = 2
 
         fun load(source: AssetSource, renderer: NativeRenderer): GameAssets {
             val manifest = AssetManifest.load(source)
 
-            val mainSpec = manifest.atlases["main"] ?: error("매니페스트에 main 아틀라스가 없다")
-            val tinySpec = manifest.atlases["tiny"] ?: error("매니페스트에 tiny 아틀라스가 없다")
+            val tiles = loadAtlas(source, renderer, manifest, "tiles", TEXTURE_TILES)
+            val units = loadAtlas(source, renderer, manifest, "units", TEXTURE_UNITS)
 
-            val mainBitmap = decode(source, mainSpec.image)
-            upload(renderer, TEXTURE_MAIN, mainBitmap)
-            val mainAtlas = TextureAtlas.parse(
-                xml = source.readText(
-                    mainSpec.descriptor ?: error("main 아틀라스에 descriptor 가 없다"),
-                ),
-                textureId = TEXTURE_MAIN,
-                textureWidth = mainBitmap.width,
-                textureHeight = mainBitmap.height,
-            )
-            val mainWidth = mainBitmap.width
-            val mainHeight = mainBitmap.height
-            mainBitmap.recycle()
+            Log.i(TAG, "에셋 로드 완료: tiles ${tiles.size} / units ${units.size} 스프라이트")
+            return GameAssets(manifest, tiles, units)
+        }
 
-            val tinyBitmap = decode(source, tinySpec.image)
-            upload(renderer, TEXTURE_TINY, tinyBitmap)
-            val tinyAtlas = GridAtlas(
-                textureId = TEXTURE_TINY,
-                tileSize = tinySpec.tileSize,
-                columns = tinySpec.columns,
-                rows = tinySpec.rows,
-                spacing = tinySpec.spacing,
-                textureWidth = tinyBitmap.width,
-                textureHeight = tinyBitmap.height,
-            )
-            tinyBitmap.recycle()
+        private fun loadAtlas(
+            source: AssetSource,
+            renderer: NativeRenderer,
+            manifest: AssetManifest,
+            key: String,
+            textureId: Int,
+        ): TextureAtlas {
+            val spec = manifest.atlases[key] ?: error("매니페스트에 $key 아틀라스가 없다")
+            val nearest = spec.filter != "linear"
 
-            Log.i(
-                TAG,
-                "에셋 로드 완료: main ${mainWidth}x$mainHeight / ${mainAtlas.size} 스프라이트, " +
-                    "tiny ${tinyAtlas.tileCount} 타일",
+            val bitmap = decode(source, spec.image)
+            upload(renderer, textureId, bitmap, nearest)
+            val atlas = TextureAtlas.parse(
+                xml = source.readText(spec.descriptor ?: error("$key 아틀라스에 descriptor 가 없다")),
+                textureId = textureId,
+                textureWidth = bitmap.width,
+                textureHeight = bitmap.height,
+                // NEAREST 로 뽑는 픽셀아트는 인셋을 거의 두지 않는다. 크게 두면 도트가 잘린다.
+                // LINEAR 아틀라스는 이웃 스프라이트가 번지지 않도록 half-texel 을 둔다.
+                insetTexels = if (nearest) 0.02f else 0.5f,
             )
-            return GameAssets(manifest, mainAtlas, tinyAtlas)
+            bitmap.recycle()
+            return atlas
         }
 
         private fun decode(source: AssetSource, path: String): Bitmap {
@@ -77,11 +84,16 @@ class GameAssets private constructor(
             }
         }
 
-        private fun upload(renderer: NativeRenderer, textureId: Int, bitmap: Bitmap) {
+        private fun upload(
+            renderer: NativeRenderer,
+            textureId: Int,
+            bitmap: Bitmap,
+            nearest: Boolean,
+        ) {
             val buffer = ByteBuffer.allocateDirect(bitmap.byteCount).order(ByteOrder.nativeOrder())
             bitmap.copyPixelsToBuffer(buffer)
             buffer.rewind()
-            check(renderer.uploadTexture(textureId, bitmap.width, bitmap.height, buffer)) {
+            check(renderer.uploadTexture(textureId, bitmap.width, bitmap.height, buffer, nearest)) {
                 "텍스처 업로드 실패 (id=$textureId)"
             }
         }
