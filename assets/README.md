@@ -39,3 +39,5 @@
 - HUD 중앙은 게임 월드를 가리지 않도록 비워 두고, 컨트롤과 상태창은 기기 safe inset 기준으로 배치합니다.
 - 현재 플레이어 색상 체계: P1 cyan, P2 orange, P3 lime, P4 violet.
 - `*_raw.png`는 생성 원본 보관용입니다. 실제 게임에서는 배경과 셀을 정리한 `components/` 또는 `components_atlas_128.png`를 사용합니다.
+- `RANDOM_MAP_ASSET_GUIDE.md`: AI 랜덤 맵 생성용 의미·배치·검증 가이드
+- `random_map_generation_profile.json`: 생성 비율과 검증 기준의 기계 판독용 기본값

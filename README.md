@@ -241,7 +241,7 @@ app/src/main/
 ├── kotlin/com/kophas/battlecity/
 │   ├── core/                 Constants, Direction, FixedStepClock, GameLoop
 │   ├── map/                  TileType, TileMap, StageGenerator, StageData,
-│   │                         StageTheme, StagePatterns, AutoTiler, Rng
+│   │                         StageTheme, MapGenProfile, Rng
 │   ├── gameplay/             GameWorld, MatchState, BalanceConfig, Tank,
 │   │                         Projectile, Explosion, ObjectPool
 │   ├── render/               Viewport, SpriteBatch, TextureAtlas, GridAtlas,
@@ -256,7 +256,8 @@ app/src/main/
     ├── atlas/                game.png + game.xml (스프라이트 195장, 한 장)
     └── manifest/
         ├── assets.json       게임 의미 <-> 리소스 매핑
-        └── balance.json      게임 규칙과 능력치
+        ├── balance.json      게임 규칙과 능력치
+        └── mapgen.json       랜덤 맵 생성 규칙
 ```
 
 ---
@@ -283,7 +284,7 @@ COM AI 설계는 [docs/AI.md](./docs/AI.md) 를 참고하세요.
 | Phase 4 | 특수기 — 관통탄, 방어막, 대시, 쿨타임, UI | ✅ 완료 |
 | Phase 4.5 | 환경 아트 교체 — 지형·구조물·환경 오브젝트를 자체 리소스로 전면 교체 | ✅ 완료 |
 | Phase 5 | COM — Spawn, 타입별 AI, State Machine, 20 × Player 수 생성 | ✅ 완료 |
-| Phase 5.5 | 에셋 리팩터링 — 자체 에셋 팩 전면 적용, 아틀라스 1장, 16:9, 아이콘/스플래시 | ✅ 완료 |
+| Phase 5.5 | 에셋 리팩터링 — 자체 에셋 팩 전면 적용, 아틀라스 1장, 16:9, 룰 기반 맵 생성 | ✅ 완료 |
 | Phase 6 | 로컬 멀티플레이 — Host, Join, Lobby, 상태 동기화, Disconnect 처리 | 예정 |
 | Phase 7 | 모바일 UI — Virtual Joystick, Fire/Special, HUD, Player Status | 예정 |
 | Phase 8 | 최종화 — 사운드, 이펙트, 진동, 최적화, 저사양/Tablet/Fold/해상도 테스트 | 예정 |
@@ -348,5 +349,8 @@ seed 로 생성된 4인용 4:3 스테이지(24×18 블록). 지형·도로 오�
 
 인게임 그래픽 전체를 자체 에셋 팩으로 교체했습니다. 탱크는 4방향이 미리 그려져 있어
 회전 없이 그리고, 아틀라스는 한 장이라 프레임 안에서 텍스처 교체가 없습니다.
-화면비는 16:9 고정이며, HUD 는 상태창 판 위에 탱크 초상 · 하트 · 처치 수 ·
-특수기 쿨타임 고리를 얹습니다. AI 설계는 [docs/AI.md](./docs/AI.md) 에 있습니다.
+화면비는 16:9 고정이며, 맵은 `assets/RANDOM_MAP_ASSET_GUIDE.md` 를 구현한 룰 기반
+생성기가 만듭니다 — 경로를 먼저 깔고 지형을 군집으로 놓은 뒤 연결성·공정성을 검증해
+85점 미만이면 폐기합니다. HUD 는 상태창 판 위에 탱크 초상 · 하트 · 처치 수 ·
+특수기 쿨타임 고리를 얹습니다. 설계는 [docs/AI.md](./docs/AI.md) 와
+[docs/STAGE_GENERATION.md](./docs/STAGE_GENERATION.md) 에 있습니다.

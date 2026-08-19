@@ -160,8 +160,9 @@
       "fuelBarrel": { "kind": "explosive", "blastCells": 3, "sprites": ["barrel_hazard"] },
       "steelBarrel": { "kind": "explosive", "blastCells": 2, "sprites": ["barrel_steel"] },
       "supplyCrate": {
+        "comment": "crate_broken 은 파괴 상태라 초기 배치에 쓰지 않는다 (가이드 §13).",
         "kind": "solid", "destructible": true, "hp": 1,
-        "sprites": ["crate_intact", "crate_broken"]
+        "sprites": ["crate_intact"]
       },
       "sandbagLine": {
         "kind": "solid", "destructible": true, "hp": 1, "layout": "line",

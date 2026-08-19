@@ -199,6 +199,24 @@ class WorldRenderer(
                 layer = Constants.Layer.HAZARD,
             )
 
+            // 숲은 탱크 **위**에 그려 가린다. 통과는 되지만 안이 안 보인다. (계획서 §30)
+            TileType.FOREST -> {
+                if (spriteIndex < 0) return
+                val full = objectRegions[spriteIndex]
+                batch.draw(
+                    region = if (quadrantX < 0) {
+                        full
+                    } else {
+                        full.sub(quadrantX, quadrantY, Constants.CELLS_PER_BLOCK, Constants.CELLS_PER_BLOCK)
+                    },
+                    x = screenX,
+                    y = screenY,
+                    width = size,
+                    height = size,
+                    layer = Constants.Layer.CANOPY,
+                )
+            }
+
             TileType.BRICK, TileType.STEEL -> {
                 if (spriteIndex < 0) return
                 val full = objectRegions[spriteIndex]

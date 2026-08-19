@@ -19,6 +19,8 @@ import java.nio.ByteOrder
  */
 class GameAssets private constructor(
     val manifest: AssetManifest,
+    /** 랜덤 맵 생성 규칙. (assets/RANDOM_MAP_ASSET_GUIDE.md) */
+    val mapGen: com.kophas.battlecity.map.MapGenProfile,
     val atlas: TextureAtlas,
 ) {
     operator fun get(name: String): TextureRegion =
@@ -33,9 +35,10 @@ class GameAssets private constructor(
 
         fun load(source: AssetSource, renderer: NativeRenderer): GameAssets {
             val manifest = AssetManifest.load(source)
+            val mapGen = com.kophas.battlecity.map.MapGenProfile.load(source)
             val atlas = loadAtlas(source, renderer, manifest, "game", TEXTURE_GAME)
-            Log.i(TAG, "에셋 로드 완료: 스프라이트 ${atlas.size}장")
-            return GameAssets(manifest, atlas)
+            Log.i(TAG, "에셋 로드 완료: 스프라이트 ${atlas.size}장, 맵 규칙 v${mapGen.version}")
+            return GameAssets(manifest, mapGen, atlas)
         }
 
         private fun loadAtlas(

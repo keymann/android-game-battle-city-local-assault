@@ -37,6 +37,8 @@ class StageData(
     val playerSpawnBlocks: IntArray,
     val theme: StageTheme,
     val seed: Long,
+    /** 생성기가 매긴 검증 결과. 로그와 테스트가 읽는다. (가이드 §14) */
+    val report: StageGenerator.Report? = null,
 ) {
     val cellsX: Int = blocksX * Constants.CELLS_PER_BLOCK
     val cellsY: Int = blocksY * Constants.CELLS_PER_BLOCK

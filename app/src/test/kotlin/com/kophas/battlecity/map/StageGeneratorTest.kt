@@ -20,9 +20,13 @@ class StageGeneratorTest {
         File("app/src/main/assets"),
     ).firstOrNull { it.isDirectory } ?: error("assets 디렉터리를 찾지 못했다")
 
-    private val manifest = AssetManifest.load(AssetSource.ofDirectory(assetsDir))
+    private val source = AssetSource.ofDirectory(assetsDir)
 
-    private val generator = StageGenerator(manifest)
+    private val manifest = AssetManifest.load(source)
+
+    private val profile = MapGenProfile.load(source)
+
+    private val generator = StageGenerator(manifest, profile)
 
     // --- 결정론 -----------------------------------------------------------
 
@@ -56,9 +60,9 @@ class StageGeneratorTest {
 
     @Test
     fun `맵 크기는 플레이어 수에 따라 커진다`() {
-        assertEquals(16, generator.blocksXFor(2))
-        assertEquals(23, generator.blocksXFor(3))
-        assertEquals(25, generator.blocksXFor(4))
+        assertEquals(23, generator.blocksXFor(2))
+        assertEquals(28, generator.blocksXFor(3))
+        assertEquals(32, generator.blocksXFor(4))
     }
 
     @Test
@@ -71,21 +75,21 @@ class StageGeneratorTest {
             assertTrue(
                 "players=$players 비율이 16:9 에서 너무 멀다 " +
                     "(${stage.blocksX}x${stage.blocksY}, 오차 ${error * 100}%)",
-                error < 0.006f,
+                error < 0.017f,
             )
             assertTrue("가로가 세로보다 길어야 한다", stage.widthPx > stage.heightPx)
         }
     }
 
     @Test
-    fun `2인 맵은 16x9 블록 1024x576 으로 정확히 16 대 9 다`() {
-        val stage = generator.generate(1L, playerCount = 2)
-        assertEquals(16, stage.blocksX)
-        assertEquals(9, stage.blocksY)
-        assertEquals(32, stage.cellsX)
-        assertEquals(18, stage.cellsY)
-        assertEquals(1024f, stage.widthPx, 1e-3f)
-        assertEquals(576f, stage.heightPx, 1e-3f)
+    fun `4인 맵은 32x18 블록으로 정확히 16 대 9 다`() {
+        val stage = generator.generate(1L, playerCount = 4)
+        assertEquals(32, stage.blocksX)
+        assertEquals(18, stage.blocksY)
+        assertEquals(64, stage.cellsX)
+        assertEquals(36, stage.cellsY)
+        assertEquals(2048f, stage.widthPx, 1e-3f)
+        assertEquals(1152f, stage.heightPx, 1e-3f)
         assertEquals(16f / 9f, stage.aspect, 1e-4f)
     }
 
@@ -231,37 +235,46 @@ class StageGeneratorTest {
     }
 
     @Test
-    fun `장식 오브젝트가 매 스테이지 배치된다`() {
+    fun `환경 오브젝트가 매 스테이지 배치된다`() {
+        // 소품은 블록보다 작아 셀 하나에 통째로 그린다. (가이드 §4.8)
         for (seed in 1L..20L) {
             val stage = generator.generate(seed, playerCount = 4)
-            assertTrue("seed=$seed 장식이 하나도 없다", stage.decor.isNotEmpty())
+            assertTrue("seed=$seed 소품이 하나도 없다", stage.wholeSpriteCells.isNotEmpty())
         }
     }
 
     @Test
-    fun `참조하는 스프라이트 이름이 모두 매니페스트에서 온 것이다`() {
-        val known = buildSet {
-            addAll(manifest.tileSprites("BRICK"))
-            addAll(manifest.tileSprites("STEEL"))
-            addAll(manifest.tileSprites("FOREST"))
+    fun `참조하는 스프라이트가 모두 프로필이 허용한 것이다`() {
+        // 규칙의 출처가 매니페스트에서 mapgen.json 으로 옮겨 왔다. 이제 그림 후보는
+        // variation 표가 정한다. 표 밖의 이름이 나오면 렌더러가 못 찾아 터진다.
+        val allowed = buildSet {
+            for (type in listOf(
+                "DIRT", "CRACKED_DIRT", "SCORCHED_DIRT", "DRY_GRASS", "LUSH_GRASS",
+                "ICE", "BRICK", "STEEL", "FOREST",
+            )) {
+                addAll(profile.variation(type)?.names.orEmpty())
+            }
             for (group in manifest.propGroupIds) {
                 addAll(manifest.propGroup(group)?.get("sprites")?.asStringList.orEmpty())
-            }
-            val terrain = manifest.root["terrain"]?.asObject.orEmpty()
-            for ((_, node) in terrain) {
-                for ((key, value) in node.asObject) {
-                    if (key == "comment") continue
-                    // base / accents 처럼 배열인 항목과 도로 마스크처럼 문자열인 항목을 모두 받는다.
-                    value.asString?.let { add(it) }
-                    addAll(value.asStringList)
-                }
             }
         }
 
         for (seed in 1L..10L) {
             val stage = generator.generate(seed, playerCount = 4)
-            val used = stage.spriteNames.toSet() + stage.groundNames.toSet()
-            assertTrue("매니페스트 밖 스프라이트: ${used - known}", known.containsAll(used))
+            val used = (stage.spriteNames + stage.groundNames).toSet()
+            assertTrue("seed=$seed 프로필 밖 스프라이트: ${used - allowed}", allowed.containsAll(used))
+        }
+    }
+
+    @Test
+    fun `초기 배치에 런타임 상태 그림을 쓰지 않는다`() {
+        // 가이드 §13. 금 간 벽이나 파괴된 본진을 처음부터 깔면 폐허처럼 보인다.
+        assertTrue("금지 목록이 비어 있다", profile.runtimeStateOnly.isNotEmpty())
+        for (seed in 1L..10L) {
+            val stage = generator.generate(seed, playerCount = 4)
+            val used = (stage.spriteNames + stage.groundNames).toSet()
+            val forbidden = used intersect profile.runtimeStateOnly
+            assertTrue("seed=$seed 런타임 상태 그림이 깔렸다: $forbidden", forbidden.isEmpty())
         }
     }
 
