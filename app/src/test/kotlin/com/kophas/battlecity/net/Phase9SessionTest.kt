@@ -227,6 +227,34 @@ class Phase9SessionTest {
     // --- 방 규칙 전달 -----------------------------------------------------
 
     @Test
+    fun `방 규칙은 판이 열리기 전에도 로비 현황에 실려 온다`() {
+        var latest: Messages.LobbyUpdate? = null
+        val client = ClientSession(network.open("10.0.0.50014", 50014), "손님", clock)
+        client.listener = object : ClientSession.Listener {
+            override fun onLobby(update: Messages.LobbyUpdate) {
+                latest = update
+            }
+        }
+        client.join(hostPeer, 0)
+        pump(client)
+
+        // 방장이 규칙을 바꾸면 START 를 기다리지 않고 곧바로 내려간다.
+        host.prepareMatch(
+            Messages.Start(
+                seed = 0, stageIndex = 0, playerCount = 0, gridHash = 0, startTick = 0,
+                mapSize = 0, friendlyFire = false, maxActiveEnemies = 9, baseProtection = false,
+            ),
+        )
+        pump(client, times = 8, stepMs = 300)
+
+        assertNotNull("로비 현황이 오지 않았다", latest)
+        assertEquals(0, latest!!.mapSize)
+        assertFalse(latest!!.friendlyFire)
+        assertEquals(9, latest!!.maxActiveEnemies)
+        assertFalse(latest!!.baseProtection)
+    }
+
+    @Test
     fun `방 규칙이 START 에 실려 참가자에게 간다`() {
         val client = joinedClient(50008, "손님")
         client.setReady(true, 0, 1, "GST")

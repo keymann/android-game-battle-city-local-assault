@@ -126,6 +126,11 @@ class NetDriver(
      * 주기 위한 사본일 뿐, 판을 여는 데 쓰이지 않는다. (계획서 §44.2)
      */
     var roomSettings: RoomSettings = RoomSettings()
+        set(value) {
+            field = value
+            // 방장이 바꾸는 즉시 로비 현황에 실린다. START 를 기다리지 않는다.
+            host?.let { prepareStart(it, scene) }
+        }
 
     /** START. Host 만 누를 수 있다. (계획서 §28) */
     fun startMatch(currentScene: BattleScene?): Boolean {
@@ -306,6 +311,15 @@ class NetDriver(
 
             override fun onLobby(update: Messages.LobbyUpdate) {
                 lastLobby = update
+                // 방 규칙은 방장 것이다. 받은 그대로 덮어쓴다.
+                roomSettings = roomSettings.copy(
+                    mapSize = RoomSettings.MapSize.entries.getOrElse(update.mapSize) {
+                        RoomSettings.MapSize.STANDARD
+                    },
+                    friendlyFire = update.friendlyFire,
+                    maxActiveEnemies = update.maxActiveEnemies,
+                    baseProtection = update.baseProtection,
+                )
             }
 
             override fun onDenied(reason: Int) {

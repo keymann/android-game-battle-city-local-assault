@@ -57,7 +57,9 @@ adb shell am start -n com.kophas.battlecity/.MainActivity --es netRole solo
 | 언제 굳나 | 판을 열 때 (START) | 손을 떼는 즉시 |
 | 어디에 남나 | 아무 데도. 방과 함께 사라진다 | `SharedPreferences` |
 
-방 규칙은 `Messages.Start` 한 통에 실려 모두에게 간다. 맵은 seed 로만 보내므로
+방 규칙은 `Messages.Start` 한 통에 실려 모두에게 간다. 로비에 있는 동안에도 `LOBBY`
+패킷에 함께 실린다 — 그러지 않으면 아직 판이 안 열린 로비에서 참가자가 설정 화면을
+열었을 때 **제 기기의 기본값**을 방 규칙인 양 보게 된다. 맵은 seed 로만 보내므로
 (→ [NETWORK.md](NETWORK.md) §2) 규칙이 한 사람이라도 다르면 **다른 맵이 만들어진다.**
 그래서 참가자가 고른 값은 START 를 받는 순간 통째로 덮어써진다.
 

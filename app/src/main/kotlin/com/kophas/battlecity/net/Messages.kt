@@ -71,11 +71,28 @@ object Messages {
         val host: Boolean,
     )
 
-    data class LobbyUpdate(val slots: List<LobbySlot>, val countdownTicks: Int)
+    /**
+     * 로비 현황. 방 규칙도 함께 실린다.
+     *
+     * 규칙을 판이 시작될 때만 보내면, 아직 판이 안 열린 로비에서 참가자가 설정 화면을
+     * 열었을 때 **제 기기의 기본값**을 방 규칙인 양 보게 된다. 방장이 본진 보호를
+     * 껐는데 켜져 있다고 읽히면 안 된다.
+     */
+    data class LobbyUpdate(
+        val slots: List<LobbySlot>,
+        val countdownTicks: Int,
+        val mapSize: Int = 1,
+        val friendlyFire: Boolean = true,
+        val maxActiveEnemies: Int = 0,
+        val baseProtection: Boolean = true,
+    )
 
     fun writeLobby(writer: PacketWriter, value: LobbyUpdate): PacketWriter {
         Protocol.header(writer, Protocol.Type.LOBBY)
             .short(value.countdownTicks)
+            .byte(value.mapSize)
+            .byte(value.maxActiveEnemies)
+            .byte(flags(value.friendlyFire, value.baseProtection, false))
             .byte(value.slots.size)
         for (slot in value.slots) {
             writer.byte(slot.index)
@@ -89,6 +106,9 @@ object Messages {
 
     fun readLobby(reader: PacketReader): LobbyUpdate {
         val countdown = reader.short()
+        val mapSize = reader.byte()
+        val maxActive = reader.byte()
+        val ruleFlags = reader.byte()
         val count = reader.byte()
         val slots = ArrayList<LobbySlot>(count)
         repeat(count) {
@@ -107,7 +127,14 @@ object Messages {
                 host = flags and 4 != 0,
             )
         }
-        return LobbyUpdate(slots, countdown)
+        return LobbyUpdate(
+            slots = slots,
+            countdownTicks = countdown,
+            mapSize = mapSize,
+            friendlyFire = ruleFlags and 1 != 0,
+            maxActiveEnemies = maxActive,
+            baseProtection = ruleFlags and 2 != 0,
+        )
     }
 
     /**

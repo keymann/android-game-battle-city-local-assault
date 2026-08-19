@@ -236,7 +236,15 @@ class HostSession(
     private fun broadcastLobby(now: Long, force: Boolean) {
         if (!force && now - lastLobbyBroadcastMs < LOBBY_INTERVAL_MS) return
         lastLobbyBroadcastMs = now
-        sendToAll(Messages.writeLobby(writer, lobby.snapshot()))
+        // 방 규칙을 함께 싣는다. 로비에서 설정을 열어 본 참가자가 제 기본값을
+        // 방 규칙으로 오해하지 않도록.
+        val update = lobby.snapshot().copy(
+            mapSize = pendingStart.mapSize,
+            friendlyFire = pendingStart.friendlyFire,
+            maxActiveEnemies = pendingStart.maxActiveEnemies,
+            baseProtection = pendingStart.baseProtection,
+        )
+        sendToAll(Messages.writeLobby(writer, update))
     }
 
     /** 아직 방을 못 찾은 사람을 위해 주기적으로 알린다. */
