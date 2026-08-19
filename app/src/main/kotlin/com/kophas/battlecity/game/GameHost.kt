@@ -562,6 +562,15 @@ class GameHost(
         if (width <= 0 || height <= 0) return
 
         batch.begin()
+        // 설정은 혼자 화면을 다 쓴다. 뒤에 메뉴가 비쳐 보이면 어느 쪽을 누르는
+        // 것인지 헷갈리고, 판 밖으로 삐져나온 글자가 설정의 일부처럼 읽힌다.
+        if (settingsOpen) {
+            settingsScene?.render(batch)
+            batch.end()
+            finishFrame()
+            return
+        }
+
         when (screen) {
             Screen.MENU -> menuScene?.render(batch)
 
@@ -575,10 +584,11 @@ class GameHost(
 
             Screen.RESULT -> resultScene?.render(batch)
         }
-        // 설정은 어느 화면 위에도 덮인다. 뒤 화면을 지우지 않는 편이 어디서 열었는지 안다.
-        if (settingsOpen) settingsScene?.render(batch)
         batch.end()
+        finishFrame()
+    }
 
+    private fun finishFrame() {
         if (batch.droppedSprites > 0) {
             Log.w(TAG, "스프라이트 ${batch.droppedSprites}개가 배치 상한을 넘어 버려졌다")
         }

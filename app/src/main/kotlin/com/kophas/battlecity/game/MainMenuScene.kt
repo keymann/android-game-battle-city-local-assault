@@ -157,9 +157,10 @@ class MainMenuScene(private val catalog: SpriteCatalog) {
         return ScreenUi.Rect(ui.width * 0.02f, base.y, width, base.height)
     }
 
-    private fun createRect() = ui.fitByWidth(catalog.menu.primary, BUTTON_WIDTH, 0.40f)
+    // 두 단추를 붙여 두면 하나로 보이고 잘못 누른다. 손가락 하나가 들어갈 만큼 띄운다.
+    private fun createRect() = ui.fitByWidth(catalog.menu.primary, BUTTON_WIDTH, CREATE_TOP)
 
-    private fun joinRect() = ui.fitByWidth(catalog.menu.secondary, BUTTON_WIDTH, 0.64f)
+    private fun joinRect() = ui.fitByWidth(catalog.menu.secondary, BUTTON_WIDTH, JOIN_TOP)
 
     private fun settingsRect() = ui.fitByHeight(catalog.menu.settings, 1.7f, 0.83f, 0.93f)
 
@@ -167,6 +168,8 @@ class MainMenuScene(private val catalog: SpriteCatalog) {
         const val TITLE_TOP = 0.05f
         const val TITLE_WIDTH = 0.30f
         const val BUTTON_WIDTH = 0.26f
+        const val CREATE_TOP = 0.36f
+        const val JOIN_TOP = 0.67f
 
         // 판 그림에서 잰 자리. 제목판은 두 줄이 들어간다.
         const val TITLE_LINE1 = 0.42f

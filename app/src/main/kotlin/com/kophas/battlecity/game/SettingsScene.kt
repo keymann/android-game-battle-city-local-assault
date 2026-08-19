@@ -217,7 +217,7 @@ class SettingsScene(private val catalog: SpriteCatalog) {
      * 그림 비율대로만 놓으면 두 칸이 좁아 이름표와 조작기가 겹치고, 통째로 늘리면
      * 모서리 장식이 부풀어 오른다. 끝을 그대로 두고 가운데만 늘리면 둘 다 피한다.
      */
-    private fun panelRect() = ui.centeredRect(0.03f, PANEL_WIDTH, PANEL_UNITS)
+    private fun panelRect() = ui.centeredRect(PANEL_TOP, PANEL_WIDTH, PANEL_UNITS)
 
     private fun column(side: Int): Float {
         val panel = panelRect()
@@ -534,8 +534,10 @@ class SettingsScene(private val catalog: SpriteCatalog) {
         // 오른쪽 칸은 항목이 적어 아래를 비운다. 스피커 그림으로 채운다.
         private const val ROW_BGM = 1
         private const val ROW_SFX = 2
-        private const val PANEL_UNITS = 12.6f
-        private const val PANEL_WIDTH = 0.88f
+        // 설정은 혼자 화면을 다 쓴다. 판을 화면 가장자리까지 늘린다.
+        private const val PANEL_TOP = 0.025f
+        private const val PANEL_UNITS = 13.4f
+        private const val PANEL_WIDTH = 0.94f
 
         /** 조작기가 차지하는 칸의 비율. 나머지가 이름표 자리다. */
         private const val CONTROL_WIDTH = 0.5f
