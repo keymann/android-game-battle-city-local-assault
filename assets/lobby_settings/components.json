@@ -1,0 +1,266 @@
+{
+  "columns": 4,
+  "rows": 4,
+  "sourceSize": [
+    1254,
+    1254
+  ],
+  "components": [
+    {
+      "name": "settings_panel",
+      "index": 0,
+      "row": 0,
+      "column": 0,
+      "sourceCell": [
+        0,
+        0,
+        314,
+        314
+      ],
+      "outputSize": [
+        287,
+        197
+      ]
+    },
+    {
+      "name": "segment_normal",
+      "index": 1,
+      "row": 0,
+      "column": 1,
+      "sourceCell": [
+        314,
+        0,
+        313,
+        314
+      ],
+      "outputSize": [
+        234,
+        133
+      ]
+    },
+    {
+      "name": "segment_selected",
+      "index": 2,
+      "row": 0,
+      "column": 2,
+      "sourceCell": [
+        627,
+        0,
+        313,
+        314
+      ],
+      "outputSize": [
+        249,
+        133
+      ]
+    },
+    {
+      "name": "toggle_off",
+      "index": 3,
+      "row": 0,
+      "column": 3,
+      "sourceCell": [
+        940,
+        0,
+        314,
+        314
+      ],
+      "outputSize": [
+        200,
+        121
+      ]
+    },
+    {
+      "name": "toggle_on",
+      "index": 4,
+      "row": 1,
+      "column": 0,
+      "sourceCell": [
+        0,
+        314,
+        314,
+        313
+      ],
+      "outputSize": [
+        217,
+        121
+      ]
+    },
+    {
+      "name": "slider_track",
+      "index": 5,
+      "row": 1,
+      "column": 1,
+      "sourceCell": [
+        314,
+        314,
+        313,
+        313
+      ],
+      "outputSize": [
+        326,
+        64
+      ]
+    },
+    {
+      "name": "slider_thumb",
+      "index": 6,
+      "row": 1,
+      "column": 2,
+      "sourceCell": [
+        627,
+        314,
+        313,
+        313
+      ],
+      "outputSize": [
+        134,
+        140
+      ]
+    },
+    {
+      "name": "bgm_icon",
+      "index": 7,
+      "row": 1,
+      "column": 3,
+      "sourceCell": [
+        940,
+        314,
+        314,
+        313
+      ],
+      "outputSize": [
+        172,
+        165
+      ]
+    },
+    {
+      "name": "sfx_icon",
+      "index": 8,
+      "row": 2,
+      "column": 0,
+      "sourceCell": [
+        0,
+        627,
+        314,
+        313
+      ],
+      "outputSize": [
+        181,
+        172
+      ]
+    },
+    {
+      "name": "speaker_on",
+      "index": 9,
+      "row": 2,
+      "column": 1,
+      "sourceCell": [
+        314,
+        627,
+        313,
+        313
+      ],
+      "outputSize": [
+        180,
+        171
+      ]
+    },
+    {
+      "name": "speaker_muted",
+      "index": 10,
+      "row": 2,
+      "column": 2,
+      "sourceCell": [
+        627,
+        627,
+        313,
+        313
+      ],
+      "outputSize": [
+        181,
+        171
+      ]
+    },
+    {
+      "name": "randomize_dice",
+      "index": 11,
+      "row": 2,
+      "column": 3,
+      "sourceCell": [
+        940,
+        627,
+        314,
+        313
+      ],
+      "outputSize": [
+        179,
+        171
+      ]
+    },
+    {
+      "name": "dropdown_button",
+      "index": 12,
+      "row": 3,
+      "column": 0,
+      "sourceCell": [
+        0,
+        940,
+        314,
+        314
+      ],
+      "outputSize": [
+        179,
+        159
+      ]
+    },
+    {
+      "name": "reset_button",
+      "index": 13,
+      "row": 3,
+      "column": 1,
+      "sourceCell": [
+        314,
+        940,
+        313,
+        314
+      ],
+      "outputSize": [
+        181,
+        160
+      ]
+    },
+    {
+      "name": "apply_button",
+      "index": 14,
+      "row": 3,
+      "column": 2,
+      "sourceCell": [
+        627,
+        940,
+        313,
+        314
+      ],
+      "outputSize": [
+        194,
+        165
+      ]
+    },
+    {
+      "name": "close_button",
+      "index": 15,
+      "row": 3,
+      "column": 3,
+      "sourceCell": [
+        940,
+        940,
+        314,
+        314
+      ],
+      "outputSize": [
+        186,
+        165
+      ]
+    }
+  ]
+}

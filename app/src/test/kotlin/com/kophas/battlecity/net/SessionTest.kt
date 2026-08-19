@@ -156,7 +156,7 @@ class SessionTest {
         client.setReady(true, 0, 1, "GST")
         pump(client)
 
-        host.prepareMatch(seed = 20260819L, stageIndex = 3, gridHash = -777L)
+        host.prepareMatch(Messages.Start(seed = 20260819L, stageIndex = 3, playerCount = 0, gridHash = -777L, startTick = 0))
         assertTrue(host.requestStart())
 
         var hostStart: Messages.Start? = null
@@ -328,7 +328,7 @@ class SessionTest {
         val client = joinedClient(port, "손님")
         client.setReady(true, 0, 1, "GST")
         pump(client)
-        host.prepareMatch(1L, 0, 0L)
+        host.prepareMatch(Messages.Start(1L, 0, 0, 0L, 0))
         host.requestStart()
         repeat(Protocol.COUNTDOWN_SECONDS * 60 + 4) { host.update() }
         pump(client)

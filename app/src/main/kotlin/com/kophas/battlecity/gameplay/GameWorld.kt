@@ -33,6 +33,13 @@ class GameWorld(
         val iceFriction: Float = 0.12f,
         /** 폭발성 프롭 기본 반경(셀). 매니페스트 값이 없을 때 쓴다. */
         val defaultBlastCells: Int = 2,
+        /**
+         * 아군 포탄에도 맞는가. 방 설정이 정한다.
+         *
+         * 끄면 같은 편 포탄은 그냥 통과한다. 네 명이 좁은 맵에서 뒤엉키면
+         * 서로 쏴서 죽는 일이 더 많아지기 때문에 끄고 싶을 수 있다.
+         */
+        val friendlyFire: Boolean = true,
     )
 
     /** 규칙 판정 결과를 밖으로 알린다. 사운드/점수/네트워크가 여기에 붙는다. */
@@ -59,6 +66,9 @@ class GameWorld(
 
         /** 지속형 특수기가 끝났다. */
         fun onSpecialExpired(tank: Tank, special: BalanceConfig.Special) = Unit
+
+        /** 본진 보호막이 한 발을 막아 냈다. */
+        fun onBaseShieldHit() = Unit
 
         fun onBaseDestroyed() = Unit
     }
@@ -447,6 +457,7 @@ class GameWorld(
         for (tank in tanks) {
             if (!tank.alive) continue
             if (tank.id == projectile.ownerId) continue
+            if (!config.friendlyFire && tank.faction == projectile.ownerFaction) continue
             if (tank.spawnGuardRemaining > 0f) continue
             if (!projectile.overlaps(tank)) continue
 
@@ -499,6 +510,17 @@ class GameWorld(
                     detonate(ix, iy)
                 }
 
+                TileMap.DamageResult.BASE_SHIELDED -> {
+                    stopped = true
+                    listener?.onBaseShieldHit()
+                    spawnExplosion(
+                        Explosion.Kind.STEEL_HIT,
+                        (ix + 0.5f) * Constants.CELL_PX,
+                        (iy + 0.5f) * Constants.CELL_PX,
+                        Constants.BLOCK_PX,
+                    )
+                }
+
                 TileMap.DamageResult.BASE_HIT -> {
                     stopped = true
                     spawnExplosion(
@@ -518,7 +540,11 @@ class GameWorld(
 
                 TileMap.DamageResult.NONE -> Unit
             }
-            if (result == TileMap.DamageResult.BASE_HIT) break
+            if (result == TileMap.DamageResult.BASE_HIT ||
+                result == TileMap.DamageResult.BASE_SHIELDED
+            ) {
+                break
+            }
         }
 
         if (stopped) {

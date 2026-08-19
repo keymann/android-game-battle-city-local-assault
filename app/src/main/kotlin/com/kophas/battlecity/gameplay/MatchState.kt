@@ -11,6 +11,8 @@ class MatchState(
     val balance: BalanceConfig,
     /** 로비에서 고른 이름 · 탱크 · 색. 없으면 기본값으로 채운다. */
     profiles: List<PlayerProfile> = emptyList(),
+    /** 방 설정이 정한 동시 COM 수. 0 이면 balance.json 값을 쓴다. */
+    maxActiveOverride: Int = 0,
 ) {
     enum class Phase { PLAYING, VICTORY, GAME_OVER }
 
@@ -73,7 +75,8 @@ class MatchState(
     val totalEnemies: Int = rules.totalEnemies(playerCount)
 
     /** 동시에 존재할 수 있는 COM 수. 총량과 분리한다. (계획서 §44.2) */
-    val maxActiveEnemies: Int = rules.maxActiveEnemies(playerCount)
+    val maxActiveEnemies: Int =
+        if (maxActiveOverride > 0) maxActiveOverride else rules.maxActiveEnemies(playerCount)
 
     /** 아직 한 번도 등장하지 않은 COM 수. */
     var enemiesPending: Int = totalEnemies

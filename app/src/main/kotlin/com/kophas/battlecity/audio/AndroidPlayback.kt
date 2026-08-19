@@ -92,6 +92,14 @@ class AndroidPlayback(
         }.onFailure { Log.w(TAG, "배경음을 못 읽었다: $clip ($it)") }
     }
 
+    override fun setMusicVolume(volume: Float) {
+        runCatching { music?.setVolume(volume, volume) }
+    }
+
+    override fun setLoopVolume(clip: String, volume: Float) {
+        loopStreams[clip]?.let { runCatching { pool.setVolume(it, volume, volume) } }
+    }
+
     override fun stopMusic() {
         music?.let { player ->
             runCatching { player.stop() }

@@ -45,6 +45,9 @@ class LobbyScene(private val catalog: SpriteCatalog) {
         data object CycleType : Action
         data object CycleColor : Action
         data class SetName(val name: String) : Action
+
+        /** 방 설정을 연다. 방장이 아니면 소리 크기만 바꿀 수 있다. (계획서 §44.2) */
+        data object OpenSettings : Action
     }
 
     val view = View()
@@ -65,6 +68,7 @@ class LobbyScene(private val catalog: SpriteCatalog) {
     fun onTap(x: Float, y: Float): Action {
         if (editingName) return tapKeyboard(x, y)
 
+        if (hitsSettings(x, y)) return Action.OpenSettings
         if (hitsStart(x, y)) {
             startPressed = true
             return if (canStart()) Action.Start else Action.None
@@ -106,6 +110,7 @@ class LobbyScene(private val catalog: SpriteCatalog) {
         drawSlots(batch, unit)
         drawChoices(batch, unit)
         drawStart(batch, unit)
+        drawSettingsButton(batch)
         drawStatus(batch, unit)
     }
 
@@ -232,6 +237,19 @@ class LobbyScene(private val catalog: SpriteCatalog) {
         val centerX = columnCenter(column)
         drawCentered(batch, title, centerX, y, size * 0.72f, LABEL_COLOR)
         drawCentered(batch, value, centerX, y + size * 1.15f, size, valueColor)
+    }
+
+    /** 방 설정 단추. 로비 오른쪽 위에 둔다. 시작 단추와 멀어야 잘못 누르지 않는다. */
+    private fun drawSettingsButton(batch: SpriteBatch) {
+        val rect = settingsRect()
+        batch.draw(
+            region = catalog.lobbySettings,
+            x = rect[0],
+            y = rect[1],
+            width = rect[2],
+            height = rect[3],
+            layer = Constants.Layer.HUD,
+        )
     }
 
     private fun drawStart(batch: SpriteBatch, unit: Float) {
@@ -390,6 +408,16 @@ class LobbyScene(private val catalog: SpriteCatalog) {
         val centerX = columnCenter(column)
         val halfWidth = width * 0.09f
         return y in top..bottom && x in (centerX - halfWidth)..(centerX + halfWidth)
+    }
+
+    private fun settingsRect(): FloatArray {
+        val size = height * UNIT_RATIO * 2.0f
+        return floatArrayOf(width * 0.94f - size, height * 0.04f, size, size)
+    }
+
+    private fun hitsSettings(x: Float, y: Float): Boolean {
+        val rect = settingsRect()
+        return x in rect[0]..(rect[0] + rect[2]) && y in rect[1]..(rect[1] + rect[3])
     }
 
     private fun hitsStart(x: Float, y: Float): Boolean {

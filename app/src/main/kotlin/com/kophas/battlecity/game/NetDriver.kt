@@ -21,7 +21,8 @@ import com.kophas.battlecity.net.UdpTransport
  * 상태는 20Hz 로 내보낸다. 게임 로직 60Hz 를 3틱마다 한 번이다. (계획서 §36)
  */
 class NetDriver(
-    private val role: NetRole,
+    /** 이 기기가 맡은 역할. 화면이 무엇을 보여 줄지 가른다. */
+    val role: NetRole,
     private val playerName: String,
     private val hostAddress: String?,
     /** 고를 수 있는 색의 수. 매니페스트 팔레트 크기다. */
@@ -40,6 +41,10 @@ class NetDriver(
 
     /** 사람이 잡은 자리. 여기에는 AI 를 붙이지 않는다. 조종간이 둘이 되기 때문이다. */
     val humanSlots = HashSet<Int>()
+
+    /** 카운트다운에 남은 틱. 0 이면 세고 있지 않다. 소리를 낼 때 쓴다. */
+    val countdownTicks: Int
+        get() = (host?.lobby?.countdownTicks ?: lastLobby?.countdownTicks) ?: 0
 
     /** 아직 로비에 있는가. 판이 시작되면 false 가 된다. */
     val inLobby: Boolean
@@ -114,16 +119,102 @@ class NetDriver(
         }
     }
 
+    /**
+     * 방을 열 때 정한 규칙. 방장만 바꿀 수 있고 START 에 실려 모두에게 간다.
+     *
+     * 참가자 쪽 값은 START 를 받는 순간 덮어써진다. 여기 담긴 것은 화면에 보여
+     * 주기 위한 사본일 뿐, 판을 여는 데 쓰이지 않는다. (계획서 §44.2)
+     */
+    var roomSettings: RoomSettings = RoomSettings()
+
     /** START. Host 만 누를 수 있다. (계획서 §28) */
-    fun startMatch(currentScene: BattleScene?) {
-        val session = host ?: return
-        session.prepareMatch(
-            seed = Rng.advanceSeed(clock()),
-            stageIndex = 0,
-            gridHash = currentScene?.stageGridHash ?: 0L,
-        )
-        session.requestStart()
+    fun startMatch(currentScene: BattleScene?): Boolean {
+        val session = host ?: return false
+        prepareStart(session, currentScene)
+        return session.requestStart()
     }
+
+    private fun prepareStart(session: HostSession, currentScene: BattleScene?) {
+        // 시드를 정해 두었으면 그 판을 그대로 다시 만든다. 0 이면 매번 새로 뽑는다.
+        val seed = if (roomSettings.randomSeed != 0L) {
+            roomSettings.randomSeed
+        } else {
+            Rng.advanceSeed(clock())
+        }
+        session.prepareMatch(
+            Messages.Start(
+                seed = seed,
+                stageIndex = stageIndex,
+                playerCount = 0,
+                gridHash = currentScene?.stageGridHash ?: 0L,
+                startTick = 0,
+                mapSize = roomSettings.mapSize.ordinal,
+                friendlyFire = roomSettings.friendlyFire,
+                maxActiveEnemies = roomSettings.maxActiveEnemies,
+                baseProtection = roomSettings.baseProtection,
+            ),
+        )
+    }
+
+    /** 이번에 열 스테이지 번호. PLAY AGAIN 을 누를 때마다 하나씩 올라간다. */
+    private var stageIndex = 0
+
+    /** 이 기기가 겪는 왕복 지연. 못 쟀으면 -1. (계획서 §44.2) */
+    val latencyMs: Int
+        get() = when (role) {
+            NetRole.LOCAL -> -1
+            NetRole.HOST -> host?.latencyMs ?: -1
+            NetRole.CLIENT -> client?.latencyMs ?: -1
+        }
+
+    /** 접속이 살아 있는가. 화면 구석의 신호 아이콘이 쓴다. */
+    val connected: Boolean
+        get() = when (role) {
+            NetRole.LOCAL -> false
+            NetRole.HOST -> true
+            NetRole.CLIENT -> client?.state != ClientSession.State.DISCONNECTED
+        }
+
+    /** 결과 화면에 남아 있는 다른 사람 수. 방장만 셀 수 있다. (계획서 §33) */
+    val resultPeerCount: Int get() = host?.resultPeerCount ?: 0
+
+    /**
+     * 그 자리 사람이 아직 결과 화면에 있는가. 방장만 알 수 있다.
+     *
+     * 참가자에게는 이 정보가 오지 않는다. PLAY AGAIN 을 누르는 사람은 방장뿐이라,
+     * 누가 남았는지 알아야 할 사람도 방장뿐이다.
+     */
+    fun isPresentInResult(slot: Int): Boolean = host?.isInResult(slot) ?: false
+
+    /** 결과 화면에 들어왔다 / 떠났다고 알린다. */
+    fun setResultPresence(present: Boolean) {
+        client?.sendPresence(present)
+    }
+
+    /** 판이 끝났다. 로비를 다시 열어 다음 판을 기다린다. */
+    fun returnToLobby() {
+        started = false
+        when (role) {
+            NetRole.HOST -> host?.reopenLobby(clock())
+            NetRole.CLIENT -> client?.returnToLobby()
+            NetRole.LOCAL -> Unit
+        }
+    }
+
+    /** 방장이 PLAY AGAIN 을 눌렀다. 결과 화면에 남은 사람들과 다음 판을 연다. */
+    fun playAgain(currentScene: BattleScene?): Boolean {
+        val session = host ?: return false
+        stageIndex++
+        started = false
+        prepareStart(session, currentScene)
+        return session.playAgain(clock())
+    }
+
+    /** 판이 시작될 때 부른다. 화면이 전투로 넘어가는 신호다. */
+    var onMatchStarted: (() -> Unit)? = null
+
+    /** 호스트와 끊겼을 때 부른다. (계획서 §37) */
+    var onDisconnected: (() -> Unit)? = null
 
     /** 이 기기의 조종 입력. Host/LOCAL 은 바로 먹이고 Client 는 올려 보낸다. */
     fun submitLocalInput(scene: BattleScene, input: Messages.Input) {
@@ -234,6 +325,8 @@ class NetDriver(
 
             override fun onDisconnected() {
                 Log.w(TAG, "호스트와 끊겼다. 로비로 돌아간다")
+                // 화면만으로는 알아채기 어렵다. 소리로도 알린다. (계획서 §37)
+                onDisconnected?.invoke()
             }
         }
         client = session
@@ -253,6 +346,17 @@ class NetDriver(
      */
     private fun beginWithProfiles(start: Messages.Start) {
         val currentScene = scene ?: return
+        // 방 규칙은 START 한 통에 실려 온다. 참가자도 이것으로 같은 맵을 만든다.
+        stageIndex = start.stageIndex
+        roomSettings = roomSettings.copy(
+            mapSize = RoomSettings.MapSize.entries.getOrElse(start.mapSize) {
+                RoomSettings.MapSize.STANDARD
+            },
+            friendlyFire = start.friendlyFire,
+            maxActiveEnemies = start.maxActiveEnemies,
+            baseProtection = start.baseProtection,
+        )
+        currentScene.room = roomSettings
         val update = host?.lobby?.snapshot() ?: lastLobby
         val connected = update?.slots.orEmpty().filter { it.connected }
 
@@ -271,6 +375,7 @@ class NetDriver(
             humanSlots += ordinal
         }
         currentScene.beginStage(start.seed, start.stageIndex, start.playerCount)
+        onMatchStarted?.invoke()
     }
 
     private fun driveHost() {

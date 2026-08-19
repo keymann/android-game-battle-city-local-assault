@@ -10,7 +10,6 @@ import com.kophas.battlecity.gameplay.GameWorld
 import com.kophas.battlecity.gameplay.MatchState
 import com.kophas.battlecity.gameplay.PlayerProfile
 import com.kophas.battlecity.gameplay.Tank
-import com.kophas.battlecity.map.Rng
 import com.kophas.battlecity.map.StageGenerator
 import com.kophas.battlecity.net.Messages
 import com.kophas.battlecity.net.SnapshotBridge
@@ -59,11 +58,22 @@ class BattleScene(
      */
     var profiles: List<PlayerProfile> = emptyList()
 
+    /** 방장이 정한 규칙. 판을 열 때 반영한다. */
+    var room: RoomSettings = RoomSettings()
+
     /** 소리와 진동. 없으면 조용히 돌아간다. (계획서 §34) */
     var audio: AudioDirector? = null
 
     /** 이 기기가 조종하는 자리. 진동은 이 사람에게만 준다. */
     var localSlot: Int = 0
+
+    /** 이 기기의 왕복 지연. HUD 구석에 ms 로 나간다. (계획서 §44.2) */
+    var networkLatencyMs: Int = -1
+
+    var networkOnline: Boolean = true
+
+    /** 네트워크 표시를 그릴지. 혼자 하는 판에는 뜻이 없다. */
+    var showNetwork: Boolean = false
 
     /**
      * 저사양 기기에서 연출을 줄인다. (계획서 §24)
@@ -75,6 +85,17 @@ class BattleScene(
 
     /** 승패 소리는 한 번만 낸다. */
     private var resultAnnounced = false
+
+    /**
+     * 판이 끝나고 결과를 보여 줄 때가 되면 부른다. (계획서 §33)
+     *
+     * 씬이 스스로 다음 스테이지를 열지 않는다. 다음에 무엇을 할지는 결과 화면에서
+     * 사람이 고르고, 그 결정은 방장 한 사람의 것이다.
+     */
+    var onMatchFinished: (() -> Unit)? = null
+
+    /** 결과를 이미 넘겼는가. 매 틱 다시 부르면 결과 화면이 계속 초기화된다. */
+    private var finishReported = false
 
     private val catalog = SpriteCatalog(assets)
     private val generator = StageGenerator(assets.manifest, assets.mapGen)
@@ -108,12 +129,15 @@ class BattleScene(
     // -----------------------------------------------------------------------
 
     private fun buildStage() {
-        val stage = generator.generate(seed, playerCount, stageIndex)
-        match = MatchState(playerCount, balance, profiles)
-        world = GameWorld(stage, balance)
+        // 맵 크기는 방 설정이 한 단계 좁히거나 넓힌다.
+        val stage = generator.generate(seed, room.gridPlayerCount(playerCount), stageIndex)
+        match = MatchState(playerCount, balance, profiles, room.maxActiveEnemies)
+        world = GameWorld(stage, balance, GameWorld.Config(friendlyFire = room.friendlyFire))
+        world.map.enableBaseShield(room.baseProtection)
         world.listener = MatchBridge()
 
         resultAnnounced = false
+        finishReported = false
         director = AiDirector(balance, aiSettings, seed)
         director.bind(world)
         slotOfTank.clear()
@@ -205,6 +229,9 @@ class BattleScene(
         // Client 는 규칙을 굴리지 않는다. 폭발 같은 연출만 흘려보낸다. (계획서 §4.2)
         if (role == NetRole.CLIENT) {
             world.updateEffectsOnly(tickSeconds)
+            updateAudio()
+            // 승패는 Host 가 스냅샷으로 알려 준다. 결과 화면으로 넘어가는 길은 같다.
+            checkFinished(tickSeconds)
             return
         }
 
@@ -216,15 +243,32 @@ class BattleScene(
         respawnPlayers()
         updateAudio()
 
-        if (match.phase != MatchState.Phase.PLAYING) {
-            if (resultHoldRemaining <= 0f) {
-                resultHoldRemaining = RESULT_HOLD_SECONDS
-                logResult()
-            }
-            resultHoldRemaining -= tickSeconds
-            if (resultHoldRemaining <= 0f) nextStage()
-        }
+        checkFinished(tickSeconds)
     }
+
+    /**
+     * 승패가 갈린 뒤 잠깐 멈춘다.
+     *
+     * 마지막 폭발이 화면에 남아 있는 채로 결과 화면이 덮이면 무슨 일이 일어났는지
+     * 못 본다. 터지는 것을 끝까지 보여 주고 넘긴다.
+     */
+    private fun checkFinished(tickSeconds: Float) {
+        if (match.phase == MatchState.Phase.PLAYING || finishReported) return
+        if (resultHoldRemaining <= 0f) {
+            resultHoldRemaining = RESULT_HOLD_SECONDS
+            logResult()
+        }
+        resultHoldRemaining -= tickSeconds
+        if (resultHoldRemaining > 0f) return
+        finishReported = true
+        onMatchFinished?.invoke()
+    }
+
+    /** 결과 화면이 읽어 갈 성적표. */
+    val matchState: MatchState get() = match
+
+    /** 지금 스테이지 번호. 0부터 센다. */
+    val stage: Int get() = stageIndex
 
     /**
      * 이어지는 소리와 배경음. (계획서 §34)
@@ -278,12 +322,6 @@ class BattleScene(
         }
     }
 
-    private fun nextStage() {
-        stageIndex++
-        seed = Rng.advanceSeed(seed)
-        buildStage()
-    }
-
     private fun logResult() {
         val ranking = match.ranking().joinToString(" / ") {
             "P${it.index + 1} ${it.kills}킬 ♥${it.lives}"
@@ -299,6 +337,9 @@ class BattleScene(
     fun render(batch: SpriteBatch, viewport: Viewport) {
         worldRenderer.reducedEffects = reducedEffects
         worldRenderer.render(world, batch, viewport, elapsedSeconds)
+        hudRenderer.latencyMs = networkLatencyMs
+        hudRenderer.online = networkOnline
+        hudRenderer.showNetwork = showNetwork
         hudRenderer.render(batch, viewport, match, world)
     }
 
@@ -374,6 +415,12 @@ class BattleScene(
             director.onMapChanged()
         }
 
+        override fun onBaseShieldHit() {
+            // 막아 냈다는 것을 알려야 한다. 조용하면 그냥 빗나간 줄 안다.
+            audio?.play(AudioDirector.Event.BULLET_HIT_STEEL)
+            audio?.vibrate(AudioDirector.Haptic.TAKE_DAMAGE)
+        }
+
         override fun onBaseDestroyed() {
             audio?.play(AudioDirector.Event.BASE_DESTROY)
             audio?.vibrate(AudioDirector.Haptic.BASE_DESTROY)
@@ -386,8 +433,8 @@ class BattleScene(
         const val DEFAULT_PLAYERS = 4
         const val DEFAULT_SEED = 20260819L
 
-        /** 승패가 갈린 뒤 결과를 보여 주는 시간. 결과 화면은 Phase 8 에서 붙는다. */
-        const val RESULT_HOLD_SECONDS = 3f
+        /** 승패가 갈린 뒤 결과 화면으로 넘어가기까지 기다리는 시간. */
+        const val RESULT_HOLD_SECONDS = 2.5f
 
         /** 본진에서 이 거리 안에 적이 오면 경고음이 돈다. */
         const val BASE_ALERT_PX = 64f * 5f

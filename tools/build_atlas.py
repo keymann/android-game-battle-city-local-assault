@@ -4,6 +4,9 @@
     assets/sprites/{terrain,tanks,effects}   원본 판 + 이름표(JSON)
     assets/hud/components                    HUD 아이콘
     assets/lobby/components                  로비 아이콘
+    assets/main_menu/components              메인 메뉴
+    assets/lobby_settings/components         방 설정
+    assets/result/components                 결과 화면
     assets/font/font_sheet.png               비트맵 폰트 글리프
         -> app/src/main/assets/atlas/game.png / game.xml
 
@@ -43,6 +46,8 @@ SHELL, FLASH, IMPACT = 40, 48, 56
 HUD = 64
 #: 로비는 게임 화면보다 크게 그린다. 손가락으로 누를 것들이라 작으면 안 된다.
 LOBBY = 96
+#: 메뉴·설정·결과의 판과 버튼. 가로로 길게 늘여 쓰므로 가로 해상도가 넉넉해야 한다.
+SCREEN = 160
 
 ATLAS_WIDTH = 1024
 
@@ -159,6 +164,34 @@ def build_icons(entries, src, prefix, size):
         entries.append((name, out))
 
 
+def build_screen(entries, folder, prefix, size):
+    """메뉴 · 설정 · 결과 화면 조각.
+
+    낱장 PNG 를 쓰지 않는다. 그 파일들은 4x4 격자 눈금으로 잘려 있는데 판 그림은
+    한 칸보다 넓어서, 넓은 띠(배너 · 버튼)가 옆 칸까지 밀고 들어가 두 조각이
+    한 파일에 섞여 있다. 판에서 **빈 줄로 갈라** 직접 뜬다. 이름과 순서는
+    components.json 이 정한 대로다.
+    """
+    sheet = f"assets/{folder}/components_sheet_rgba.png"
+    with open(f"assets/{folder}/components.json", encoding="utf-8") as f:
+        names = [c["name"] for c in sorted(json.load(f)["components"],
+                                           key=lambda c: c["index"])]
+
+    boxes = A.find_cells(sheet)
+    if len(boxes) != len(names):
+        # 조각 수가 어긋나면 이름이 통째로 밀린다. 조용히 넘어가면 안 된다.
+        raise SystemExit(f"{folder}: 조각 {len(boxes)}개, 이름 {len(names)}개로 어긋난다")
+
+    for name, box in zip(names, boxes):
+        if name in SKIP_ICONS:
+            continue
+        out = f"{A.SPRITES}/{prefix}{name}.png"
+        A.crop(sheet, box, out)
+        A.run(["magick", out, "-trim", "+repage",
+               "-filter", "Box", "-resize", f"{size}x{size}", "-depth", "8", out])
+        entries.append((f"{prefix}{name}", out))
+
+
 def build_font(entries):
     """비트맵 폰트를 얹는다.
 
@@ -193,6 +226,9 @@ def main():
     build_effects(entries)
     build_icons(entries, "assets/hud/components", "hud_", HUD)
     build_icons(entries, "assets/lobby/components", "lobby_", LOBBY)
+    build_screen(entries, "main_menu", "menu_", SCREEN)
+    build_screen(entries, "lobby_settings", "set_", SCREEN)
+    build_screen(entries, "result", "result_", SCREEN)
     build_font(entries)
 
     entries = [(n, p) for n, p in entries if not n.startswith("_")]

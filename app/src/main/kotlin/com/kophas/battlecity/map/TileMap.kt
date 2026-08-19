@@ -25,6 +25,20 @@ class TileMap(val stage: StageData) {
     var baseDestroyed: Boolean = false
         private set
 
+    /**
+     * 본진 보호막이 아직 남아 있는가. (계획서 §14 protected)
+     *
+     * 방 설정에서 켜면 본진이 첫 포탄을 한 번 막아 낸다. 한 발에 판이 끝나 버리면
+     * 마지막 순간에 손 쓸 도리가 없다. 막아 낸 뒤에는 사라진다.
+     */
+    var baseShielded: Boolean = false
+        private set
+
+    /** 판을 열 때 보호막을 켠다. 방 설정이 정한다. */
+    fun enableBaseShield(enabled: Boolean) {
+        baseShielded = enabled
+    }
+
     fun reset() {
         stage.cells.copyInto(cells)
         stage.cellSprite.copyInto(sprites)
@@ -149,8 +163,14 @@ class TileMap(val stage: StageData) {
             }
 
             TileType.BASE -> {
-                baseDestroyed = true
-                DamageResult.BASE_HIT
+                if (baseShielded) {
+                    // 보호막이 한 발을 먹는다. 다음 발부터는 그대로 들어간다.
+                    baseShielded = false
+                    DamageResult.BASE_SHIELDED
+                } else {
+                    baseDestroyed = true
+                    DamageResult.BASE_HIT
+                }
             }
 
             else -> if (type.blocksBullet) DamageResult.BLOCKED else DamageResult.NONE
@@ -176,7 +196,7 @@ class TileMap(val stage: StageData) {
                         setType(tx, ty, TileType.EMPTY)
                     }
                     // 본진은 폭발에도 파괴된다. 아군 폭발물이라도 마찬가지다. (계획서 §15)
-                    TileType.BASE -> baseDestroyed = true
+                    TileType.BASE -> if (baseShielded) baseShielded = false else baseDestroyed = true
                     else -> Unit
                 }
             }
@@ -199,6 +219,9 @@ class TileMap(val stage: StageData) {
 
         /** 본진을 맞혔다. 즉시 GAME OVER. */
         BASE_HIT,
+
+        /** 본진 보호막이 막아 냈다. 이번 한 발은 견딘다. */
+        BASE_SHIELDED,
         ;
 
         val stopsBullet: Boolean get() = this != NONE

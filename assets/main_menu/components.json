@@ -1,0 +1,266 @@
+{
+  "columns": 4,
+  "rows": 4,
+  "sourceSize": [
+    1254,
+    1254
+  ],
+  "components": [
+    {
+      "name": "title_plate",
+      "index": 0,
+      "row": 0,
+      "column": 0,
+      "sourceCell": [
+        0,
+        0,
+        314,
+        314
+      ],
+      "outputSize": [
+        322,
+        143
+      ]
+    },
+    {
+      "name": "primary_button_normal",
+      "index": 1,
+      "row": 0,
+      "column": 1,
+      "sourceCell": [
+        314,
+        0,
+        313,
+        314
+      ],
+      "outputSize": [
+        270,
+        129
+      ]
+    },
+    {
+      "name": "primary_button_pressed",
+      "index": 2,
+      "row": 0,
+      "column": 2,
+      "sourceCell": [
+        627,
+        0,
+        313,
+        314
+      ],
+      "outputSize": [
+        291,
+        130
+      ]
+    },
+    {
+      "name": "secondary_button_normal",
+      "index": 3,
+      "row": 0,
+      "column": 3,
+      "sourceCell": [
+        940,
+        0,
+        314,
+        314
+      ],
+      "outputSize": [
+        319,
+        130
+      ]
+    },
+    {
+      "name": "secondary_button_pressed",
+      "index": 4,
+      "row": 1,
+      "column": 0,
+      "sourceCell": [
+        0,
+        314,
+        314,
+        313
+      ],
+      "outputSize": [
+        315,
+        142
+      ]
+    },
+    {
+      "name": "profile_badge",
+      "index": 5,
+      "row": 1,
+      "column": 1,
+      "sourceCell": [
+        314,
+        314,
+        313,
+        313
+      ],
+      "outputSize": [
+        194,
+        184
+      ]
+    },
+    {
+      "name": "settings_button_normal",
+      "index": 6,
+      "row": 1,
+      "column": 2,
+      "sourceCell": [
+        627,
+        314,
+        313,
+        313
+      ],
+      "outputSize": [
+        201,
+        192
+      ]
+    },
+    {
+      "name": "settings_button_pressed",
+      "index": 7,
+      "row": 1,
+      "column": 3,
+      "sourceCell": [
+        940,
+        314,
+        314,
+        313
+      ],
+      "outputSize": [
+        204,
+        192
+      ]
+    },
+    {
+      "name": "create_room_icon",
+      "index": 8,
+      "row": 2,
+      "column": 0,
+      "sourceCell": [
+        0,
+        627,
+        314,
+        313
+      ],
+      "outputSize": [
+        227,
+        207
+      ]
+    },
+    {
+      "name": "join_room_icon",
+      "index": 9,
+      "row": 2,
+      "column": 1,
+      "sourceCell": [
+        314,
+        627,
+        313,
+        313
+      ],
+      "outputSize": [
+        221,
+        206
+      ]
+    },
+    {
+      "name": "player_icon",
+      "index": 10,
+      "row": 2,
+      "column": 2,
+      "sourceCell": [
+        627,
+        627,
+        313,
+        313
+      ],
+      "outputSize": [
+        215,
+        206
+      ]
+    },
+    {
+      "name": "network_strong",
+      "index": 11,
+      "row": 2,
+      "column": 3,
+      "sourceCell": [
+        940,
+        627,
+        314,
+        313
+      ],
+      "outputSize": [
+        215,
+        206
+      ]
+    },
+    {
+      "name": "network_weak",
+      "index": 12,
+      "row": 3,
+      "column": 0,
+      "sourceCell": [
+        0,
+        940,
+        314,
+        314
+      ],
+      "outputSize": [
+        221,
+        181
+      ]
+    },
+    {
+      "name": "network_disconnected",
+      "index": 13,
+      "row": 3,
+      "column": 1,
+      "sourceCell": [
+        314,
+        940,
+        313,
+        314
+      ],
+      "outputSize": [
+        220,
+        181
+      ]
+    },
+    {
+      "name": "status_indicator_active",
+      "index": 14,
+      "row": 3,
+      "column": 2,
+      "sourceCell": [
+        627,
+        940,
+        313,
+        314
+      ],
+      "outputSize": [
+        252,
+        92
+      ]
+    },
+    {
+      "name": "status_indicator_inactive",
+      "index": 15,
+      "row": 3,
+      "column": 3,
+      "sourceCell": [
+        940,
+        940,
+        314,
+        314
+      ],
+      "outputSize": [
+        253,
+        92
+      ]
+    }
+  ]
+}

@@ -27,6 +27,12 @@ class AudioDirector(
         fun playMusic(clip: String, volume: Float)
         fun stopMusic()
         fun vibrate(milliseconds: Long, amplitude: Int)
+
+        /** 이미 도는 배경음의 크기를 바꾼다. 다시 틀지 않고 줄인다. */
+        fun setMusicVolume(volume: Float) = Unit
+
+        /** 이미 도는 반복음의 크기를 바꾼다. */
+        fun setLoopVolume(clip: String, volume: Float) = Unit
     }
 
     object Event {
@@ -73,6 +79,45 @@ class AudioDirector(
     var muted: Boolean = false
         private set
 
+    /**
+     * 이 기기가 정한 소리 크기. (계획서 §44.2 볼륨 설정)
+     *
+     * 방 규칙과 달리 **기기마다 다르다.** 매니페스트가 정한 소리별 크기에 이 값을
+     * 곱한다. 그래야 총성과 폭발음의 상대적인 크기 관계는 그대로 두고 전체만 줄인다.
+     */
+    var bgmScale: Float = 1f
+        private set
+
+    var sfxScale: Float = 1f
+        private set
+
+    /** 설정 화면에서 슬라이더를 끄는 동안 계속 부른다. 지금 나는 소리에도 바로 걸린다. */
+    fun setVolumes(bgm: Float, sfx: Float) {
+        val newBgm = bgm.coerceIn(0f, 1f)
+        val newSfx = sfx.coerceIn(0f, 1f)
+        if (newBgm == bgmScale && newSfx == sfxScale) return
+        // 0 을 오르내리면 곡을 멈추거나 다시 틀어야 한다. 소리 없는 MediaPlayer 를
+        // 돌려 둘 이유가 없고, 크기만 올려서는 이미 멈춘 곡이 돌아오지 않는다.
+        val wasSilent = bgmScale <= 0f
+        val nowSilent = newBgm <= 0f
+        bgmScale = newBgm
+        sfxScale = newSfx
+        when {
+            wasSilent && !nowSilent -> {
+                val resume = currentTrack
+                currentTrack = null
+                setTrack(resume)
+            }
+
+            !wasSilent && nowSilent -> playback.stopMusic()
+
+            else -> playback.setMusicVolume(settings.bgmVolume * bgmScale)
+        }
+        for (id in activeLoops) {
+            settings.loop(id)?.let { playback.setLoopVolume(it.name, it.volume * sfxScale) }
+        }
+    }
+
     private val lastPlayedMs = HashMap<String, Long>()
     private val activeLoops = HashSet<String>()
     private var currentTrack: String? = null
@@ -99,7 +144,8 @@ class AudioDirector(
         val last = lastPlayedMs[event]
         if (last != null && now - last < clip.minIntervalMs) return
         lastPlayedMs[event] = now
-        playback.play(clip.name, clip.volume)
+        if (sfxScale <= 0f) return
+        playback.play(clip.name, clip.volume * sfxScale)
     }
 
     /** 조건이 이어지는 동안 도는 소리. 이미 돌고 있으면 다시 시작하지 않는다. */
@@ -108,7 +154,7 @@ class AudioDirector(
         val running = id in activeLoops
         if (active && !running && !muted) {
             activeLoops += id
-            playback.startLoop(clip.name, clip.volume)
+            playback.startLoop(clip.name, clip.volume * sfxScale)
         } else if (!active && running) {
             activeLoops -= id
             playback.stopLoop(clip.name)
@@ -155,7 +201,12 @@ class AudioDirector(
             return
         }
         val clip = settings.track(id) ?: return
-        playback.playMusic(clip, settings.bgmVolume)
+        if (bgmScale <= 0f) {
+            // 0 이면 아예 틀지 않는다. 소리 없는 MediaPlayer 를 돌려 둘 이유가 없다.
+            playback.stopMusic()
+            return
+        }
+        playback.playMusic(clip, settings.bgmVolume * bgmScale)
     }
 
     val track: String? get() = currentTrack

@@ -48,6 +48,15 @@ class SpriteCatalog(private val assets: GameAssets) {
 
     val baseDestroyFps: Float = base?.get("destroyFps")?.asFloat ?: 6f
 
+    /** 보호막이 남아 있는 동안의 본진. (계획서 §14 protected) */
+    val baseShielded: TextureRegion = assets[base?.get("shielded")?.asString ?: "base_shielded"]
+
+    /** 본진이 위험할 때 번갈아 그린다. */
+    val baseWarnFrames: List<TextureRegion> =
+        regions("tiles", "BASE", "warnFrames").ifEmpty { listOf(baseIntact) }
+
+    val baseWarnFps: Float = base?.get("warnFps")?.asFloat ?: 4f
+
     /** 폭발이 끝난 뒤 남는 잔해. */
     val baseWreck: TextureRegion = assets[base?.get("wreck")?.asString ?: "base_rubble"]
 
@@ -180,6 +189,11 @@ class SpriteCatalog(private val assets: GameAssets) {
 
     val deadIcon: TextureRegion = assets[manifest.hud("dead") ?: "hud_player_dead"]
 
+    /** 전투 중 표시하는 접속 상태. (계획서 §44.2) */
+    val netOnline: TextureRegion = screen("network", "online", "hud_network_strong")
+
+    val netOffline: TextureRegion = screen("network", "offline", "hud_network_disconnected")
+
     // --- 조작 UI (계획서 §18) ---------------------------------------------
 
     private fun control(key: String, fallback: String): TextureRegion =
@@ -228,6 +242,122 @@ class SpriteCatalog(private val assets: GameAssets) {
     val lobbyWifi: TextureRegion = lobby("wifiStrong", "lobby_wifi_strong")
 
     val lobbyWifiWeak: TextureRegion = lobby("wifiWeak", "lobby_wifi_weak")
+
+    /** 로비에서 방 설정을 여는 단추. 방장만 쓸모가 있다. (계획서 §44.2) */
+    val lobbySettings: TextureRegion = lobby("settings", "lobby_settings_button")
+
+    // --- 메뉴 · 설정 · 결과 화면 ------------------------------------------
+
+    private fun screen(group: String, key: String, fallback: String): TextureRegion =
+        assets[node("hud", group, key)?.asString ?: fallback]
+
+    private fun screenList(group: String, key: String, fallback: String): List<TextureRegion> =
+        (node("hud", group, key)?.asStringList ?: emptyList())
+            .map { assets[it] }
+            .ifEmpty { listOf(assets[fallback]) }
+
+    class MenuArt(
+        val title: TextureRegion,
+        val primary: TextureRegion,
+        val primaryPressed: TextureRegion,
+        val secondary: TextureRegion,
+        val secondaryPressed: TextureRegion,
+        val settings: TextureRegion,
+        val settingsPressed: TextureRegion,
+        val createIcon: TextureRegion,
+        val joinIcon: TextureRegion,
+        val profile: TextureRegion,
+        val playerIcon: TextureRegion,
+        val netStrong: TextureRegion,
+        val netWeak: TextureRegion,
+        val netOff: TextureRegion,
+        /** 켜짐 · 꺼짐을 알리는 작은 등. 지금은 결과 화면의 재석 표시에 쓴다. */
+        val statusOn: TextureRegion,
+        val statusOff: TextureRegion,
+    )
+
+    val menu = MenuArt(
+        title = screen("menu", "title", "menu_title_plate"),
+        primary = screen("menu", "primary", "menu_primary_button_normal"),
+        primaryPressed = screen("menu", "primaryPressed", "menu_primary_button_pressed"),
+        secondary = screen("menu", "secondary", "menu_secondary_button_normal"),
+        secondaryPressed = screen("menu", "secondaryPressed", "menu_secondary_button_pressed"),
+        settings = screen("menu", "settings", "menu_settings_button_normal"),
+        settingsPressed = screen("menu", "settingsPressed", "menu_settings_button_pressed"),
+        createIcon = screen("menu", "createIcon", "menu_create_room_icon"),
+        joinIcon = screen("menu", "joinIcon", "menu_join_room_icon"),
+        profile = screen("menu", "profile", "menu_profile_badge"),
+        playerIcon = screen("menu", "playerIcon", "menu_player_icon"),
+        netStrong = screen("menu", "netStrong", "menu_network_strong"),
+        netWeak = screen("menu", "netWeak", "menu_network_weak"),
+        netOff = screen("menu", "netOff", "menu_network_disconnected"),
+        statusOn = screen("menu", "statusOn", "menu_status_indicator_active"),
+        statusOff = screen("menu", "statusOff", "menu_status_indicator_inactive"),
+    )
+
+    class SettingsArt(
+        val panel: TextureRegion,
+        val segment: TextureRegion,
+        val segmentSelected: TextureRegion,
+        val toggleOn: TextureRegion,
+        val toggleOff: TextureRegion,
+        val sliderTrack: TextureRegion,
+        val sliderThumb: TextureRegion,
+        val dropdown: TextureRegion,
+        val dice: TextureRegion,
+        val apply: TextureRegion,
+        val close: TextureRegion,
+        val reset: TextureRegion,
+        val bgmIcon: TextureRegion,
+        val sfxIcon: TextureRegion,
+        val speakerOn: TextureRegion,
+        val speakerMuted: TextureRegion,
+    )
+
+    val settings = SettingsArt(
+        panel = screen("settings", "panel", "set_settings_panel"),
+        segment = screen("settings", "segment", "set_segment_normal"),
+        segmentSelected = screen("settings", "segmentSelected", "set_segment_selected"),
+        toggleOn = screen("settings", "toggleOn", "set_toggle_on"),
+        toggleOff = screen("settings", "toggleOff", "set_toggle_off"),
+        sliderTrack = screen("settings", "sliderTrack", "set_slider_track"),
+        sliderThumb = screen("settings", "sliderThumb", "set_slider_thumb"),
+        dropdown = screen("settings", "dropdown", "set_dropdown_button"),
+        dice = screen("settings", "dice", "set_randomize_dice"),
+        apply = screen("settings", "apply", "set_apply_button"),
+        close = screen("settings", "close", "set_close_button"),
+        reset = screen("settings", "reset", "set_reset_button"),
+        bgmIcon = screen("settings", "bgmIcon", "set_bgm_icon"),
+        sfxIcon = screen("settings", "sfxIcon", "set_sfx_icon"),
+        speakerOn = screen("settings", "speakerOn", "set_speaker_on"),
+        speakerMuted = screen("settings", "speakerMuted", "set_speaker_muted"),
+    )
+
+    class ResultArt(
+        val victory: TextureRegion,
+        val gameOver: TextureRegion,
+        val winnerCard: TextureRegion,
+        val medal: TextureRegion,
+        val stageClear: TextureRegion,
+        val primary: TextureRegion,
+        val secondary: TextureRegion,
+        val home: TextureRegion,
+        val rows: List<TextureRegion>,
+        val rankBadges: List<TextureRegion>,
+    )
+
+    val result = ResultArt(
+        victory = screen("result", "victory", "result_victory_banner"),
+        gameOver = screen("result", "gameOver", "result_game_over_banner"),
+        winnerCard = screen("result", "winnerCard", "result_winner_card"),
+        medal = screen("result", "medal", "result_winner_medal"),
+        stageClear = screen("result", "stageClear", "result_stage_clear_card"),
+        primary = screen("result", "primary", "result_primary_action_button"),
+        secondary = screen("result", "secondary", "result_secondary_action_button"),
+        home = screen("result", "home", "result_home_button"),
+        rows = screenList("result", "rowByColor", "result_result_row_cyan"),
+        rankBadges = screenList("result", "rankBadges", "result_rank_1_badge"),
+    )
 
     private val digits: List<TextureRegion> =
         (0..9).map { assets["${manifest.hudDigitPrefix}$it"] }

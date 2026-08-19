@@ -58,7 +58,7 @@ object UdpSelfTest {
             client.join(Peer(LOOPBACK, hostTransport.localPeer.port), 0)
             pump(host, client, rounds = 30)
 
-            host.prepareMatch(PROBE_SEED, 0, PROBE_HASH)
+            host.prepareMatch(Messages.Start(PROBE_SEED, 0, 0, PROBE_HASH, 0))
             host.requestStart()
             // 카운트다운은 update 한 번에 한 틱씩 줄어든다. 오갈 시간은 따로 필요 없다.
             repeat(Protocol.COUNTDOWN_SECONDS * 60) { host.update() }

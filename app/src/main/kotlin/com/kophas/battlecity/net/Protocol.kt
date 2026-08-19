@@ -50,6 +50,15 @@ object Protocol {
     /** 살아 있다는 신호를 보내는 주기. */
     const val HEARTBEAT_MS: Long = 800
 
+    /** 왕복 시간을 재는 주기. (계획서 §44.2 네트워크 상태 표시) */
+    const val PING_INTERVAL_MS: Long = 1000
+
+    /** 이 왕복 시간까지는 쾌적하다고 본다. */
+    const val LATENCY_GOOD_MS: Int = 60
+
+    /** 이 왕복 시간을 넘으면 끊길락 말락 한 것으로 본다. */
+    const val LATENCY_POOR_MS: Int = 180
+
     /** 로비에서 START 를 누른 뒤 세는 시간. (계획서 §38) */
     const val COUNTDOWN_SECONDS: Int = 3
 
@@ -97,6 +106,15 @@ object Protocol {
 
         /** Host -> Client. 방을 닫는다. (계획서 §37 Host 연결 종료) */
         const val HOST_CLOSED: Int = 13
+
+        /** 양쪽. 보낸 시각을 실어 보낸다. 받은 쪽은 그대로 되돌려 준다. */
+        const val PING: Int = 14
+
+        /** 양쪽. PING 에 실려 온 시각을 그대로 돌려준다. 왕복 시간을 잰다. */
+        const val PONG: Int = 15
+
+        /** Client -> Host. 결과 화면에 있는가 / 떠났는가. (계획서 §33) */
+        const val PRESENCE: Int = 16
     }
 
     object Deny {

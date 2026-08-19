@@ -145,6 +145,11 @@ object Messages {
         val playerCount: Int,
         val gridHash: Long,
         val startTick: Long,
+        /** 방장이 정한 규칙. 판정에 영향을 주므로 함께 보낸다. */
+        val mapSize: Int = 1,
+        val friendlyFire: Boolean = true,
+        val maxActiveEnemies: Int = 0,
+        val baseProtection: Boolean = true,
     )
 
     fun writeStart(writer: PacketWriter, value: Start): PacketWriter =
@@ -154,14 +159,31 @@ object Messages {
             .byte(value.playerCount)
             .long(value.gridHash)
             .long(value.startTick)
+            .byte(value.mapSize)
+            .byte(value.maxActiveEnemies)
+            .byte(flags(value.friendlyFire, value.baseProtection, false))
 
-    fun readStart(reader: PacketReader) = Start(
-        seed = reader.long(),
-        stageIndex = reader.short(),
-        playerCount = reader.byte(),
-        gridHash = reader.long(),
-        startTick = reader.long(),
-    )
+    fun readStart(reader: PacketReader): Start {
+        val seed = reader.long()
+        val stageIndex = reader.short()
+        val playerCount = reader.byte()
+        val gridHash = reader.long()
+        val startTick = reader.long()
+        val mapSize = reader.byte()
+        val maxActive = reader.byte()
+        val rules = reader.byte()
+        return Start(
+            seed = seed,
+            stageIndex = stageIndex,
+            playerCount = playerCount,
+            gridHash = gridHash,
+            startTick = startTick,
+            mapSize = mapSize,
+            friendlyFire = rules and 1 != 0,
+            maxActiveEnemies = maxActive,
+            baseProtection = rules and 2 != 0,
+        )
+    }
 
     // --- 조종 입력 --------------------------------------------------------
 
@@ -311,4 +333,26 @@ object Messages {
 
     private fun flags(a: Boolean, b: Boolean, c: Boolean): Int =
         (if (a) 1 else 0) or (if (b) 2 else 0) or (if (c) 4 else 0)
+
+    // --- 지연 측정 · 결과 화면 -------------------------------------------
+
+    /**
+     * 왕복 시간 측정. 보낸 쪽의 시계를 그대로 실어 보내고 받은 쪽은 되돌려만 준다.
+     *
+     * 두 기기의 시계를 맞출 필요가 없다. 값을 해석하는 쪽이 언제나 보낸 쪽이라,
+     * 돌아온 값을 제 시계에서 빼면 그것이 곧 왕복 시간이다.
+     */
+    fun writePing(writer: PacketWriter, stamp: Long): PacketWriter =
+        Protocol.header(writer, Protocol.Type.PING).long(stamp)
+
+    fun writePong(writer: PacketWriter, stamp: Long): PacketWriter =
+        Protocol.header(writer, Protocol.Type.PONG).long(stamp)
+
+    fun readStamp(reader: PacketReader): Long = reader.long()
+
+    /** 결과 화면에 있는지. 방장이 PLAY AGAIN 을 열어 둘지 정하는 데 쓴다. */
+    fun writePresence(writer: PacketWriter, present: Boolean): PacketWriter =
+        Protocol.header(writer, Protocol.Type.PRESENCE).bool(present)
+
+    fun readPresence(reader: PacketReader): Boolean = reader.bool()
 }

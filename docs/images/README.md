@@ -17,3 +17,6 @@
 | `phase7_controls.png` | Phase 7 — 가상 조이스틱과 FIRE/SPECIAL 버튼 |
 | `phase7_lobby.png` | Phase 7 — 로비 화면 |
 | `phase8_polish.png` | Phase 8 — 사운드·이펙트까지 얹은 최종 화면 |
+| `phase9_menu.png` | Phase 9 — 메인 메뉴 (방 찾기 상태 표시 포함) |
+| `phase9_settings.png` | Phase 9 — 방 규칙과 기기 소리 설정 |
+| `phase9_result.png` | Phase 9 — 결과 화면 (순위·승자·다음 판) |

@@ -43,14 +43,17 @@ class MainActivity : ComponentActivity() {
         //   adb shell am start -n com.kophas.battlecity/.MainActivity --ez preferVulkan false
         gameView.host.preferVulkan = intent?.getBooleanExtra(EXTRA_PREFER_VULKAN, true) ?: true
 
-        // 로컬 대전 역할. 조작 UI 가 붙기 전까지는 실행 인자로 정한다. (계획서 §4.2)
+        // 역할은 메인 메뉴에서 고른다. 실행 인자를 주면 메뉴를 건너뛴다. (계획서 §4.2)
         //   adb shell am start -n .../.MainActivity --es netRole host
         //   adb shell am start -n .../.MainActivity --es netRole client --es hostAddress 192.168.0.5
-        gameView.host.netRole = when (intent?.getStringExtra(EXTRA_NET_ROLE)) {
+        //   adb shell am start -n .../.MainActivity --es netRole solo     (혼자 판만 확인)
+        val role = intent?.getStringExtra(EXTRA_NET_ROLE)
+        gameView.host.netRole = when (role) {
             "host" -> NetRole.HOST
             "client" -> NetRole.CLIENT
             else -> NetRole.LOCAL
         }
+        gameView.host.soloDebug = role == "solo"
         gameView.host.hostAddress = intent?.getStringExtra(EXTRA_HOST_ADDRESS)
         // 이름을 주지 않으면 자리 번호로 P1 ~ P4 가 들어간다. 로비에서 고칠 수 있다.
         intent?.getStringExtra(EXTRA_PLAYER_NAME)?.let { gameView.host.playerName = it }
