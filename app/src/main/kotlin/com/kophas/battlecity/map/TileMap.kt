@@ -54,6 +54,10 @@ class TileMap(val stage: StageData) {
         sprites[i] = spriteIndex.toShort()
     }
 
+    /** 사분면으로 쪼개지 않고 스프라이트를 통째로 그려야 하는 셀인가. */
+    fun isWholeSprite(cellX: Int, cellY: Int): Boolean =
+        inBounds(cellX, cellY) && (cellY * cellsX + cellX) in stage.wholeSpriteCells
+
     fun isExplosive(cellX: Int, cellY: Int): Boolean =
         inBounds(cellX, cellY) &&
             typeAt(cellX, cellY) == TileType.BRICK &&

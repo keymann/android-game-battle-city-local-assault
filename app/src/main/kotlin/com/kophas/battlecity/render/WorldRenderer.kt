@@ -93,7 +93,10 @@ class WorldRenderer(
         val cellSize = viewport.worldToScreenLength(Constants.CELL_PX)
         val perBlock = Constants.CELLS_PER_BLOCK
 
-        val waterFrame = catalog.water
+        val waterFrame = catalog.waterFrames[
+            ((timeSeconds * catalog.waterAnimFps).toInt().coerceAtLeast(0)) %
+                catalog.waterFrames.size,
+        ]
         val iceAlpha = ((catalog.iceTint ushr 24) and 0xFF) / 255f
         val iceRed = ((catalog.iceTint ushr 16) and 0xFF) / 255f
         val iceGreen = ((catalog.iceTint ushr 8) and 0xFF) / 255f
@@ -126,7 +129,6 @@ class WorldRenderer(
                         spriteIndex = uniformSprite,
                         quadrantX = -1,
                         quadrantY = -1,
-                        waterBrightness = waterBrightness(originX, originY, timeSeconds),
                         screenX = viewport.worldToScreenX(originX * Constants.CELL_PX),
                         screenY = viewport.worldToScreenY(originY * Constants.CELL_PX),
                         size = blockSize,
@@ -144,12 +146,13 @@ class WorldRenderer(
                     for (dx in 0 until perBlock) {
                         val cx = originX + dx
                         val cy = originY + dy
+                        // 한 칸짜리 소품은 사분면으로 쪼개면 4분의 1만 보인다.
+                        val whole = map.isWholeSprite(cx, cy)
                         drawTile(
                             type = map.typeAt(cx, cy),
                             spriteIndex = map.spriteIndexAt(cx, cy),
-                            quadrantX = dx,
-                            quadrantY = dy,
-                            waterBrightness = waterBrightness(cx, cy, timeSeconds),
+                            quadrantX = if (whole) -1 else dx,
+                            quadrantY = if (whole) -1 else dy,
                             screenX = viewport.worldToScreenX(cx * Constants.CELL_PX),
                             screenY = viewport.worldToScreenY(cy * Constants.CELL_PX),
                             size = cellSize,
@@ -173,7 +176,6 @@ class WorldRenderer(
         spriteIndex: Int,
         quadrantX: Int,
         quadrantY: Int,
-        waterBrightness: Float,
         screenX: Float,
         screenY: Float,
         size: Float,
@@ -192,9 +194,6 @@ class WorldRenderer(
                 width = size,
                 height = size,
                 layer = Constants.Layer.HAZARD,
-                red = waterBrightness,
-                green = waterBrightness,
-                blue = waterBrightness,
             )
 
             TileType.ICE -> batch.draw(
@@ -500,14 +499,6 @@ class WorldRenderer(
                 layer = Constants.Layer.EFFECT,
             )
         }
-    }
-
-    /** 셀 위치에 따라 위상을 어긋뜨려 대각선으로 잔물결이 지나가게 한다. */
-    private fun waterBrightness(cellX: Int, cellY: Int, timeSeconds: Float): Float {
-        val shimmer = catalog.waterShimmer
-        if (shimmer <= 0f) return 1f
-        val phase = timeSeconds * catalog.waterAnimFps * TWO_PI + (cellX + cellY) * RIPPLE_STEP
-        return 1f - shimmer * 0.5f + shimmer * 0.5f * kotlin.math.sin(phase)
     }
 
     private fun red(color: Int): Float = ((color ushr 16) and 0xFF) / 255f

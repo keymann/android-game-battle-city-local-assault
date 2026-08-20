@@ -8,6 +8,7 @@
 #   assets/kenney_desert-shooter-pack  Interface      198 x 16px  -> ui_*
 #   assets/kenney_desert-shooter-pack  Weapons         40 x 24px  -> fx_*
 #   assets/custom/본진_건물.png          본진 파괴 애니   4 x 32x40  -> base_*
+#   assets/renewal.png                  환경 오브젝트    62장        -> env_*
 #
 # 결과물:
 #   app/src/main/assets/atlas/tiles.png   단일 텍스처
@@ -38,6 +39,7 @@ DUNGEON_DIR="assets/kenney_tiny-dungeon/Tiles"
 UI_DIR="assets/kenney_desert-shooter-pack_1.0/PNG/Interface/Tiles"
 FX_DIR="assets/kenney_desert-shooter-pack_1.0/PNG/Weapons/Tiles"
 BASE_SHEET="assets/custom/본진_건물.png"
+ENV_SHEET="assets/renewal.png"
 
 list_tiles() { ls "$1"/tile_*.png | sort; }
 
@@ -81,19 +83,23 @@ magick montage "$TMP"/base/base_*.png \
 magick "$TMP/partbase_raw.png" -background none -gravity northwest \
   -extent "${WIDTH}x${BASE_H}" "$TMP/partbase.png"
 
+# --- 환경 오브젝트 구역 ------------------------------------------------------
+python3 tools/cut_environment.py "$ENV_SHEET" "$TMP/env" "$WIDTH"
+ENV_H=$(magick identify -format '%h' "$TMP/env/env.png")
+
 # --- 합치기 -----------------------------------------------------------------
 mkdir -p "$OUT_DIR"
 # 본진 스프라이트가 16bit 로 들어오면 아틀라스 전체가 16bit 이 된다.
 # 런타임은 어차피 ARGB8888 로 디코드하므로 파일만 두 배가 된다. 8bit 로 고정한다.
-magick "$TMP/part16.png" "$TMP/part24.png" "$TMP/partbase.png" \
+magick "$TMP/part16.png" "$TMP/part24.png" "$TMP/partbase.png" "$TMP/env/env.png" \
   -background none -append -depth 8 -strip "$OUT_DIR/tiles.png"
 
 PART16_H=$(magick identify -format '%h' "$TMP/part16.png")
 TOTAL_W=$(magick identify -format '%w' "$OUT_DIR/tiles.png")
 TOTAL_H=$(magick identify -format '%h' "$OUT_DIR/tiles.png")
-echo "아틀라스 ${TOTAL_W}x${TOTAL_H} (16px ${PART16_H} / 24px ${PART24_H} / 본진 ${BASE_H})"
+echo "아틀라스 ${TOTAL_W}x${TOTAL_H} (16px ${PART16_H} / 24px ${PART24_H} / 본진 ${BASE_H} / 환경 ${ENV_H})"
 
 # --- 서술자 -----------------------------------------------------------------
 python3 tools/write_atlas_xml.py \
   "$OUT_DIR/tiles.xml" "$COLS_16" "$COLS_24" "$PART16_H" "$PART24_H" \
-  "$BASE_W" "$BASE_H" "$BASE_COUNT"
+  "$BASE_W" "$BASE_H" "$BASE_COUNT" "$TMP/env/layout.json"

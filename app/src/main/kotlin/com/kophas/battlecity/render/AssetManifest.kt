@@ -68,8 +68,12 @@ class AssetManifest(val root: JsonValue) {
     fun tileSprites(type: String): List<String> =
         tile(type)?.get("sprites")?.asStringList ?: emptyList()
 
-    /** 후보가 하나뿐인 TileType 의 스프라이트 이름. (WATER, ICE 등) */
+    /** 후보가 하나뿐인 TileType 의 스프라이트 이름. (ICE 등) */
     fun tileSprite(type: String): String? = tile(type)?.get("sprite")?.asString
+
+    /** 애니메이션 프레임을 가진 TileType 의 프레임 목록. (WATER) */
+    fun tileFrames(type: String): List<String> =
+        tile(type)?.get("frames")?.asStringList ?: emptyList()
 
     /** 지형 섹션. 잔디/흙/자갈 기본 타일과 도로·흙 구역 오토타일 매핑이 들어 있다. */
     fun terrain(group: String): JsonValue? = root["terrain"]?.get(group)

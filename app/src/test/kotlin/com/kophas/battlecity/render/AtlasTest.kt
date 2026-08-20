@@ -37,9 +37,9 @@ class AtlasTest {
     )
 
     @Test
-    fun `통합 아틀라스는 네 팩의 스프라이트를 모두 담는다`() {
+    fun `통합 아틀라스가 모든 출처의 스프라이트를 담는다`() {
         val atlas = atlas()
-        assertEquals(704, atlas.size)
+        assertEquals(767, atlas.size)
         assertEquals("tiles.png", atlas.imagePath)
 
         // 팩별 개수: Tiny Battle 198 / Tiny Town 132 / Tiny Dungeon 132 / Desert Shooter 198 + 40
@@ -48,6 +48,7 @@ class AtlasTest {
         assertEquals(132, atlas.names.count { it.startsWith("dungeon_") })
         assertEquals(40, atlas.names.count { it.startsWith("fx_") })
         assertEquals("본진 파괴 4프레임", 4, atlas.names.count { it.startsWith("base_") })
+        assertEquals("환경 오브젝트", 63, atlas.names.count { it.startsWith("env_") })
     }
 
     @Test
@@ -93,6 +94,11 @@ class AtlasTest {
         // 본진은 블록보다 세로로 길다(깃발이 위로 나온다).
         assertEquals(32, atlas["base_0"].width)
         assertEquals(40, atlas["base_0"].height)
+        // 이어 붙는 지형 타일은 정확히 정사각이어야 틈이 생기지 않는다.
+        for (name in listOf("env_ground_grass", "env_water_0", "env_brick_0", "env_road_line")) {
+            assertEquals("$name 가로", 32, atlas[name].width)
+            assertEquals("$name 세로", 32, atlas[name].height)
+        }
     }
 
     @Test
@@ -173,7 +179,7 @@ class AtlasTest {
 
     private companion object {
         const val ATLAS_WIDTH = 352
-        const val ATLAS_HEIGHT = 592
+        const val ATLAS_HEIGHT = 832
         const val UNITS_WIDTH = 1124
         const val UNITS_HEIGHT = 1128
 
@@ -182,6 +188,7 @@ class AtlasTest {
             """(battle|town|dungeon|fx)_\d{3}""" +
                 """|ui_(char|digit)_[A-Z0-9]""" +
                 """|base_\d""" +
+                """|env_[a-z0-9_]+""" +
                 """|(tankBody|tank|bullet|shot|explosion|explosionSmoke|tracks|oilSpill)[A-Za-z0-9_]*""",
         )
     }
