@@ -265,7 +265,8 @@ app/src/main/
 
 Kenney CC0 에셋 2종을 사용합니다. 선별 근거와 전체 매핑표는
 [docs/ASSET_SELECTION.md](./docs/ASSET_SELECTION.md),
-스테이지 랜덤 생성 설계는 [docs/STAGE_GENERATION.md](./docs/STAGE_GENERATION.md) 를 참고하세요.
+스테이지 랜덤 생성 설계는 [docs/STAGE_GENERATION.md](./docs/STAGE_GENERATION.md),
+COM AI 설계는 [docs/AI.md](./docs/AI.md) 를 참고하세요.
 
 크레딧은 [CREDITS.md](./CREDITS.md) 에 있습니다.
 
@@ -281,7 +282,7 @@ Kenney CC0 에셋 2종을 사용합니다. 선별 근거와 전체 매핑표는
 | Phase 3.5 | 아트 리워크 — 픽셀아트 월드 통일, 지형·환경 대폭 보강, 비트맵 폰트 HUD | ✅ 완료 |
 | Phase 4 | 특수기 — 관통탄, 방어막, 대시, 쿨타임, UI | ✅ 완료 |
 | Phase 4.5 | 환경 아트 교체 — 지형·구조물·환경 오브젝트를 자체 리소스로 전면 교체 | ✅ 완료 |
-| Phase 5 | COM — Spawn, 타입별 AI, State Machine, 20 × Player 수 생성 | 예정 |
+| Phase 5 | COM — Spawn, 타입별 AI, State Machine, 20 × Player 수 생성 | ✅ 완료 |
 | Phase 6 | 로컬 멀티플레이 — Host, Join, Lobby, 상태 동기화, Disconnect 처리 | 예정 |
 | Phase 7 | 모바일 UI — Virtual Joystick, Fire/Special, HUD, Player Status | 예정 |
 | Phase 8 | 최종화 — 사운드, 이펙트, 진동, 최적화, 저사양/Tablet/Fold/해상도 테스트 | 예정 |
@@ -342,8 +343,8 @@ seed 로 생성된 4인용 4:3 스테이지(24×18 블록). 지형·도로 오�
 벽돌·석재 구조물, 환경 오브젝트, 본진이 모두 랜덤 배치됩니다.
 월드는 16px 픽셀아트, 회전하는 탱크만 벡터풍 팩을 씁니다.
 
-![Phase 4.5](docs/images/phase45_environment.png)
+![Phase 5](docs/images/phase5_com_ai.png)
 
-지형·구조물·환경 오브젝트는 자체 리소스(`assets/renewal.png`)에서 잘라 쓰고,
-회전하는 유닛(탱크·포탄·폭발)만 Kenney Top-down Tanks Redux 를 유지합니다.
-좌측 HUD 는 비트맵 폰트로 `P1 ♥♥♥ 0` / `ENEMY 80` 과 특수기 쿨타임 게이지를 표시합니다.
+COM 80기가 상단 세 지점에서 나와 경로를 찾아 밀고 내려오고, 본진 앞마당에서는
+플레이어 쪽이 침입자를 요격합니다. AI 설계는 [docs/AI.md](./docs/AI.md) 에 있습니다.
+좌측 HUD 는 비트맵 폰트로 `P1 ♥♥♥ 0` / `ENEMY 71` 과 특수기 쿨타임 게이지를 표시합니다.

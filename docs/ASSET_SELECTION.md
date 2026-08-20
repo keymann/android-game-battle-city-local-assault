@@ -1,5 +1,10 @@
 # 리소스 선별 결과 (Asset Selection)
 
+> **원본 리소스는 저장소에 없다.** 완성된 아틀라스(`app/src/main/assets/atlas/`)만
+> 두고 `assets/` 폴더를 지웠다. 이 문서는 그 아틀라스가 **무엇으로 어떻게 만들어졌는지**
+> 를 남기는 기록이다. 다시 만들어야 하면 `git checkout 78f5e1b -- assets` 로 원본을
+> 되살린 뒤 `tools/build_tile_atlas.sh` 를 돌린다.
+
 > 지형과 환경 오브젝트는 프로젝트 자체 리소스(`assets/renewal.png`)에서 잘라 쓴다.
 > 회전하는 유닛(탱크·포탄·폭발)만 Kenney *Top-down Tanks Redux*(CC0),
 > HUD 폰트와 게이지는 Kenney *Desert Shooter Pack*(CC0)을 유지한다.

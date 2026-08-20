@@ -14,6 +14,12 @@
 #   app/src/main/assets/atlas/tiles.png   단일 텍스처
 #   app/src/main/assets/atlas/tiles.xml   Kenney TextureAtlas 형식 서술자
 #
+# 주의: 위의 원본 리소스는 더 이상 저장소에 없다. 완성된 아틀라스만 두고
+#       assets/ 폴더를 통째로 지웠기 때문이다. 다시 만들려면 원본을 되살려야 한다.
+#         git checkout 78f5e1b -- assets     (Phase 5 커밋에 마지막으로 남아 있다)
+#       Kenney 팩은 CC0 이므로 kenney.nl 에서 새로 받아도 된다. renewal.png 와
+#       custom/본진_건물.png 는 프로젝트에 직접 넣은 것이라 git 에서만 나온다.
+#
 # 이름으로 조회하므로(예: town_052) 매니페스트가 숫자 인덱스 대신
 # 출처가 드러나는 문자열을 쓴다. 아틀라스 배치가 바뀌어도 매니페스트는 그대로다.
 #

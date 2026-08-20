@@ -5,6 +5,11 @@
 본 프로젝트의 모든 그래픽 리소스는 **Kenney** (https://www.kenney.nl) 제작이며
 **Creative Commons Zero (CC0 1.0)** 로 배포됩니다.
 
+원본 파일은 저장소에 없습니다. 완성된 아틀라스만 두고 `assets/` 폴더를 지웠기
+때문입니다. **원본** 칸은 아틀라스를 만들 때 어디서 가져왔는지를 남긴 기록입니다.
+(Phase 5 커밋 `78f5e1b` 에 마지막으로 남아 있고, Kenney 팩은 CC0 이라 kenney.nl
+에서 새로 받아도 됩니다.)
+
 | 팩 | 사용 범위 | 원본 |
 |---|---|---|
 | **Top-down Tanks Redux** | 탱크(몸체+포신), 포탄, 폭발, 궤도자국 | `assets/asset1` |
