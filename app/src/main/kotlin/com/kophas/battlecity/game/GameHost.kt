@@ -23,6 +23,7 @@ import com.kophas.battlecity.render.NativeRenderer
 import com.kophas.battlecity.render.RendererBackend
 import com.kophas.battlecity.render.SpriteBatch
 import com.kophas.battlecity.render.SpriteCatalog
+import com.kophas.battlecity.render.StageBox
 import com.kophas.battlecity.render.Viewport
 import java.util.concurrent.atomic.AtomicReference
 
@@ -741,7 +742,10 @@ class GameHost(
         if (currentScene.logicalWidth != viewport.logicalWidth) {
             viewport.resizeWorld(currentScene.logicalWidth, currentScene.logicalHeight)
         }
-        viewport.update(width, height, insets)
+        // 월드도 UI 와 같은 16:9 조각 안에 담는다. 월드만 화면 전체를 쓰면 가로로 긴
+        // 단말에서 맵과 조작 UI 가 서로 다른 자리를 기준으로 놓인다.
+        val stage = Viewport.Insets.of(StageBox.fit(width.toFloat(), height.toFloat()), width, height)
+        viewport.update(width, height, insets.outerOf(stage))
         currentScene.render(batch, viewport)
         // 조작 UI 는 맵 위에, 화면 픽셀 좌표로 그린다. 맵과 함께 늘었다 줄었다 하면
         // 안 된다. 손가락 크기는 해상도가 아니라 기기 크기를 따르기 때문이다.
