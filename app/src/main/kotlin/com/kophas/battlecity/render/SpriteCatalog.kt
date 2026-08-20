@@ -18,7 +18,16 @@ class SpriteCatalog(private val assets: GameAssets) {
     val waterFrames: List<TextureRegion> =
         manifest.tileIndices("WATER").ifEmpty { listOf(37) }.map { assets.tiny[it] }
 
-    val waterAnimFps: Float = manifest.tile("WATER")?.get("animFps")?.asFloat ?: 2f
+    val waterAnimFps: Float = manifest.tile("WATER")?.get("animFps")?.asFloat ?: 0.5f
+
+    /**
+     * 물결 세기.
+     *
+     * asset2 에서 잔디가 섞이지 않은 열린 수면 타일은 #37 하나뿐이라
+     * 프레임 교대로는 물결을 만들 수 없다. 대신 밝기를 셀 위치에 따라
+     * 살짝 흔들어 잔물결처럼 보이게 한다.
+     */
+    val waterShimmer: Float = manifest.tile("WATER")?.get("shimmer")?.asFloat ?: 0.1f
 
     val iceFrame: TextureRegion =
         assets.tiny[manifest.tileIndices("ICE").firstOrNull() ?: 37]
@@ -111,6 +120,26 @@ class SpriteCatalog(private val assets: GameAssets) {
         Tank.Faction.PLAYER -> playerArt[tank.colorSlot.coerceIn(0, playerArt.lastIndex)]
         Tank.Faction.ENEMY -> enemyArt.getValue(tank.type)
     }
+
+    // --- HUD --------------------------------------------------------------
+
+    val heart: TextureRegion = assets.tiny[manifest.hudLifeIndex]
+
+    private val digits: List<TextureRegion> =
+        manifest.hudDigitIndices.ifEmpty { (180..189).toList() }.map { assets.tiny[it] }
+
+    val ammo: TextureRegion = assets.tiny[manifest.root["hud"]?.get("ammo")?.asInt ?: 191]
+
+    val locked: TextureRegion = assets.tiny[manifest.root["hud"]?.get("locked")?.asInt ?: 193]
+
+    private val flagBySlot: List<TextureRegion> =
+        (manifest.root["tanks"]?.get("playerSlots")?.asArray ?: emptyList()).map { slot ->
+            assets.tiny[slot["flagIndex"]?.asInt ?: 16]
+        }.ifEmpty { listOf(assets.tiny[16]) }
+
+    fun digit(value: Int): TextureRegion = digits[value.coerceIn(0, digits.lastIndex)]
+
+    fun playerFlag(slot: Int): TextureRegion = flagBySlot[slot.coerceIn(0, flagBySlot.lastIndex)]
 
     // --- 이펙트 -----------------------------------------------------------
 

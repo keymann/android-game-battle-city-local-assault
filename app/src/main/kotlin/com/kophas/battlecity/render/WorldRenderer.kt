@@ -135,6 +135,7 @@ class WorldRenderer(
                         spriteIndex = uniformSprite,
                         quadrantX = -1,
                         quadrantY = -1,
+                        waterBrightness = waterBrightness(originX, originY, timeSeconds),
                         screenX = viewport.worldToScreenX(originX * Constants.CELL_PX),
                         screenY = viewport.worldToScreenY(originY * Constants.CELL_PX),
                         size = blockSize,
@@ -157,6 +158,7 @@ class WorldRenderer(
                             spriteIndex = map.spriteIndexAt(cx, cy),
                             quadrantX = dx,
                             quadrantY = dy,
+                            waterBrightness = waterBrightness(cx, cy, timeSeconds),
                             screenX = viewport.worldToScreenX(cx * Constants.CELL_PX),
                             screenY = viewport.worldToScreenY(cy * Constants.CELL_PX),
                             size = cellSize,
@@ -180,6 +182,7 @@ class WorldRenderer(
         spriteIndex: Int,
         quadrantX: Int,
         quadrantY: Int,
+        waterBrightness: Float,
         screenX: Float,
         screenY: Float,
         size: Float,
@@ -198,6 +201,9 @@ class WorldRenderer(
                 width = size,
                 height = size,
                 layer = Constants.Layer.HAZARD,
+                red = waterBrightness,
+                green = waterBrightness,
+                blue = waterBrightness,
             )
 
             TileType.ICE -> batch.draw(
@@ -384,6 +390,14 @@ class WorldRenderer(
         }
     }
 
+    /** 셀 위치에 따라 위상을 어긋뜨려 대각선으로 잔물결이 지나가게 한다. */
+    private fun waterBrightness(cellX: Int, cellY: Int, timeSeconds: Float): Float {
+        val shimmer = catalog.waterShimmer
+        if (shimmer <= 0f) return 1f
+        val phase = timeSeconds * catalog.waterAnimFps * TWO_PI + (cellX + cellY) * RIPPLE_STEP
+        return 1f - shimmer * 0.5f + shimmer * 0.5f * kotlin.math.sin(phase)
+    }
+
     private fun red(color: Int): Float = ((color ushr 16) and 0xFF) / 255f
 
     private fun green(color: Int): Float = ((color ushr 8) and 0xFF) / 255f
@@ -393,5 +407,7 @@ class WorldRenderer(
     private companion object {
         const val CONCEALED_ALPHA = 0.35f
         const val SILHOUETTE_ALPHA = 0.85f
+        const val TWO_PI = 6.2831855f
+        const val RIPPLE_STEP = 0.55f
     }
 }
