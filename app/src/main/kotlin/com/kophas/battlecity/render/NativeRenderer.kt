@@ -75,6 +75,7 @@ class NativeRenderer : AutoCloseable {
             batch.spriteCount,
             batch.runBuffer,
             batch.runCount,
+            batch.opaqueSpriteCount,
         )
     }
 
@@ -114,6 +115,7 @@ class NativeRenderer : AutoCloseable {
         spriteCount: Int,
         runs: ByteBuffer,
         runCount: Int,
+        opaqueCount: Int,
     )
 
     private external fun nativeSurfaceWidth(handle: Long): Int

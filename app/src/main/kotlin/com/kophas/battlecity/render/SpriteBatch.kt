@@ -16,7 +16,17 @@ import java.nio.IntBuffer
  * 프레임마다 JNI 배열 복사가 일어나지 않도록 direct ByteBuffer 를 재사용한다.
  * 정렬은 인덱스를 담은 `LongArray` 하나만 쓰므로 프레임당 할당이 없다.
  */
-class SpriteBatch(val capacity: Int = DEFAULT_CAPACITY) {
+class SpriteBatch(
+    val capacity: Int = DEFAULT_CAPACITY,
+    /**
+     * 이 레이어까지는 알파 블렌딩 없이 그린다.
+     *
+     * 지형은 화면 전체를 덮는 불투명 레이어라 블렌딩이 순수 낭비다.
+     * 정렬이 레이어 우선이라 불투명 스프라이트는 항상 앞쪽 연속 구간에 모인다.
+     * (계획서 §25 렌더링 최적화)
+     */
+    val opaqueLayerLimit: Int = Constants.Layer.GROUND,
+) {
 
     init {
         require(capacity in 1..MAX_CAPACITY) { "capacity 는 1..$MAX_CAPACITY 범위여야 한다" }
@@ -56,6 +66,10 @@ class SpriteBatch(val capacity: Int = DEFAULT_CAPACITY) {
 
     /** 상한을 넘겨 버려진 스프라이트 수. 0이 아니면 capacity 를 늘려야 한다. */
     var droppedSprites: Int = 0
+        private set
+
+    /** 앞에서부터 이만큼은 블렌딩 없이 그려도 된다. */
+    var opaqueSpriteCount: Int = 0
         private set
 
     val spriteBuffer: ByteBuffer get() = spriteByteBuffer
@@ -126,6 +140,7 @@ class SpriteBatch(val capacity: Int = DEFAULT_CAPACITY) {
         droppedSprites = overflowed
         spriteCount = pending
         runCount = 0
+        opaqueSpriteCount = 0
         if (pending == 0) {
             spriteFloats.clear()
             runInts.clear()
@@ -143,10 +158,15 @@ class SpriteBatch(val capacity: Int = DEFAULT_CAPACITY) {
             val key = keys[i]
             val slot = (key and 0xFFFFFFFFL).toInt()
             val textureId = ((key ushr 32) and 0xFFFF).toInt()
+            val layer = (key ushr 48).toInt()
 
             spriteFloats.put(staging, slot * FLOATS_PER_SPRITE, FLOATS_PER_SPRITE)
 
-            if (textureId != currentTexture) {
+            if (layer <= opaqueLayerLimit) opaqueSpriteCount = i + 1
+
+            // 불투명 구간과 블렌딩 구간은 파이프라인이 다르므로 텍스처가 같아도 run 을 끊는다.
+            val crossesOpaqueBoundary = i == opaqueSpriteCount && currentCount > 0
+            if (textureId != currentTexture || crossesOpaqueBoundary) {
                 if (currentCount > 0) {
                     runInts.put(currentTexture)
                     runInts.put(currentCount)

@@ -496,10 +496,22 @@ bool VulkanRenderer::createPipeline() {
 
     VkResult result =
             vkCreateGraphicsPipelines(device_, VK_NULL_HANDLE, 1, &info, nullptr, &pipeline_);
+
+    // 지형처럼 화면을 꽉 채우는 불투명 스프라이트용. 블렌딩만 끈 같은 파이프라인이다.
+    VkPipelineColorBlendAttachmentState opaqueAttachment = blendAttachment;
+    opaqueAttachment.blendEnable = VK_FALSE;
+    VkPipelineColorBlendStateCreateInfo opaqueBlend = blend;
+    opaqueBlend.pAttachments = &opaqueAttachment;
+    VkGraphicsPipelineCreateInfo opaqueInfo = info;
+    opaqueInfo.pColorBlendState = &opaqueBlend;
+    VkResult opaqueResult = vkCreateGraphicsPipelines(device_, VK_NULL_HANDLE, 1, &opaqueInfo,
+                                                      nullptr, &pipelineOpaque_);
+
     vkDestroyShaderModule(device_, vertModule, nullptr);
     vkDestroyShaderModule(device_, fragModule, nullptr);
-    if (result != VK_SUCCESS) {
-        BC_LOGE("그래픽 파이프라인 생성 실패 (VkResult=%d)", static_cast<int>(result));
+    if (result != VK_SUCCESS || opaqueResult != VK_SUCCESS) {
+        BC_LOGE("그래픽 파이프라인 생성 실패 (blend=%d opaque=%d)", static_cast<int>(result),
+                static_cast<int>(opaqueResult));
         return false;
     }
     return true;
@@ -821,7 +833,8 @@ void VulkanRenderer::onSurfaceResized(int32_t /*width*/, int32_t /*height*/) {
 }
 
 void VulkanRenderer::renderFrame(float clearR, float clearG, float clearB, const float* sprites,
-                                 int32_t spriteCount, const int32_t* runs, int32_t runCount) {
+                                 int32_t spriteCount, const int32_t* runs, int32_t runCount,
+                                 int32_t opaqueCount) {
     if (!ready_) return;
     if (needsRecreate_) {
         needsRecreate_ = false;
@@ -918,8 +931,6 @@ void VulkanRenderer::renderFrame(float clearR, float clearG, float clearB, const
     vkCmdBeginRenderPass(frame.cmd, &passBegin, VK_SUBPASS_CONTENTS_INLINE);
 
     if (quadCount > 0 && runCount > 0) {
-        vkCmdBindPipeline(frame.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_);
-
         VkViewport viewport{};
         viewport.width = static_cast<float>(extent_.width);
         viewport.height = static_cast<float>(extent_.height);
@@ -945,11 +956,19 @@ void VulkanRenderer::renderFrame(float clearR, float clearG, float clearB, const
         vkCmdBindIndexBuffer(frame.cmd, indexBuffer_, 0, VK_INDEX_TYPE_UINT16);
 
         int32_t drawn = 0;
+        VkPipeline boundPipeline = VK_NULL_HANDLE;
         for (int32_t r = 0; r < runCount && drawn < quadCount; ++r) {
             const int32_t texId = runs[r * 2 + 0];
             int32_t count = runs[r * 2 + 1];
             if (drawn + count > quadCount) count = quadCount - drawn;
             if (count <= 0) continue;
+
+            // 배치가 불투명 구간 경계에서 run 을 끊어 주므로 run 하나는 한쪽에만 속한다.
+            VkPipeline wanted = (drawn < opaqueCount) ? pipelineOpaque_ : pipeline_;
+            if (wanted != boundPipeline) {
+                vkCmdBindPipeline(frame.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, wanted);
+                boundPipeline = wanted;
+            }
 
             auto it = textures_.find(texId);
             if (it != textures_.end() && it->second.set != VK_NULL_HANDLE) {
@@ -1087,6 +1106,9 @@ void VulkanRenderer::destroyEverything() {
         destroySwapchain();
 
         if (pipeline_ != VK_NULL_HANDLE) vkDestroyPipeline(device_, pipeline_, nullptr);
+        if (pipelineOpaque_ != VK_NULL_HANDLE) {
+            vkDestroyPipeline(device_, pipelineOpaque_, nullptr);
+        }
         if (pipelineLayout_ != VK_NULL_HANDLE) {
             vkDestroyPipelineLayout(device_, pipelineLayout_, nullptr);
         }
@@ -1101,6 +1123,7 @@ void VulkanRenderer::destroyEverything() {
         if (commandPool_ != VK_NULL_HANDLE) vkDestroyCommandPool(device_, commandPool_, nullptr);
 
         pipeline_ = VK_NULL_HANDLE;
+        pipelineOpaque_ = VK_NULL_HANDLE;
         pipelineLayout_ = VK_NULL_HANDLE;
         renderPass_ = VK_NULL_HANDLE;
         sampler_ = VK_NULL_HANDLE;

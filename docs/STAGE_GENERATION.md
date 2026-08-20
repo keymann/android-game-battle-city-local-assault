@@ -29,19 +29,27 @@ HOST                                   CLIENT × 3
 
 ---
 
-## 2. 맵 규격
+## 2. 맵 규격 — 가로:세로 **4:3** 고정
+
+게임이 항상 landscape 로 돌기 때문에 정사각형 맵은 좌우를 크게 낭비한다.
+논리 해상도를 4:3 으로 고정한다. (계획서 §21)
 
 ```text
-MAP_BLOCKS = 13 + 3 × (playerCount − 2)
+BLOCKS_X = 16 + 4 × (playerCount − 2)
+BLOCKS_Y = BLOCKS_X × 3 / 4
 ```
 
-| 플레이어 | 블록 | 셀 | 논리 px |
-|---:|---:|---:|---:|
-| 2명 | 13 × 13 | 26 × 26 | 832 × 832 |
-| 3명 | 16 × 16 | 32 × 32 | 1024 × 1024 |
-| 4명 | 19 × 19 | 38 × 38 | 1216 × 1216 |
+| 플레이어 | 블록 | 셀 | 논리 px | 비율 |
+|---:|---:|---:|---:|---:|
+| 2명 | 16 × 12 | 32 × 24 | 1024 × 768 | 4:3 |
+| 3명 | 20 × 15 | 40 × 30 | 1280 × 960 | 4:3 |
+| 4명 | 24 × 18 | 48 × 36 | 1536 × 1152 | 4:3 |
 
-원작(13×13)을 2인 기준으로 두고, 인원이 늘어난 만큼만 확장한다. 동시 COM 8~12기(§44.2)와 플레이어 4기가 서로를 찾을 수 있는 밀도를 유지한다.
+세로 12~18 블록은 원작(13×13)과 비슷한 종심을 유지하고, 늘어난 인원만큼 가로로 넓힌다.
+동시 COM 8~12기(§44.2)와 플레이어 4기가 서로를 찾을 수 있는 밀도를 유지한다.
+
+화면이 4:3 보다 넓으면 [Viewport] 가 좌우를 레터박스로 남긴다. 그 여백이 Phase 7 의
+HUD 자리가 된다. (계획서 §20)
 
 ---
 
@@ -214,9 +222,10 @@ WALL_H     BOX        PILLARS    MAZE       CHECKER    STEEL_CORE
 
 ```text
 StageData
- ├─ blocks : Int          맵 한 변의 블록 수
- ├─ cells  : ByteArray    (blocks×2)² TileType — 충돌·판정의 유일한 근거
- ├─ ground : ShortArray   blocks² 지형 스프라이트 인덱스 (렌더 전용)
+ ├─ blocksX / blocksY : Int   맵 블록 수 (항상 4:3)
+ ├─ cells  : ByteArray    cellsX × cellsY TileType — 충돌·판정의 유일한 근거
+ ├─ cellSprite : ShortArray   셀별 오브젝트 스프라이트 인덱스 (렌더 전용)
+ ├─ ground : ShortArray   블록별 지형 스프라이트 인덱스 (렌더 전용)
  ├─ decor  : List<DecorInstance>  { spriteId, x, y, rotation, layer }
  ├─ props  : List<PropInstance>   { groupId, spriteId, cell, hp, explosive }
  ├─ base   : BaseState
@@ -249,6 +258,8 @@ StageData
 
 ## 6. 확장 여지
 
+- 벽돌/강철은 블록(2×2 셀)에 스프라이트 한 장을 걸치고 각 셀이 자기 사분면만 그린다.
+  절반만 무너진 벽이 원작처럼 남고, 블록이 통째로 온전하면 쿼드 하나로 합쳐 그린다.
 - `generatorVersion`을 올리면 알고리즘을 바꿔도 구버전 클라이언트와 안전하게 분기할 수 있다
 - 패턴 스탬프 목록과 프롭 그룹은 `assets.json` / 별도 데이터 파일로 빼면 코드 수정 없이 스테이지 성격을 튜닝할 수 있다
 - 동일 seed 재사용으로 "이 맵 다시 하기" 기능을 그대로 얻는다

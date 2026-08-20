@@ -34,9 +34,9 @@ in vec2 vUV;
 in vec4 vColor;
 out vec4 outColor;
 void main() {
-    vec4 c = texture(uTex, vUV) * vColor;
-    if (c.a < 0.004) discard;
-    outColor = c;
+    // discard 는 타일 기반 GPU 에서 early-Z 를 무력화한다.
+    // 알파 블렌딩이 이미 투명 픽셀을 처리하므로 쓰지 않는다.
+    outColor = texture(uTex, vUV) * vColor;
 }
 )";
 
@@ -235,7 +235,8 @@ void GlesRenderer::releaseTexture(int32_t textureId) {
 }
 
 void GlesRenderer::renderFrame(float clearR, float clearG, float clearB, const float* sprites,
-                               int32_t spriteCount, const int32_t* runs, int32_t runCount) {
+                               int32_t spriteCount, const int32_t* runs, int32_t runCount,
+                               int32_t opaqueCount) {
     if (!ready_) return;
 
     glViewport(0, 0, width_, height_);
@@ -307,11 +308,19 @@ void GlesRenderer::renderFrame(float clearR, float clearG, float clearB, const f
     glActiveTexture(GL_TEXTURE0);
 
     int32_t drawn = 0;
+    bool blendEnabled = true;
     for (int32_t r = 0; r < runCount && drawn < quadCount; ++r) {
         const int32_t texId = runs[r * 2 + 0];
         int32_t count = runs[r * 2 + 1];
         if (drawn + count > quadCount) count = quadCount - drawn;
         if (count <= 0) continue;
+
+        // 지형은 불투명하므로 블렌딩을 꺼서 fill rate 를 아낀다.
+        const bool wantBlend = drawn >= opaqueCount;
+        if (wantBlend != blendEnabled) {
+            if (wantBlend) glEnable(GL_BLEND); else glDisable(GL_BLEND);
+            blendEnabled = wantBlend;
+        }
 
         auto it = textures_.find(texId);
         if (it != textures_.end()) {
@@ -323,6 +332,7 @@ void GlesRenderer::renderFrame(float clearR, float clearG, float clearB, const f
         drawn += count;
     }
 
+    if (!blendEnabled) glEnable(GL_BLEND);
     glBindVertexArray(0);
     eglSwapBuffers(display_, surface_);
 }

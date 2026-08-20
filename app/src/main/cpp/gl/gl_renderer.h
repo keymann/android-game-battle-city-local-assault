@@ -30,7 +30,8 @@ public:
 
     void renderFrame(float clearR, float clearG, float clearB,
                      const float* sprites, int32_t spriteCount,
-                     const int32_t* runs, int32_t runCount) override;
+                     const int32_t* runs, int32_t runCount,
+                     int32_t opaqueCount) override;
 
     int32_t surfaceWidth() const override { return width_; }
     int32_t surfaceHeight() const override { return height_; }

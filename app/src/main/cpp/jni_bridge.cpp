@@ -134,7 +134,7 @@ JNIEXPORT void JNICALL Java_com_kophas_battlecity_render_NativeRenderer_nativeRe
 // Kotlin SpriteBatch 가 direct ByteBuffer 를 유지한다. (계획서 §25 Draw Call 최소화)
 JNIEXPORT void JNICALL Java_com_kophas_battlecity_render_NativeRenderer_nativeRenderFrame(
         JNIEnv* env, jobject, jlong handle, jfloat clearR, jfloat clearG, jfloat clearB,
-        jobject sprites, jint spriteCount, jobject runs, jint runCount) {
+        jobject sprites, jint spriteCount, jobject runs, jint runCount, jint opaqueCount) {
     RendererHandle* h = fromHandle(handle);
     if (h == nullptr || !h->impl) return;
 
@@ -149,7 +149,8 @@ JNIEXPORT void JNICALL Java_com_kophas_battlecity_render_NativeRenderer_nativeRe
             runCount = 0;
         }
     }
-    h->impl->renderFrame(clearR, clearG, clearB, spriteData, spriteCount, runData, runCount);
+    h->impl->renderFrame(clearR, clearG, clearB, spriteData, spriteCount, runData, runCount,
+                         opaqueCount);
 }
 
 JNIEXPORT jint JNICALL Java_com_kophas_battlecity_render_NativeRenderer_nativeSurfaceWidth(

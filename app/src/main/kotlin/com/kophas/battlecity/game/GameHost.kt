@@ -34,7 +34,7 @@ class GameHost(private val assetManager: AssetManager) : GameLoop.Callbacks {
     private val loop = GameLoop(this)
 
     private var assets: GameAssets? = null
-    private var scene: Phase1Scene? = null
+    private var scene: Phase2Scene? = null
     private var insets = Viewport.Insets.NONE
 
     var preferVulkan: Boolean = true
@@ -84,6 +84,10 @@ class GameHost(private val assetManager: AssetManager) : GameLoop.Callbacks {
         val width = renderer.surfaceWidth
         val height = renderer.surfaceHeight
         if (width <= 0 || height <= 0) return
+        // 스테이지가 새로 생성되면 맵 크기가 달라질 수 있다. 논리 해상도를 맞춰 준다.
+        if (currentScene.logicalWidth != viewport.logicalWidth) {
+            viewport.resizeWorld(currentScene.logicalWidth, currentScene.logicalHeight)
+        }
         viewport.update(width, height, insets)
 
         batch.begin()
@@ -97,7 +101,11 @@ class GameHost(private val assetManager: AssetManager) : GameLoop.Callbacks {
     }
 
     override fun onStats(stats: GameLoop.Stats) {
-        Log.d(TAG, "fps=${stats.fps} tps=${stats.ticksPerSecond} dropped=${stats.droppedTicks} backend=$backend")
+        Log.d(
+            TAG,
+            "fps=${stats.fps} tps=${stats.ticksPerSecond} dropped=${stats.droppedTicks} " +
+                "sprites=${batch.spriteCount} runs=${batch.runCount} backend=$backend",
+        )
     }
 
     private fun drainCommands() {
@@ -123,7 +131,7 @@ class GameHost(private val assetManager: AssetManager) : GameLoop.Callbacks {
 
         val loaded = GameAssets.load(AssetSource.of(assetManager), renderer)
         assets = loaded
-        val newScene = Phase1Scene(loaded)
+        val newScene = Phase2Scene(loaded)
         scene = newScene
         viewport.resizeWorld(newScene.logicalWidth, newScene.logicalHeight)
     }
