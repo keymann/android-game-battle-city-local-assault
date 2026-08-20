@@ -64,6 +64,8 @@ class ClientSession(
     private var lastSnapshotMs = 0L
     private var previousSnapshotMs = 0L
     private var tankType = 0
+    private var colorIndex = 0
+    private var chosenName = playerName
 
     /** 같은 망에 방이 있는지 물어본다. */
     fun search() {
@@ -73,18 +75,22 @@ class ClientSession(
     }
 
     /** 찾은 방에 들어간다. */
-    fun join(peer: Peer, tankType: Int) {
+    fun join(peer: Peer, tankType: Int, colorIndex: Int = 0) {
         host = peer
         this.tankType = tankType
+        this.colorIndex = colorIndex
         state = State.JOINING
         lastHeardMs = clock()
         sendJoin()
     }
 
-    fun setReady(ready: Boolean, tankType: Int) {
+    /** 준비 상태와 고른 것을 함께 올린다. */
+    fun setReady(ready: Boolean, tankType: Int, colorIndex: Int = this.colorIndex, name: String = chosenName) {
         this.tankType = tankType
+        this.colorIndex = colorIndex
+        this.chosenName = name
         if (host == Peer.NONE) return
-        send(Messages.writeReady(writer, Messages.Ready(ready, tankType)))
+        send(Messages.writeReady(writer, Messages.Ready(ready, tankType, colorIndex, name)))
     }
 
     /** 이번 틱의 조종 입력. 바뀐 것이 없어도 보낸다. UDP 는 잃어버리기 때문이다. */
@@ -144,6 +150,8 @@ class ClientSession(
             Protocol.Type.JOIN_ACK -> {
                 val ack = Messages.readJoinAck(reader)
                 slot = ack.slot
+                // 색은 Host 가 정한 것을 따른다. 원한 색을 남이 먼저 쥐었을 수 있다.
+                colorIndex = ack.colorIndex
                 host = from
                 state = State.LOBBY
                 lastHeardMs = now
@@ -191,7 +199,7 @@ class ClientSession(
 
     private fun sendJoin() {
         lastJoinMs = clock()
-        send(Messages.writeJoin(writer, Messages.Join(playerName, tankType)))
+        send(Messages.writeJoin(writer, Messages.Join(chosenName, tankType, colorIndex)))
     }
 
     private fun heartbeat(now: Long) {

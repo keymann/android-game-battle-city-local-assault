@@ -33,19 +33,31 @@ object Messages {
 
     // --- 입장 -------------------------------------------------------------
 
-    data class Join(val name: String, val tankType: Int)
+    data class Join(val name: String, val tankType: Int, val colorIndex: Int)
 
     fun writeJoin(writer: PacketWriter, value: Join): PacketWriter =
-        Protocol.header(writer, Protocol.Type.JOIN).text(value.name).byte(value.tankType)
+        Protocol.header(writer, Protocol.Type.JOIN)
+            .text(value.name)
+            .byte(value.tankType)
+            .byte(value.colorIndex)
 
-    fun readJoin(reader: PacketReader) = Join(reader.text(), reader.byte())
+    fun readJoin(reader: PacketReader) = Join(reader.text(), reader.byte(), reader.byte())
 
-    data class JoinAck(val slot: Int, val tankType: Int)
+    /**
+     * 배정 결과.
+     *
+     * 색은 Host 가 정해 준 것을 그대로 따른다. 먼저 들어온 사람이 이미 그 색을
+     * 쓰고 있으면 남은 색으로 바꿔서 준다. 같은 색이 둘이면 누가 누구인지 모른다.
+     */
+    data class JoinAck(val slot: Int, val tankType: Int, val colorIndex: Int)
 
     fun writeJoinAck(writer: PacketWriter, value: JoinAck): PacketWriter =
-        Protocol.header(writer, Protocol.Type.JOIN_ACK).byte(value.slot).byte(value.tankType)
+        Protocol.header(writer, Protocol.Type.JOIN_ACK)
+            .byte(value.slot)
+            .byte(value.tankType)
+            .byte(value.colorIndex)
 
-    fun readJoinAck(reader: PacketReader) = JoinAck(reader.byte(), reader.byte())
+    fun readJoinAck(reader: PacketReader) = JoinAck(reader.byte(), reader.byte(), reader.byte())
 
     // --- 로비 -------------------------------------------------------------
 
@@ -53,6 +65,7 @@ object Messages {
         val index: Int,
         val name: String,
         val tankType: Int,
+        val colorIndex: Int,
         val ready: Boolean,
         val connected: Boolean,
         val host: Boolean,
@@ -68,6 +81,7 @@ object Messages {
             writer.byte(slot.index)
                 .text(slot.name)
                 .byte(slot.tankType)
+                .byte(slot.colorIndex)
                 .byte(flags(slot.ready, slot.connected, slot.host))
         }
         return writer
@@ -81,11 +95,13 @@ object Messages {
             val index = reader.byte()
             val name = reader.text()
             val type = reader.byte()
+            val color = reader.byte()
             val flags = reader.byte()
             slots += LobbySlot(
                 index = index,
                 name = name,
                 tankType = type,
+                colorIndex = color,
                 ready = flags and 1 != 0,
                 connected = flags and 2 != 0,
                 host = flags and 4 != 0,
@@ -94,12 +110,28 @@ object Messages {
         return LobbyUpdate(slots, countdown)
     }
 
-    data class Ready(val ready: Boolean, val tankType: Int)
+    /**
+     * 준비 상태와 고른 것을 함께 보낸다. (계획서 §28, §29)
+     *
+     * 이름 · 탱크 · 색을 따로 보내지 않는다. 로비에서 무엇을 만지든 결국 "지금 내
+     * 상태는 이렇다" 를 알리면 되고, 패킷이 하나면 순서가 뒤바뀔 일도 없다.
+     */
+    data class Ready(
+        val ready: Boolean,
+        val tankType: Int,
+        val colorIndex: Int,
+        val name: String,
+    )
 
     fun writeReady(writer: PacketWriter, value: Ready): PacketWriter =
-        Protocol.header(writer, Protocol.Type.READY).bool(value.ready).byte(value.tankType)
+        Protocol.header(writer, Protocol.Type.READY)
+            .bool(value.ready)
+            .byte(value.tankType)
+            .byte(value.colorIndex)
+            .text(value.name)
 
-    fun readReady(reader: PacketReader) = Ready(reader.bool(), reader.byte())
+    fun readReady(reader: PacketReader) =
+        Ready(reader.bool(), reader.byte(), reader.byte(), reader.text())
 
     // --- 시작 -------------------------------------------------------------
 

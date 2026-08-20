@@ -7,6 +7,7 @@ import com.kophas.battlecity.core.Direction
 import com.kophas.battlecity.gameplay.BalanceConfig
 import com.kophas.battlecity.gameplay.GameWorld
 import com.kophas.battlecity.gameplay.MatchState
+import com.kophas.battlecity.gameplay.PlayerProfile
 import com.kophas.battlecity.gameplay.Tank
 import com.kophas.battlecity.map.Rng
 import com.kophas.battlecity.map.StageGenerator
@@ -47,9 +48,16 @@ class BattleScene(
     private var playerCount: Int = DEFAULT_PLAYERS,
     startSeed: Long = DEFAULT_SEED,
     private val role: NetRole = NetRole.LOCAL,
-    /** 사람이 원격에서 조종하는 자리. 여기에는 AI 를 붙이지 않는다. */
-    private val remoteSlots: Set<Int> = emptySet(),
+    /** 사람이 조종하는 자리. 여기에는 AI 를 붙이지 않는다. */
+    private val humanSlots: Set<Int> = emptySet(),
 ) {
+    /**
+     * 로비에서 고른 이름 · 탱크 · 색. 판을 열기 전에 채워 넣는다.
+     *
+     * 비어 있으면 자리 번호로 기본값을 만든다. 혼자 하는 판에는 로비가 없기 때문이다.
+     */
+    var profiles: List<PlayerProfile> = emptyList()
+
     private val catalog = SpriteCatalog(assets)
     private val generator = StageGenerator(assets.manifest, assets.mapGen)
     private val worldRenderer = WorldRenderer(catalog)
@@ -83,7 +91,7 @@ class BattleScene(
 
     private fun buildStage() {
         val stage = generator.generate(seed, playerCount, stageIndex)
-        match = MatchState(playerCount, balance)
+        match = MatchState(playerCount, balance, profiles)
         world = GameWorld(stage, balance)
         world.listener = MatchBridge()
 
@@ -117,7 +125,8 @@ class BattleScene(
         val tank = world.spawnTank(
             faction = Tank.Faction.PLAYER,
             type = slot.tankType,
-            colorSlot = slot.index,
+            // 색은 자리 번호가 아니라 **고른 색**이다. 화면과 HUD 가 같은 색을 쓴다.
+            colorSlot = slot.colorIndex,
             blockIndex = block,
             direction = Direction.UP,
             ownerSlot = slot.index,
@@ -126,7 +135,7 @@ class BattleScene(
         slotOfTank[tank.id] = slot.index
         match.onPlayerSpawned(slot.index, tank.id)
         // 사람이 잡은 자리에는 AI 를 붙이지 않는다. 붙이면 조종간이 둘이 된다.
-        if (slot.index !in remoteSlots) director.attach(tank)
+        if (slot.index !in humanSlots) director.attach(tank)
     }
 
     // -----------------------------------------------------------------------
@@ -236,6 +245,13 @@ class BattleScene(
         worldRenderer.render(world, batch, viewport, elapsedSeconds)
         hudRenderer.render(batch, viewport, match, world)
     }
+
+    /** 판이 시작되고 흐른 시간. 조작 UI 의 맥동에 쓴다. */
+    val elapsed: Float get() = elapsedSeconds
+
+    /** 이 기기가 조종하는 탱크. 조작 UI 가 특수기 쿨타임을 보여 줄 때 쓴다. */
+    fun tankOfSlot(slot: Int): Tank? =
+        world.tanks.firstOrNull { it.ownerSlot == slot && it.alive }
 
     // -----------------------------------------------------------------------
 

@@ -112,7 +112,7 @@ class HostSession(
 
             Protocol.Type.READY -> slotOf(from)?.let { slot ->
                 val ready = Messages.readReady(reader)
-                lobby.setReady(slot, ready.ready, ready.tankType, now)
+                lobby.setReady(slot, ready.ready, ready.tankType, ready.colorIndex, ready.name, now)
                 broadcastLobby(now, force = true)
             }
 
@@ -137,20 +137,24 @@ class HostSession(
     private fun handleJoin(from: Peer, join: Messages.Join, now: Long) {
         // 같은 사람이 두 번 보냈으면 자리를 새로 주지 않는다. 패킷은 흔히 중복된다.
         slotOf(from)?.let { existing ->
-            send(from, Messages.writeJoinAck(writer, Messages.JoinAck(existing, join.tankType)))
+            val color = lobby.slots[existing].colorIndex
+            send(from, Messages.writeJoinAck(writer, Messages.JoinAck(existing, join.tankType, color)))
             return
         }
         if (lobby.started) {
             send(from, deny(Protocol.Deny.ALREADY_STARTED))
             return
         }
-        val slot = lobby.join(join.name, join.tankType, now)
+        val slot = lobby.join(join.name, join.tankType, join.colorIndex, now)
         if (slot == null) {
             send(from, deny(Protocol.Deny.ROOM_FULL))
             return
         }
         peers[slot.index] = from
-        send(from, Messages.writeJoinAck(writer, Messages.JoinAck(slot.index, join.tankType)))
+        send(
+            from,
+            Messages.writeJoinAck(writer, Messages.JoinAck(slot.index, join.tankType, slot.colorIndex)),
+        )
         listener?.onPlayerJoined(slot.index, join.name)
         broadcastLobby(now, force = true)
     }

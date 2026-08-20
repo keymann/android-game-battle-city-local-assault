@@ -247,7 +247,7 @@ app/src/main/
 │   ├── render/               Viewport, SpriteBatch, TextureAtlas, GridAtlas,
 │   │                         AssetManifest, GameAssets, SpriteCatalog,
 │   │                         WorldRenderer, HudRenderer, NativeRenderer
-│   ├── game/                 GameHost, BattleScene, NetDriver
+│   ├── game/                 GameHost, BattleScene, LobbyScene, NetDriver
 │   ├── util/                 Json (의존성 없는 파서)
 │   ├── MainActivity.kt
 │   └── GameSurfaceView.kt
@@ -287,7 +287,7 @@ COM AI 설계는 [docs/AI.md](./docs/AI.md),
 | Phase 5 | COM — Spawn, 타입별 AI, State Machine, 20 × Player 수 생성 | ✅ 완료 |
 | Phase 5.5 | 에셋 리팩터링 — 자체 에셋 팩 전면 적용, 아틀라스 1장, 16:9, 룰 기반 맵 생성 | ✅ 완료 |
 | Phase 6 | 로컬 멀티플레이 — Host, Join, Lobby, 상태 동기화, Disconnect 처리 | ✅ 완료 |
-| Phase 7 | 모바일 UI — Virtual Joystick, Fire/Special, HUD, Player Status | 예정 |
+| Phase 7 | 모바일 UI — Virtual Joystick, Fire/Special, HUD, 로비 화면 | ✅ 완료 |
 | Phase 8 | 최종화 — 사운드, 이펙트, 진동, 최적화, 저사양/Tablet/Fold/해상도 테스트 | 예정 |
 
 ### MVP 순서
@@ -345,6 +345,18 @@ Tank Explosion / Player Death / Enemy Spawn / Base Warning / Base Destroy / Vict
 seed 로 생성된 4인용 4:3 스테이지(24×18 블록). 지형·도로 오토타일, 흙 구역,
 벽돌·석재 구조물, 환경 오브젝트, 본진이 모두 랜덤 배치됩니다.
 월드는 16px 픽셀아트, 회전하는 탱크만 벡터풍 팩을 씁니다.
+
+![Phase 7](docs/images/phase7_controls.png)
+
+왼쪽은 짚은 자리에 생기는 가상 조이스틱, 오른쪽 아래는 FIRE 와 SPECIAL 입니다.
+아날로그로 받아 가장 가까운 네 방향으로 접습니다. 특수기 쿨타임은 **버튼 자체**가
+아래에서 차오르며 보여 주고, 다 차면 살짝 맥동합니다.
+HUD 에는 로비에서 고른 이름과 탱크가 고른 색으로 함께 나옵니다.
+
+![로비](docs/images/phase7_lobby.png)
+
+로비에서 이름(세 글자) · 탱크 종류 · 색을 고릅니다. 사람끼리 같은 색은 고를 수 없고
+COM 색도 고를 수 없습니다. Host 만 START 를 누를 수 있고 최소 두 명이 모두 준비해야 합니다.
 
 ![Phase 5.5](docs/images/phase55_asset_refresh.png)
 

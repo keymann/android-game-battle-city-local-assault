@@ -122,10 +122,21 @@
     },
     "slotMarker": {
       "sprite": "hud_heart_full",
-      "sizeRatio": 0.34,
+      "sizeRatio": 0.32,
       "offsetRatio": -0.62,
-      "colors": ["#35D2F0", "#F2922E", "#A6D62E", "#B45CE8"],
-      "comment": "탱크 색은 종류가 정하므로 같은 종류를 고른 두 사람이 구별되지 않는다. 머리 위에 슬롯 색 표식을 띄운다. (P1 cyan / P2 orange / P3 lime / P4 violet)"
+      "comment": "머리 위 표식. 색은 그 사람이 고른 색을 쓴다."
+    },
+    "palette": {
+      "comment": "탱크 그림은 무채색이고 여기서 색을 입힌다. 사람끼리 같은 색은 고를 수 없고, COM 색도 고를 수 없다.",
+      "com": { "name": "GRAY", "color": "#9AA3AE" },
+      "players": [
+        { "name": "CYAN", "color": "#35D2F0" },
+        { "name": "ORANGE", "color": "#F2922E" },
+        { "name": "LIME", "color": "#A6D62E" },
+        { "name": "VIOLET", "color": "#B45CE8" },
+        { "name": "RED", "color": "#E2543C" },
+        { "name": "GOLD", "color": "#F5C542" }
+      ]
     }
   },
 
@@ -185,11 +196,25 @@
     "charPrefix": "ui_char_",
     "altDigitPrefix": "ui_alt_digit_",
     "altCharPrefix": "ui_alt_char_",
-    "cooldown": {
-      "comment": "특수기 쿨타임 고리. 한 장을 어둡게 깔고 차오른 만큼만 밝게 덧그린다.",
-      "ring": "hud_cooldown_75"
-    },
     "network": { "online": "hud_network_strong", "offline": "hud_network_disconnected" },
+    "lobby": {
+      "comment": "로비 화면 (계획서 §28).",
+      "title": "lobby_title_plate",
+      "slotByColor": [
+        "lobby_player_slot_cyan", "lobby_player_slot_orange",
+        "lobby_player_slot_lime", "lobby_player_slot_violet"
+      ],
+      "ready": "lobby_ready_badge",
+      "waiting": "lobby_waiting_badge",
+      "locked": "lobby_locked_badge",
+      "host": "lobby_host_badge",
+      "disconnected": "lobby_disconnected",
+      "start": "lobby_primary_button_normal",
+      "startPressed": "lobby_primary_button_pressed",
+      "secondary": "lobby_secondary_button",
+      "wifiStrong": "lobby_wifi_strong",
+      "wifiWeak": "lobby_wifi_weak"
+    },
     "controls": {
       "comment": "Phase 7 에서 쓴다. 지금은 그리지 않는다.",
       "joystickBase": "hud_joystick_base",

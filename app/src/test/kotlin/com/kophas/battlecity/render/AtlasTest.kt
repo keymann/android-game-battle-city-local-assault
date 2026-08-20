@@ -62,7 +62,9 @@ class AtlasTest {
         assertEquals("방어막 3프레임", 3, names.count { it.matches(Regex("shield_\\d")) })
         assertEquals("대시 3프레임", 3, count("dash_trail_"))
 
-        assertEquals("HUD 아이콘 16종", 16, count("hud_"))
+        // 쿨타임 고리 둘은 뺐다. 쿨타임은 SPECIAL 버튼 자체로 표현한다.
+        assertEquals("HUD 아이콘 14종", 14, count("hud_"))
+        assertEquals("로비 아이콘 16종", 16, count("lobby_"))
     }
 
     @Test
@@ -142,7 +144,8 @@ class AtlasTest {
 
     @Test
     fun `아래에서 차오르는 띠는 위쪽을 잘라낸다`() {
-        val region = atlas()["hud_cooldown_75"]
+        // SPECIAL 버튼이 이 방식으로 차오른다.
+        val region = atlas()["hud_special_button_normal"]
         val half = region.bottomBand(0.5f)
         assertTrue("아래 끝은 그대로다", half.v1 == region.v1)
         assertTrue("위쪽이 잘렸다", half.v0 > region.v0)

@@ -52,6 +52,7 @@ class MainActivity : ComponentActivity() {
             else -> NetRole.LOCAL
         }
         gameView.host.hostAddress = intent?.getStringExtra(EXTRA_HOST_ADDRESS)
+        // 이름을 주지 않으면 자리 번호로 P1 ~ P4 가 들어간다. 로비에서 고칠 수 있다.
         intent?.getStringExtra(EXTRA_PLAYER_NAME)?.let { gameView.host.playerName = it }
 
         if (intent?.getBooleanExtra(EXTRA_NET_SELF_TEST, false) == true) {

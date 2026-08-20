@@ -2,6 +2,7 @@ package com.kophas.battlecity
 
 import android.content.Context
 import android.util.AttributeSet
+import android.view.MotionEvent
 import android.view.SurfaceHolder
 import android.view.SurfaceView
 import com.kophas.battlecity.game.GameHost
@@ -23,6 +24,41 @@ class GameSurfaceView @JvmOverloads constructor(
     init {
         holder.addCallback(this)
         isFocusable = true
+    }
+
+    /**
+     * 손가락을 게임에 넘긴다. (계획서 §18, §19)
+     *
+     * `MotionEvent` 는 여기서 끝난다. 안쪽으로는 손가락 번호와 좌표만 넘어간다.
+     * 그래야 조작 규칙을 기기 없이 시험할 수 있다.
+     *
+     * 여러 손가락을 함께 본다. 움직이면서 쏘는 것이 기본 조작이기 때문이다.
+     */
+    @Suppress("ClickableViewAccessibility")
+    override fun onTouchEvent(event: MotionEvent): Boolean {
+        when (event.actionMasked) {
+            MotionEvent.ACTION_DOWN, MotionEvent.ACTION_POINTER_DOWN -> {
+                val index = event.actionIndex
+                host.onTouchDown(event.getPointerId(index), event.getX(index), event.getY(index))
+            }
+
+            MotionEvent.ACTION_MOVE -> {
+                // 움직임은 손가락별로 따로 오지 않고 한 번에 묶여 온다.
+                for (index in 0 until event.pointerCount) {
+                    host.onTouchMove(
+                        event.getPointerId(index),
+                        event.getX(index),
+                        event.getY(index),
+                    )
+                }
+            }
+
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_POINTER_UP ->
+                host.onTouchUp(event.getPointerId(event.actionIndex))
+
+            MotionEvent.ACTION_CANCEL -> host.onTouchCancel()
+        }
+        return true
     }
 
     override fun surfaceCreated(holder: SurfaceHolder) = Unit

@@ -80,26 +80,40 @@ class SpriteCatalog(private val assets: GameAssets) {
         tankArt.getValue(Tank.Faction.PLAYER to type)[Direction.UP.ordinal]
 
     /**
-     * 플레이어 머리 위 표식.
+     * 탱크 색 팔레트. (계획서 §29)
      *
-     * 탱크 색은 **종류**가 정하므로 같은 종류를 고른 두 사람이 구별되지 않는다.
-     * 슬롯 색 표식을 띄워 누가 누구인지 알 수 있게 한다.
+     * 탱크 그림은 무채색이다. 색이 박힌 그림에 다른 색을 곱하면 탁해지기 때문이다.
+     * 여기 있는 색을 그릴 때 곱한다.
      */
-    class SlotMarker(
-        val region: TextureRegion,
-        val colors: IntArray,
-        val sizeRatio: Float,
-        val offsetRatio: Float,
-    ) {
-        fun colorOf(slot: Int): Int =
-            if (colors.isEmpty()) 0xFFFFFF else colors[slot.coerceIn(0, colors.lastIndex)]
+    class Palette(val playerColors: IntArray, val playerNames: List<String>, val comColor: Int) {
+
+        val size: Int get() = playerColors.size
+
+        /** [index] 가 음수면 COM 색이다. */
+        fun colorOf(index: Int): Int =
+            if (index < 0 || playerColors.isEmpty()) comColor
+            else playerColors[index % playerColors.size]
+
+        fun nameOf(index: Int): String =
+            if (index < 0 || playerNames.isEmpty()) "COM"
+            else playerNames[index % playerNames.size]
     }
+
+    val palette: Palette = run {
+        val entries = node("tanks", "palette", "players")?.asArray ?: emptyList()
+        Palette(
+            playerColors = entries.map { parseColor(it["color"]?.asString, 0xFFFFFF) }.toIntArray(),
+            playerNames = entries.map { it["name"]?.asString ?: "" },
+            comColor = parseColor(node("tanks", "palette", "com", "color")?.asString, 0x9AA3AE),
+        )
+    }
+
+    /** 플레이어 머리 위 표식. 그 사람이 고른 색으로 물들여 그린다. */
+    class SlotMarker(val region: TextureRegion, val sizeRatio: Float, val offsetRatio: Float)
 
     val slotMarker = SlotMarker(
         region = assets[node("tanks", "slotMarker", "sprite")?.asString ?: "hud_heart_full"],
-        colors = (node("tanks", "slotMarker", "colors")?.asStringList ?: emptyList())
-            .map { parseColor(it, 0xFFFFFF) }.toIntArray(),
-        sizeRatio = node("tanks", "slotMarker", "sizeRatio")?.asFloat ?: 0.34f,
+        sizeRatio = node("tanks", "slotMarker", "sizeRatio")?.asFloat ?: 0.32f,
         offsetRatio = node("tanks", "slotMarker", "offsetRatio")?.asFloat ?: -0.62f,
     )
 
@@ -166,14 +180,54 @@ class SpriteCatalog(private val assets: GameAssets) {
 
     val deadIcon: TextureRegion = assets[manifest.hud("dead") ?: "hud_player_dead"]
 
-    /**
-     * 특수기 쿨타임 고리.
-     *
-     * 남은 양에 따라 그림을 바꿔 끼우지 않는다. 한 장을 어둡게 깔고 차오른 만큼만
-     * 밝게 덧그린다. 그림을 바꾸면 반쯤 찼을 때 아이콘이 툭 바뀌어 눈에 거슬린다.
-     */
-    val cooldownRing: TextureRegion =
-        assets[node("hud", "cooldown", "ring")?.asString ?: "hud_cooldown_75"]
+    // --- 조작 UI (계획서 §18) ---------------------------------------------
+
+    private fun control(key: String, fallback: String): TextureRegion =
+        assets[node("hud", "controls", key)?.asString ?: fallback]
+
+    val stickBase: TextureRegion = control("joystickBase", "hud_joystick_base")
+
+    val stickKnob: TextureRegion = control("joystickKnob", "hud_joystick_knob")
+
+    val fireButton: TextureRegion = control("fire", "hud_fire_button_normal")
+
+    val fireButtonPressed: TextureRegion = control("firePressed", "hud_fire_button_pressed")
+
+    val specialButton: TextureRegion = control("special", "hud_special_button_normal")
+
+    val specialButtonPressed: TextureRegion =
+        control("specialPressed", "hud_special_button_pressed")
+
+    // --- 로비 (계획서 §28) -------------------------------------------------
+
+    private fun lobby(key: String, fallback: String): TextureRegion =
+        assets[node("hud", "lobby", key)?.asString ?: fallback]
+
+    val lobbyTitle: TextureRegion = lobby("title", "lobby_title_plate")
+
+    /** 자리 색은 슬롯 번호를 따른다. P1 cyan / P2 orange / P3 lime / P4 violet. */
+    val lobbySlots: List<TextureRegion> =
+        (node("hud", "lobby", "slotByColor")?.asStringList ?: emptyList())
+            .map { assets[it] }
+            .ifEmpty { listOf(assets["lobby_player_slot_cyan"]) }
+
+    val lobbyReady: TextureRegion = lobby("ready", "lobby_ready_badge")
+
+    val lobbyWaiting: TextureRegion = lobby("waiting", "lobby_waiting_badge")
+
+    val lobbyLocked: TextureRegion = lobby("locked", "lobby_locked_badge")
+
+    val lobbyHost: TextureRegion = lobby("host", "lobby_host_badge")
+
+    val lobbyDisconnected: TextureRegion = lobby("disconnected", "lobby_disconnected")
+
+    val lobbyStart: TextureRegion = lobby("start", "lobby_primary_button_normal")
+
+    val lobbyStartPressed: TextureRegion = lobby("startPressed", "lobby_primary_button_pressed")
+
+    val lobbyWifi: TextureRegion = lobby("wifiStrong", "lobby_wifi_strong")
+
+    val lobbyWifiWeak: TextureRegion = lobby("wifiWeak", "lobby_wifi_weak")
 
     private val digits: List<TextureRegion> =
         (0..9).map { assets["${manifest.hudDigitPrefix}$it"] }
@@ -181,12 +235,20 @@ class SpriteCatalog(private val assets: GameAssets) {
     private val chars: Map<Char, TextureRegion> =
         ('A'..'Z').associateWith { assets["${manifest.hudCharPrefix}$it"] }
 
+    /** 글자와 숫자 말고 폰트에 있는 기호. 빗금은 없어서 붙임표로 대신한다. */
+    private val symbols: Map<Char, TextureRegion> = buildMap {
+        assets.find("ui_minus")?.let { put('-', it) }
+        assets.find("ui_plus")?.let { put('+', it) }
+        assets.find("ui_percent")?.let { put('%', it) }
+    }
+
     fun digit(value: Int): TextureRegion = digits[value.coerceIn(0, 9)]
 
     /** 비트맵 폰트 글리프. 지원하지 않는 문자는 null 이라 공백으로 넘어간다. */
     fun glyph(char: Char): TextureRegion? = when (char) {
         in '0'..'9' -> digits[char - '0']
         in 'A'..'Z' -> chars[char]
+        '-', '+', '%' -> symbols[char]
         in 'a'..'z' -> chars[char.uppercaseChar()]
         else -> null
     }

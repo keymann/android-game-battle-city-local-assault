@@ -3,6 +3,7 @@
 
     assets/sprites/{terrain,tanks,effects}   원본 판 + 이름표(JSON)
     assets/hud/components                    HUD 아이콘
+    assets/lobby/components                  로비 아이콘
     assets/font/font_sheet.png               비트맵 폰트 글리프
         -> app/src/main/assets/atlas/game.png / game.xml
 
@@ -40,6 +41,8 @@ BIG_FX = 96
 #: 포탄과 총구 화염.
 SHELL, FLASH, IMPACT = 40, 48, 56
 HUD = 64
+#: 로비는 게임 화면보다 크게 그린다. 손가락으로 누를 것들이라 작으면 안 된다.
+LOBBY = 96
 
 ATLAS_WIDTH = 1024
 
@@ -91,11 +94,22 @@ def build_terrain(entries):
 
 
 def build_tanks(entries):
+    """탱크를 **무채색**으로 넣는다.
+
+    사람마다 색을 고르기 때문이다(로비에서 고른다). 색이 박힌 그림에 다른 색을
+    곱하면 탁해진다. 무채색으로 두고 그릴 때 곱하면 어떤 색이든 깨끗하게 나온다.
+
+    색공간을 Gray 로 바꾼 뒤 반드시 sRGB 로 되돌린다. Gray 로 남겨 두면 나중에
+    색을 곱해도 회색으로 뭉개진다.
+    """
     sheet = A.sheet_of("tanks")
     boxes = A.find_cells(sheet)
     for name, box in zip(A.names_of("tanks"), boxes):
         out = f"{A.SPRITES}/{name}.png"
         A.make_tank(sheet, box, out, TANK_BODY, TANK_CANVAS)
+        A.run(["magick", out, "-colorspace", "Gray", "-colorspace", "sRGB",
+               # 살짝 밝혀 둔다. 색을 곱하면 어두워지기 때문이다.
+               "-level", "0%,92%", "-depth", "8", out])
         entries.append((name, out))
 
 
@@ -127,16 +141,21 @@ def build_effects(entries):
         entries.append((name, out))
 
 
-def build_hud(entries):
-    """HUD 아이콘. 개별 파일은 잘림이 제각각이라 한 번 더 다듬는다."""
-    src = "assets/hud/components"
+#: 쓰지 않는 아이콘. 쿨타임은 SPECIAL 버튼 자체에 표현하므로 따로 둘 것이 없다.
+SKIP_ICONS = {"cooldown_25", "cooldown_75"}
+
+
+def build_icons(entries, src, prefix, size):
+    """아이콘 묶음. 개별 파일은 잘림이 제각각이라 한 번 더 다듬는다."""
     for filename in sorted(os.listdir(src)):
         if not filename.endswith(".png"):
             continue
-        name = f"hud_{filename[:-4]}"
+        if filename[:-4] in SKIP_ICONS:
+            continue
+        name = f"{prefix}{filename[:-4]}"
         out = f"{A.SPRITES}/{name}.png"
         A.run(["magick", os.path.join(src, filename), "-trim", "+repage",
-               "-filter", "Box", "-resize", f"{HUD}x{HUD}", "-depth", "8", out])
+               "-filter", "Box", "-resize", f"{size}x{size}", "-depth", "8", out])
         entries.append((name, out))
 
 
@@ -172,7 +191,8 @@ def main():
     build_terrain(entries)
     build_tanks(entries)
     build_effects(entries)
-    build_hud(entries)
+    build_icons(entries, "assets/hud/components", "hud_", HUD)
+    build_icons(entries, "assets/lobby/components", "lobby_", LOBBY)
     build_font(entries)
 
     entries = [(n, p) for n, p in entries if not n.startswith("_")]

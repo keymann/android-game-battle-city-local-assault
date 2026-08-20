@@ -38,17 +38,12 @@ class HudRenderer(private val catalog: SpriteCatalog) {
             y += unit * ROW_SPACING
         }
 
+        // 남은 적은 총량과 함께 보여 준다. 몇 기 남았는지만으로는 판의 길이를
+        // 가늠할 수 없다. (계획서 §20 ENEMY 32/80)
         y += unit * 0.6f
         drawPanel(batch, originX - unit * 0.3f, y - unit * 0.2f, unit * ENEMY_WIDTH_UNITS, unit * 1.2f)
-        drawText(batch, "ENEMY", originX, y, unit * 0.85f, 1f)
-        drawText(
-            batch,
-            match.enemiesRemaining.toString(),
-            originX + unit * 0.85f * GLYPH_ADVANCE * 6f,
-            y,
-            unit * 0.85f,
-            1f,
-        )
+        val label = "ENEMY ${match.enemiesRemaining}-${match.totalEnemies}"
+        drawText(batch, label, originX, y, unit * 0.8f, 1f)
     }
 
     private fun drawPlayerRow(
@@ -58,13 +53,14 @@ class HudRenderer(private val catalog: SpriteCatalog) {
         y: Float,
         unit: Float,
         match: MatchState,
-        tank: Tank?,
+        @Suppress("UNUSED_PARAMETER") tank: Tank?,
     ) {
         val dim = if (slot.eliminated) ELIMINATED_ALPHA else 1f
         var cursor = x
 
-        // 고른 탱크 초상 + 슬롯 색 라벨. 탱크 색은 종류가 정하므로 라벨 색이
-        // 누가 누구인지 알려 주는 유일한 단서다.
+        // 로비에서 고른 탱크와 색으로 초상을 그리고, 그 옆에 고른 이름을 쓴다.
+        // 화면의 탱크와 같은 그림 같은 색이라 누구 것인지 바로 이어진다.
+        val color = catalog.palette.colorOf(slot.colorIndex)
         batch.draw(
             region = catalog.playerPortrait(slot.tankType),
             x = cursor,
@@ -72,12 +68,14 @@ class HudRenderer(private val catalog: SpriteCatalog) {
             width = unit,
             height = unit,
             layer = Constants.Layer.HUD,
+            red = red(color),
+            green = green(color),
+            blue = blue(color),
             alpha = dim,
         )
         cursor += unit * 1.1f
-        val label = catalog.slotMarker.colorOf(slot.index)
-        drawText(batch, "P${slot.index + 1}", cursor, y, unit, dim, label)
-        cursor += unit * GLYPH_ADVANCE * 2f + unit * 0.3f
+        drawText(batch, slot.name, cursor, y, unit, dim, color)
+        cursor += unit * GLYPH_ADVANCE * NAME_COLUMNS + unit * 0.3f
 
         if (slot.eliminated) {
             // 탈락하면 하트 대신 해골 하나로 정리한다.
@@ -110,11 +108,6 @@ class HudRenderer(private val catalog: SpriteCatalog) {
         }
 
         drawText(batch, slot.kills.toString(), cursor, y, unit, dim)
-
-        // 특수기 쿨타임. 가득 차면 쓸 수 있다. (계획서 §6, §18.2)
-        if (tank != null && tank.special != com.kophas.battlecity.gameplay.BalanceConfig.Special.NONE) {
-            drawSpecialCooldown(batch, tank, cursor + unit * 1.4f, y, unit)
-        }
 
         // 리스폰 대기 중이면 표시를 붙인다.
         if (!slot.alive && !slot.eliminated) {
@@ -156,52 +149,13 @@ class HudRenderer(private val catalog: SpriteCatalog) {
         )
     }
 
-    /**
-     * 특수기 쿨타임.
-     *
-     * 같은 고리를 두 번 그린다. 한 번은 어둡게 전체를, 한 번은 밝게 **아래에서
-     * 차오른 만큼만** 잘라서. 원형 마스크를 쓰려면 셰이더가 필요한데 스프라이트
-     * 배치에는 그런 것이 없다. 이 방법이면 셰이더 없이도 연속으로 차오른다.
-     */
-    private fun drawSpecialCooldown(
-        batch: SpriteBatch,
-        tank: Tank,
-        x: Float,
-        y: Float,
-        unit: Float,
-    ) {
-        val ratio = tank.specialReadyRatio
-        val icon = catalog.cooldownRing
+    /** 비트맵 폰트로 한 줄 찍는다. 지원하지 않는 문자(공백, 빗금)는 자리만 비운다. */
+    private fun red(color: Int): Float = ((color ushr 16) and 0xFF) / 255f
 
-        batch.draw(
-            region = icon,
-            x = x,
-            y = y,
-            width = unit,
-            height = unit,
-            layer = Constants.Layer.HUD,
-            red = COOLDOWN_SHADE,
-            green = COOLDOWN_SHADE,
-            blue = COOLDOWN_SHADE,
-            alpha = 0.7f,
-        )
-        if (ratio <= 0f) return
+    private fun green(color: Int): Float = ((color ushr 8) and 0xFF) / 255f
 
-        val filled = icon.bottomBand(ratio)
-        val height = unit * ratio
-        batch.draw(
-            region = filled,
-            x = x,
-            y = y + unit - height,
-            width = unit,
-            height = height,
-            layer = Constants.Layer.HUD,
-            // 발동 중에는 더 밝게 두어 지금 효과가 걸려 있음을 알린다.
-            alpha = if (ratio >= 1f || tank.specialActive) 1f else 0.85f,
-        )
-    }
+    private fun blue(color: Int): Float = (color and 0xFF) / 255f
 
-    /** 비트맵 폰트로 한 줄 찍는다. 지원하지 않는 문자는 공백으로 넘어간다. */
     private fun drawText(
         batch: SpriteBatch,
         text: String,
@@ -241,11 +195,11 @@ class HudRenderer(private val catalog: SpriteCatalog) {
 
         /** 상태창 바탕 폭. HUD 한 칸 기준. */
         const val ROW_WIDTH_UNITS = 8.6f
-        const val ENEMY_WIDTH_UNITS = 6.4f
+        const val ENEMY_WIDTH_UNITS = 8.2f
         const val PANEL_ALPHA = 0.88f
 
-        /** 쿨타임 고리의 비어 있는 부분 밝기. */
-        const val COOLDOWN_SHADE = 0.35f
+        /** 이름 칸. 세 글자까지라 자리를 고정해 둔다. */
+        const val NAME_COLUMNS = 3f
 
         /** 글리프 간격. 폰트 도트가 16px 칸 안에서 여백을 가지고 있어 1보다 작다. */
         const val GLYPH_ADVANCE = 0.7f
