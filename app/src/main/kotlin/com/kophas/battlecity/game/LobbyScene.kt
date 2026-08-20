@@ -47,8 +47,8 @@ class LobbyScene(private val catalog: SpriteCatalog) {
         data object CycleColor : Action
         data class SetName(val name: String) : Action
 
-        /** 방 설정을 연다. 방장이 아니면 소리 크기만 바꿀 수 있다. (계획서 §44.2) */
-        data object OpenSettings : Action
+        /** 게임 설정(방 규칙)을 연다. 방장만 누를 수 있다. (계획서 §44.2) */
+        data object OpenGameSettings : Action
 
         /** 방을 나가 메인 메뉴로 돌아간다. (계획서 §27) */
         data object Back : Action
@@ -84,7 +84,7 @@ class LobbyScene(private val catalog: SpriteCatalog) {
 
         if (editingName) return tapKeyboard(x, y)
 
-        if (hitsSettings(x, y)) return Action.OpenSettings
+        if (settingsAllowed(view.host) && hitsSettings(x, y)) return Action.OpenGameSettings
         if (hitsBack(x, y)) {
             backPressed = true
             return Action.Back
@@ -131,7 +131,7 @@ class LobbyScene(private val catalog: SpriteCatalog) {
         drawSlots(batch, unit)
         drawChoices(batch, unit)
         drawStart(batch, unit)
-        drawSettingsButton(batch)
+        if (settingsAllowed(view.host)) drawSettingsButton(batch)
         drawBackButton(batch, unit)
         drawStatus(batch, unit)
     }
@@ -278,7 +278,13 @@ class LobbyScene(private val catalog: SpriteCatalog) {
         )
     }
 
-    /** 방 설정 단추. 로비 오른쪽 위에 둔다. 시작 단추와 멀어야 잘못 누르지 않는다. */
+    /**
+     * 게임 설정 단추. 로비 오른쪽 위에 둔다. 시작 단추와 멀어야 잘못 누르지 않는다.
+     *
+     * **방장에게만 그린다.** 방 규칙은 방장 것이라 참가자가 눌러도 고칠 것이 없다.
+     * 예전에는 참가자에게도 열어 읽기 전용으로 보여 줬는데, 고칠 수 없는 값을
+     * 보여 주면 왜 안 되는지부터 설명해야 한다. 소리 크기는 메인 메뉴에 있다.
+     */
     private fun drawSettingsButton(batch: SpriteBatch) {
         val rect = settingsRect()
         batch.draw(
@@ -609,6 +615,9 @@ class LobbyScene(private val catalog: SpriteCatalog) {
          * 화면에서 가장 크고 가운데 있는 것을 눌렀는데 아무 일도 없으면 고장으로
          * 읽히기 때문이다. 참가자가 준비할 곳은 여기밖에 없다.
          */
+        /** 게임 설정 단추를 보여 주는가. 방 규칙은 방장 것이다. (계획서 §44.2) */
+        fun settingsAllowed(isHost: Boolean): Boolean = isHost
+
         fun bottomAction(isHost: Boolean, canStart: Boolean): Action = when {
             !isHost -> Action.ToggleReady
             canStart -> Action.Start

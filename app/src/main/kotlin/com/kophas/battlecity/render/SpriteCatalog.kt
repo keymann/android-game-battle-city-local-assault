@@ -262,7 +262,8 @@ class SpriteCatalog(private val assets: GameAssets) {
         val primary: TextureRegion,
         val secondary: TextureRegion,
         val secondaryPressed: TextureRegion,
-        val settings: TextureRegion,
+        /** 사운드 설정을 여는 단추. 설정판의 스피커 그림을 그대로 쓴다. */
+        val sound: TextureRegion,
         val profile: TextureRegion,
         val playerIcon: TextureRegion,
         val netStrong: TextureRegion,
@@ -278,7 +279,7 @@ class SpriteCatalog(private val assets: GameAssets) {
         primary = screen("menu", "primary", "menu_primary_button_normal"),
         secondary = screen("menu", "secondary", "menu_secondary_button_normal"),
         secondaryPressed = screen("menu", "secondaryPressed", "menu_secondary_button_pressed"),
-        settings = screen("menu", "settings", "menu_settings_button_normal"),
+        sound = screen("menu", "sound", "set_speaker_on"),
         profile = screen("menu", "profile", "menu_profile_badge"),
         playerIcon = screen("menu", "playerIcon", "menu_player_icon"),
         netStrong = screen("menu", "netStrong", "menu_network_strong"),
