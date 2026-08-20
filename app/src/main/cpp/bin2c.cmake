@@ -1,0 +1,23 @@
+# SPIR-V 바이너리를 uint32_t 배열 헤더로 변환한다.
+# 사용: cmake -DIN=<file.spv> -DOUT=<file.h> -DSYM=<symbol> -P bin2c.cmake
+file(READ "${IN}" HEX_DATA HEX)
+string(LENGTH "${HEX_DATA}" HEX_LEN)
+math(EXPR WORD_COUNT "${HEX_LEN} / 8")
+set(BODY "")
+set(I 0)
+while(I LESS WORD_COUNT)
+    math(EXPR OFFSET "${I} * 8")
+    string(SUBSTRING "${HEX_DATA}" ${OFFSET} 8 W)
+    # SPIR-V 는 리틀엔디안으로 저장되므로 바이트 순서를 뒤집는다.
+    string(SUBSTRING "${W}" 0 2 B0)
+    string(SUBSTRING "${W}" 2 2 B1)
+    string(SUBSTRING "${W}" 4 2 B2)
+    string(SUBSTRING "${W}" 6 2 B3)
+    string(APPEND BODY "0x${B3}${B2}${B1}${B0}u,")
+    math(EXPR I "${I} + 1")
+    math(EXPR NL "${I} % 8")
+    if(NL EQUAL 0)
+        string(APPEND BODY "\n    ")
+    endif()
+endwhile()
+file(WRITE "${OUT}" "// 자동 생성 파일 - 수정하지 말 것 (bin2c.cmake)\n#pragma once\n#include <cstdint>\n\nstatic const uint32_t ${SYM}[] = {\n    ${BODY}\n};\nstatic const uint32_t ${SYM}Size = sizeof(${SYM});\n")

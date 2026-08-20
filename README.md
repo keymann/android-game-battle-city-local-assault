@@ -203,18 +203,78 @@ BOOT → MAIN_MENU → CREATE / JOIN → LOBBY → TANK_SELECT → COUNTDOWN →
 
 ---
 
+## 빌드 / 실행
+
+```bash
+./gradlew :app:assembleDebug        # APK 빌드 (Vulkan + GLES 네이티브 포함)
+./gradlew :app:testDebugUnitTest    # 단위 테스트
+adb install -r app/build/outputs/apk/debug/app-debug.apk
+```
+
+| 항목 | 값 |
+|---|---|
+| minSdk / targetSdk / compileSdk | 26 / 35 / 35 |
+| NDK / CMake | 27.0.12077973 / 3.22.1 |
+| ABI | arm64-v8a, armeabi-v7a, x86_64 |
+| 화면 방향 | **가로(landscape) 고정** — 세로는 허용하지 않는다 |
+
+OpenGL ES 폴백 경로를 강제로 확인하려면:
+
+```bash
+adb shell am start -n com.kophas.battlecity/.MainActivity --ez preferVulkan false
+```
+
+---
+
+## 프로젝트 구조
+
+```text
+app/src/main/
+├── cpp/                      네이티브 렌더러
+│   ├── renderer.h            IRenderer 추상 인터페이스
+│   ├── jni_bridge.cpp        Kotlin <-> 네이티브 경계 (direct ByteBuffer)
+│   ├── vk/vk_renderer.cpp    Vulkan 2D 스프라이트 렌더러
+│   ├── gl/gl_renderer.cpp    OpenGL ES 3.0 폴백
+│   └── shaders/              GLSL -> SPIR-V -> C 헤더 (빌드 시 glslc)
+│
+├── kotlin/com/kophas/battlecity/
+│   ├── core/                 Constants, FixedStepClock, GameLoop
+│   ├── render/               Viewport, SpriteBatch, TextureAtlas, GridAtlas,
+│   │                         AssetManifest, GameAssets, NativeRenderer
+│   ├── game/                 GameHost, Phase1Scene
+│   ├── util/                 Json (의존성 없는 파서)
+│   ├── MainActivity.kt
+│   └── GameSurfaceView.kt
+│
+└── assets/
+    ├── atlas/                main.png + main.xml, tiny.png
+    └── manifest/assets.json  게임 의미 <-> 리소스 매핑
+```
+
+---
+
+## 리소스
+
+Kenney CC0 에셋 2종을 사용합니다. 선별 근거와 전체 매핑표는
+[docs/ASSET_SELECTION.md](./docs/ASSET_SELECTION.md),
+스테이지 랜덤 생성 설계는 [docs/STAGE_GENERATION.md](./docs/STAGE_GENERATION.md) 를 참고하세요.
+
+크레딧은 [CREDITS.md](./CREDITS.md) 에 있습니다.
+
+---
+
 ## 개발 단계
 
-| Phase | 내용 |
-|---|---|
-| Phase 1 | 프로젝트 기반 — Android/Kotlin, Vulkan 초기화, 게임 루프, 고정 timestep, Sprite 렌더링 |
-| Phase 2 | 원작 핵심 게임 — Tile Map, 타일 종류, 본진, 탱크 이동, 포탄, 충돌, 폭발 |
-| Phase 3 | 플레이어 시스템 — 3종 탱크, 능력치, HP, Life, 사망, 점수 |
-| Phase 4 | 특수기 — 관통탄, 방어막, 대시, 쿨타임, UI |
-| Phase 5 | COM — Spawn, 타입별 AI, State Machine, 20 × Player 수 생성 |
-| Phase 6 | 로컬 멀티플레이 — Host, Join, Lobby, 상태 동기화, Disconnect 처리 |
-| Phase 7 | 모바일 UI — Virtual Joystick, Fire/Special, HUD, Player Status |
-| Phase 8 | 최종화 — 사운드, 이펙트, 진동, 최적화, 저사양/Tablet/Fold/해상도 테스트 |
+| Phase | 내용 | 상태 |
+|---|---|---|
+| Phase 1 | 프로젝트 기반 — Android/Kotlin, Vulkan 초기화, 게임 루프, 고정 timestep, Sprite 렌더링 | ✅ 완료 |
+| Phase 2 | 원작 핵심 게임 — Tile Map, 타일 종류, 본진, 탱크 이동, 포탄, 충돌, 폭발 | 예정 |
+| Phase 3 | 플레이어 시스템 — 3종 탱크, 능력치, HP, Life, 사망, 점수 | 예정 |
+| Phase 4 | 특수기 — 관통탄, 방어막, 대시, 쿨타임, UI | 예정 |
+| Phase 5 | COM — Spawn, 타입별 AI, State Machine, 20 × Player 수 생성 | 예정 |
+| Phase 6 | 로컬 멀티플레이 — Host, Join, Lobby, 상태 동기화, Disconnect 처리 | 예정 |
+| Phase 7 | 모바일 UI — Virtual Joystick, Fire/Special, HUD, Player Status | 예정 |
+| Phase 8 | 최종화 — 사운드, 이펙트, 진동, 최적화, 저사양/Tablet/Fold/해상도 테스트 | 예정 |
 
 ### MVP 순서
 
@@ -263,3 +323,12 @@ Tank Explosion / Player Death / Enemy Spawn / Base Warning / Base Destroy / Vict
 ## 라이선스
 
 미정
+
+---
+
+## Phase 1 실행 화면
+
+Vulkan 백엔드로 두 아틀라스가 모두 렌더되고, 레이어 정렬(지형 → 물 → 탱크 → HUD)과
+논리 해상도 832×832 를 가로 화면에 레터박스로 맞춘 결과입니다.
+
+![Phase 1](docs/images/phase1_vulkan.png)
