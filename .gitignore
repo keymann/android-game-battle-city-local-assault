@@ -7,3 +7,6 @@ build/
 .cxx/
 .kotlin/
 __pycache__/
+
+# 손으로 빌드해 둔 설치용 APK. 결과물이라 저장소에 넣지 않는다.
+release/
