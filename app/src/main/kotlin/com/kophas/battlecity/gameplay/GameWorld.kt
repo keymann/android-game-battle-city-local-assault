@@ -44,6 +44,13 @@ class GameWorld(
         fun onTankDamaged(tank: Tank, amount: Int, attackerId: Int) = Unit
 
         fun onTankDestroyed(tank: Tank, killerId: Int) = Unit
+
+        /** 특수기를 발동했다. (계획서 §6) */
+        fun onSpecialActivated(tank: Tank, special: BalanceConfig.Special) = Unit
+
+        /** 지속형 특수기가 끝났다. */
+        fun onSpecialExpired(tank: Tank, special: BalanceConfig.Special) = Unit
+
         fun onBaseDestroyed() = Unit
     }
 
@@ -91,6 +98,11 @@ class GameWorld(
         tank.maxHp = balance.rules.maxHp
         tank.moveSpeed = balance.units.moveSpeedOf(stats.moveSpeedRank)
         tank.fireCooldown = balance.units.fireCooldownOf(stats.fireRateRank)
+        tank.special = stats.special
+        tank.specialCooldown = stats.specialCooldownSeconds
+        tank.specialDuration = stats.specialDurationSeconds
+        tank.shieldDamageReduction = stats.damageReduction
+        tank.dashSpeedMultiplier = stats.speedMultiplier
         tank.spawnAt(px, py, direction)
         tank.spawnGuardRemaining = balance.rules.spawnGuardSeconds
 
@@ -117,6 +129,7 @@ class GameWorld(
             if (!tank.alive) continue
             if (tank.spawnGuardRemaining > 0f) tank.spawnGuardRemaining -= deltaSeconds
             if (tank.fireCooldownRemaining > 0f) tank.fireCooldownRemaining -= deltaSeconds
+            updateSpecial(tank, deltaSeconds)
             moveTank(tank, deltaSeconds)
         }
 
@@ -166,8 +179,8 @@ class GameWorld(
         var velocityX: Float
         var velocityY: Float
         if (tank.moving) {
-            velocityX = tank.direction.dx * tank.moveSpeed
-            velocityY = tank.direction.dy * tank.moveSpeed
+            velocityX = tank.direction.dx * tank.effectiveMoveSpeed
+            velocityY = tank.direction.dy * tank.effectiveMoveSpeed
             tank.slideX = velocityX
             tank.slideY = velocityY
         } else if (slip > 0f) {
@@ -246,6 +259,63 @@ class GameWorld(
         round(value / Constants.CELL_PX) * Constants.CELL_PX
 
     // -----------------------------------------------------------------------
+    // 특수기 (계획서 §6)
+    // -----------------------------------------------------------------------
+
+    /**
+     * 특수기를 쓴다.
+     *
+     * 타입별로 하는 일이 다르지만 쿨타임 규칙은 하나다.
+     *   - 공격형 **관통탄** : 강철을 부수고 탱크를 관통하는 포탄 한 발 (즉발)
+     *   - 방어형 **방어막** : 지속 시간 동안 받는 피해 감소 (지속)
+     *   - 스피드형 **대시** : 지속 시간 동안 이동속도 배수 (지속)
+     *
+     * 즉발형은 발사 쿨타임과 무관하게 나간다. 특수기 쿨타임이 따로 있기 때문이다.
+     *
+     * @return 실제로 발동했으면 true
+     */
+    fun activateSpecial(tank: Tank): Boolean {
+        if (!tank.canUseSpecial) return false
+
+        when (tank.special) {
+            BalanceConfig.Special.PIERCING -> {
+                val projectile = launchProjectile(tank, tank.attackPower, piercing = true)
+                    ?: return false
+                // 관통탄은 발사 쿨타임을 소모하지 않는다. 특수기 쿨타임이 대신 잡아 준다.
+                projectile.piercing = true
+            }
+
+            BalanceConfig.Special.SHIELD -> {
+                tank.specialActiveRemaining = tank.specialDuration
+                tank.damageReduction = tank.shieldDamageReduction
+            }
+
+            BalanceConfig.Special.DASH -> {
+                tank.specialActiveRemaining = tank.specialDuration
+            }
+
+            BalanceConfig.Special.NONE -> return false
+        }
+
+        tank.specialCooldownRemaining = tank.specialCooldown
+        listener?.onSpecialActivated(tank, tank.special)
+        return true
+    }
+
+    private fun updateSpecial(tank: Tank, deltaSeconds: Float) {
+        if (tank.specialCooldownRemaining > 0f) tank.specialCooldownRemaining -= deltaSeconds
+        if (tank.specialActiveRemaining <= 0f) return
+
+        tank.specialActiveRemaining -= deltaSeconds
+        if (tank.specialActiveRemaining > 0f) return
+
+        // 지속 효과를 되돌린다. 대시는 effectiveMoveSpeed 가 알아서 원래대로 돌아간다.
+        tank.specialActiveRemaining = 0f
+        if (tank.special == BalanceConfig.Special.SHIELD) tank.damageReduction = 0f
+        listener?.onSpecialExpired(tank, tank.special)
+    }
+
+    // -----------------------------------------------------------------------
     // 발사와 포탄
     // -----------------------------------------------------------------------
 
@@ -254,6 +324,13 @@ class GameWorld(
      */
     fun fire(tank: Tank, power: Int = tank.attackPower, piercing: Boolean = false): Projectile? {
         if (!tank.canFire) return null
+        val projectile = launchProjectile(tank, power, piercing) ?: return null
+        tank.fireCooldownRemaining = tank.fireCooldown
+        return projectile
+    }
+
+    /** 쿨타임을 건드리지 않고 포탄만 내보낸다. 일반 발사와 특수기가 함께 쓴다. */
+    private fun launchProjectile(tank: Tank, power: Int, piercing: Boolean): Projectile? {
         val projectile = projectiles.obtain() ?: return null
 
         // 포신 끝에서 나가도록 탱크 중심에서 반 블록 밀어낸다.
@@ -269,7 +346,6 @@ class GameWorld(
             power = power,
             piercing = piercing,
         )
-        tank.fireCooldownRemaining = tank.fireCooldown
         return projectile
     }
 

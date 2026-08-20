@@ -1,7 +1,9 @@
 package com.kophas.battlecity.render
 
 import com.kophas.battlecity.core.Constants
+import com.kophas.battlecity.gameplay.GameWorld
 import com.kophas.battlecity.gameplay.MatchState
+import com.kophas.battlecity.gameplay.Tank
 
 /**
  * 플레이어 상태 HUD. (계획서 §20 화면 구성)
@@ -21,7 +23,7 @@ import com.kophas.battlecity.gameplay.MatchState
  */
 class HudRenderer(private val catalog: SpriteCatalog) {
 
-    fun render(batch: SpriteBatch, viewport: Viewport, match: MatchState) {
+    fun render(batch: SpriteBatch, viewport: Viewport, match: MatchState, world: GameWorld) {
         val unit = viewport.worldToScreenLength(Constants.BLOCK_PX) * UNIT_RATIO
         if (unit <= 0f) return
 
@@ -30,7 +32,8 @@ class HudRenderer(private val catalog: SpriteCatalog) {
         var y = viewport.offsetY + unit * 0.5f
 
         for (slot in match.players) {
-            drawPlayerRow(batch, slot, originX, y, unit, match)
+            val tank = world.tanks.firstOrNull { it.id == slot.tankId && it.alive }
+            drawPlayerRow(batch, slot, originX, y, unit, match, tank)
             y += unit * ROW_SPACING
         }
 
@@ -53,6 +56,7 @@ class HudRenderer(private val catalog: SpriteCatalog) {
         y: Float,
         unit: Float,
         match: MatchState,
+        tank: Tank?,
     ) {
         val dim = if (slot.eliminated) ELIMINATED_ALPHA else 1f
         var cursor = x
@@ -106,6 +110,11 @@ class HudRenderer(private val catalog: SpriteCatalog) {
 
         drawText(batch, slot.kills.toString(), cursor, y, unit, dim)
 
+        // 특수기 쿨타임 게이지. 가득 차면 쓸 수 있다. (계획서 §6, §18.2)
+        if (tank != null && tank.special != com.kophas.battlecity.gameplay.BalanceConfig.Special.NONE) {
+            drawSpecialGauge(batch, tank, x, y + unit * 1.02f, unit * GAUGE_WIDTH_UNITS, unit)
+        }
+
         // 리스폰 대기 중이면 표시를 붙인다.
         if (!slot.alive && !slot.eliminated) {
             batch.draw(
@@ -118,6 +127,47 @@ class HudRenderer(private val catalog: SpriteCatalog) {
                 alpha = 0.85f,
             )
         }
+    }
+
+    /**
+     * 특수기 쿨타임 게이지.
+     *
+     * 가운데 조각 하나를 가로로 늘여 채운다. 캡 조각을 쓰면 짧을 때 찌그러진다.
+     * 준비가 끝나면 밝게 빛나 바로 알아볼 수 있다.
+     */
+    private fun drawSpecialGauge(
+        batch: SpriteBatch,
+        tank: Tank,
+        x: Float,
+        y: Float,
+        width: Float,
+        unit: Float,
+    ) {
+        val height = unit * catalog.gaugeHeightRatio
+        batch.draw(
+            region = catalog.gaugeTrack,
+            x = x,
+            y = y,
+            width = width,
+            height = height,
+            layer = Constants.Layer.HUD,
+            alpha = 0.55f,
+        )
+
+        val ratio = tank.specialReadyRatio
+        if (ratio <= 0f) return
+
+        val ready = ratio >= 1f
+        batch.draw(
+            region = catalog.gaugeFill,
+            x = x,
+            y = y,
+            width = width * ratio,
+            height = height,
+            layer = Constants.Layer.HUD,
+            // 발동 중에는 더 밝게 두어 지금 효과가 걸려 있음을 알린다.
+            alpha = if (ready || tank.specialActive) 1f else 0.75f,
+        )
     }
 
     /** 비트맵 폰트로 한 줄 찍는다. 지원하지 않는 문자는 공백으로 넘어간다. */
@@ -152,7 +202,10 @@ class HudRenderer(private val catalog: SpriteCatalog) {
 
         /** 이 폭보다 여백이 좁으면 맵 위에 겹쳐 그린다. */
         const val MIN_PANEL_UNITS = 8f
-        const val ROW_SPACING = 1.25f
+        const val ROW_SPACING = 1.55f
+
+        /** 특수기 게이지 폭. HUD 한 칸 기준. */
+        const val GAUGE_WIDTH_UNITS = 5.2f
 
         /** 글리프 간격. 폰트 도트가 16px 칸 안에서 여백을 가지고 있어 1보다 작다. */
         const val GLYPH_ADVANCE = 0.7f

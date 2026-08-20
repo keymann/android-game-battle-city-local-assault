@@ -205,7 +205,7 @@ class BattleScene(
 
     fun render(batch: SpriteBatch, viewport: Viewport) {
         worldRenderer.render(world, batch, viewport, elapsedSeconds)
-        hudRenderer.render(batch, viewport, match)
+        hudRenderer.render(batch, viewport, match, world)
     }
 
     // -----------------------------------------------------------------------
@@ -268,11 +268,18 @@ class BattleScene(
             if (tank.canFire && rng.chance(FIRE_CHANCE_PER_TICK)) {
                 world.fire(tank)
             }
+
+            // Phase 4 특수기가 실제로 도는지 눈으로 확인하기 위한 임시 트리거.
+            // 전술적 판단은 Phase 5 AI 가 맡는다.
+            if (tank.canUseSpecial && rng.chance(SPECIAL_CHANCE_PER_TICK)) {
+                world.activateSpecial(tank)
+            }
         }
 
         private companion object {
             const val STUCK_EPSILON = 0.05f
             const val FIRE_CHANCE_PER_TICK = 0.02f
+            const val SPECIAL_CHANCE_PER_TICK = 0.01f
         }
     }
 
