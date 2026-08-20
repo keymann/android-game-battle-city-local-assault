@@ -42,6 +42,18 @@ class NetDriver(
     /** 사람이 잡은 자리. 여기에는 AI 를 붙이지 않는다. 조종간이 둘이 되기 때문이다. */
     val humanSlots = HashSet<Int>()
 
+    /**
+     * 이 기기가 고른 것. 로비 현황이 아직 안 왔어도 누른 것이 사라지지 않게 들고 있는다.
+     *
+     * 예전에는 현황이 없으면 아무 일도 하지 않고 돌아섰다. 그러면 화면에서 눌러도
+     * 반응이 없고, 왜 안 되는지 알 길이 없다. 아는 값이 있으면 그것을 쓰고,
+     * 없으면 들고 있던 것에서 이어 간다.
+     */
+    private var myTankType = 0
+    private var myColorIndex = 0
+    private var myName = playerName
+    private var myReady = false
+
     /** 카운트다운에 남은 틱. 0 이면 세고 있지 않다. 소리를 낼 때 쓴다. */
     val countdownTicks: Int
         get() = (host?.lobby?.countdownTicks ?: lastLobby?.countdownTicks) ?: 0
@@ -66,15 +78,20 @@ class NetDriver(
 
     /** 자기 자리의 준비 상태를 뒤집는다. */
     fun toggleReady() {
-        val slot = lobbySlot() ?: return
-        publish(!slot.ready, slot.tankType, slot.colorIndex, slot.name)
+        val slot = lobbySlot()
+        publish(
+            ready = !(slot?.ready ?: myReady),
+            tankType = slot?.tankType ?: myTankType,
+            colorIndex = slot?.colorIndex ?: myColorIndex,
+            name = slot?.name ?: myName,
+        )
     }
 
     /** 탱크 종류를 넘긴다. 바꾸면 준비는 풀린다. 고르는 중에 판이 시작되면 곤란하다. */
     fun cycleTankType() {
-        val slot = lobbySlot() ?: return
-        val next = (slot.tankType + 1) % Tank.Type.entries.size
-        publish(false, next, slot.colorIndex, slot.name)
+        val slot = lobbySlot()
+        val next = ((slot?.tankType ?: myTankType) + 1) % Tank.Type.entries.size
+        publish(false, next, slot?.colorIndex ?: myColorIndex, slot?.name ?: myName)
     }
 
     /**
@@ -84,31 +101,40 @@ class NetDriver(
      * 전에 여기서 먼저 비어 있는 색을 찾는다.
      */
     fun cycleColor() {
-        val slot = lobbySlot() ?: return
+        val slot = lobbySlot()
         val taken = (host?.lobby?.snapshot() ?: lastLobby)?.slots.orEmpty()
-            .filter { it.connected && it.index != slot.index }
+            .filter { it.connected && it.index != localSlot }
             .map { it.colorIndex }
             .toSet()
 
-        var next = slot.colorIndex
+        var next = slot?.colorIndex ?: myColorIndex
         repeat(paletteSize) {
             next = (next + 1) % paletteSize
             if (next !in taken) {
-                publish(false, slot.tankType, next, slot.name)
+                publish(false, slot?.tankType ?: myTankType, next, slot?.name ?: myName)
                 return
             }
         }
     }
 
     fun setName(name: String) {
-        val slot = lobbySlot() ?: return
-        publish(slot.ready, slot.tankType, slot.colorIndex, name)
+        val slot = lobbySlot()
+        publish(
+            ready = slot?.ready ?: myReady,
+            tankType = slot?.tankType ?: myTankType,
+            colorIndex = slot?.colorIndex ?: myColorIndex,
+            name = name,
+        )
     }
 
     private fun lobbySlot(): Messages.LobbySlot? =
         (host?.lobby?.snapshot() ?: lastLobby)?.slots?.getOrNull(localSlot)
 
     private fun publish(ready: Boolean, tankType: Int, colorIndex: Int, name: String) {
+        myReady = ready
+        myTankType = tankType
+        myColorIndex = colorIndex
+        if (name.isNotBlank()) myName = name
         when (role) {
             NetRole.HOST ->
                 host?.lobby?.setReady(localSlot, ready, tankType, colorIndex, name, clock())

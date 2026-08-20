@@ -79,7 +79,7 @@ class LobbyScene(private val catalog: SpriteCatalog) {
         }
         if (hitsStart(x, y)) {
             startPressed = true
-            return if (canStart()) Action.Start else Action.None
+            return bottomAction(view.host, canStart())
         }
         if (hitsRow(x, y, NAME_COLUMN)) {
             editingName = true
@@ -284,10 +284,12 @@ class LobbyScene(private val catalog: SpriteCatalog) {
         val buttonHeight = unit * 2.4f
         val x = (width - buttonWidth) * 0.5f
         val y = height * START_TOP
-        val enabled = canStart()
+        val enabled = canStart() || !view.host
 
+        // 눌렸다는 것은 **흐리기로** 말한다. 눌린 그림으로 갈아 끼우면 그림마다
+        // 다듬긴 여백이 달라 같은 자리에 그려도 판이 한 번 튀었다 돌아온다.
         batch.draw(
-            region = if (startPressed) catalog.lobbyStartPressed else catalog.lobbyStart,
+            region = catalog.lobbyStart,
             x = x,
             y = y,
             width = buttonWidth,
@@ -296,15 +298,20 @@ class LobbyScene(private val catalog: SpriteCatalog) {
             red = if (enabled) 1f else DIM,
             green = if (enabled) 1f else DIM,
             blue = if (enabled) 1f else DIM,
-            alpha = if (enabled) 1f else 0.7f,
+            alpha = when {
+                startPressed -> PRESSED_ALPHA
+                enabled -> 1f
+                else -> 0.7f
+            },
         )
 
-        val label = when {
-            view.countdownTicks > 0 -> countdownLabel()
-            !view.host -> if (localSlotData()?.ready == true) "READY" else "TAP TO READY"
-            enabled -> "START GAME"
-            else -> "WAIT PLAYERS"
-        }
+        val label = bottomLabel(
+            countdown = view.countdownTicks,
+            isHost = view.host,
+            ready = localSlotData()?.ready == true,
+            canStart = enabled,
+            countdownText = { countdownLabel() },
+        )
         drawInPlate(
             batch,
             label,
@@ -419,11 +426,17 @@ class LobbyScene(private val catalog: SpriteCatalog) {
         Tank.Type.SPEED -> "SPEED"
     }
 
+    /**
+     * 방장이 지금 시작할 수 있는가. (계획서 §28)
+     *
+     * 방장 자신의 준비 상태는 보지 않는다. 시작을 누르는 사람이 자기 준비를
+     * 기다릴 일은 없다. 남은 사람이 모두 준비했으면 그것으로 충분하다.
+     */
     private fun canStart(): Boolean =
         view.host &&
             view.countdownTicks == 0 &&
             view.slots.count { it.connected } >= Protocol.MIN_PLAYERS &&
-            view.slots.all { !it.connected || it.ready }
+            view.slots.all { !it.connected || it.host || it.ready }
 
     private fun columnCenter(column: Int): Float = width * (0.3f + column * 0.2f)
 
@@ -576,43 +589,72 @@ class LobbyScene(private val catalog: SpriteCatalog) {
 
     private fun blue(color: Int): Float = (color and 0xFF) / 255f
 
-    private companion object {
-        /** 화면 높이 기준 한 칸. 기기 크기가 달라도 비율이 유지된다. */
-        const val UNIT_RATIO = 0.07f
+    companion object {
+        /**
+         * 로비 아래 큰 단추가 하는 일.
+         *
+         * 방장에게는 시작 단추이고 참가자에게는 준비 단추다. 하나로 둔 이유는,
+         * 화면에서 가장 크고 가운데 있는 것을 눌렀는데 아무 일도 없으면 고장으로
+         * 읽히기 때문이다. 참가자가 준비할 곳은 여기밖에 없다.
+         */
+        fun bottomAction(isHost: Boolean, canStart: Boolean): Action = when {
+            !isHost -> Action.ToggleReady
+            canStart -> Action.Start
+            else -> Action.None
+        }
 
-        const val TITLE_WIDTH = 0.4f
-        const val CARD_WIDTH = 0.13f
-        const val SLOT_TOP = 0.26f
-        const val CHOICE_TOP = 0.62f
-        const val START_TOP = 0.79f
-        const val START_WIDTH = 0.28f
+        /** 그 단추에 쓰는 말. 지금 누르면 무엇이 되는지가 그대로 적혀야 한다. */
+        fun bottomLabel(
+            countdown: Int,
+            isHost: Boolean,
+            ready: Boolean,
+            canStart: Boolean,
+            countdownText: () -> String = { "" },
+        ): String = when {
+            countdown > 0 -> countdownText()
+            !isHost -> if (ready) "CANCEL READY" else "READY"
+            canStart -> "START GAME"
+            else -> "WAIT PLAYERS"
+        }
+
+        private const val PRESSED_ALPHA = 0.65f
+
+        /** 화면 높이 기준 한 칸. 기기 크기가 달라도 비율이 유지된다. */
+        private const val UNIT_RATIO = 0.07f
+
+        private const val TITLE_WIDTH = 0.4f
+        private const val CARD_WIDTH = 0.13f
+        private const val SLOT_TOP = 0.26f
+        private const val CHOICE_TOP = 0.62f
+        private const val START_TOP = 0.79f
+        private const val START_WIDTH = 0.28f
 
         // 판 그림에서 잰 속판 자리. 그림을 바꾸면 이 값도 다시 재야 한다.
         //   제목판  속판이 그림 높이의 0.46 ~ 0.76 -> 가운데 0.61
         //   버튼    주황 면이 0.17 ~ 0.59        -> 가운데 0.38
-        const val TITLE_TEXT_CENTER = 0.61f
-        const val TITLE_TEXT_WIDTH = 0.72f
-        const val BACK_TOP = 0.855f
-        const val BACK_WIDTH = 0.17f
-        const val BACK_TEXT_CENTER = 0.46f
+        private const val TITLE_TEXT_CENTER = 0.61f
+        private const val TITLE_TEXT_WIDTH = 0.72f
+        private const val BACK_TOP = 0.855f
+        private const val BACK_WIDTH = 0.17f
+        private const val BACK_TEXT_CENTER = 0.46f
 
-        const val START_TEXT_CENTER = 0.38f
-        const val START_TEXT_WIDTH = 0.68f
+        private const val START_TEXT_CENTER = 0.38f
+        private const val START_TEXT_WIDTH = 0.68f
 
-        const val NAME_COLUMN = 0
-        const val TYPE_COLUMN = 1
-        const val COLOR_COLUMN = 2
+        private const val NAME_COLUMN = 0
+        private const val TYPE_COLUMN = 1
+        private const val COLOR_COLUMN = 2
 
         /** 글자판. 대문자와 숫자만 있으면 세 글자 이름에는 충분하다. */
-        const val KEYS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-        const val KEY_COLUMNS = 12
-        const val KEY_SIZE = 0.045f
-        const val KEYBOARD_TOP = 0.36f
+        private const val KEYS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+        private const val KEY_COLUMNS = 12
+        private const val KEY_SIZE = 0.045f
+        private const val KEYBOARD_TOP = 0.36f
 
-        const val GLYPH_ADVANCE = TextLayout.ADVANCE
-        const val EMPTY_ALPHA = 0.35f
-        const val DIM = 0.5f
-        const val LABEL_COLOR = 0x9AA3AE
-        const val READY_COLOR = 0x8BE04B
+        private const val GLYPH_ADVANCE = TextLayout.ADVANCE
+        private const val EMPTY_ALPHA = 0.35f
+        private const val DIM = 0.5f
+        private const val LABEL_COLOR = 0x9AA3AE
+        private const val READY_COLOR = 0x8BE04B
     }
 }

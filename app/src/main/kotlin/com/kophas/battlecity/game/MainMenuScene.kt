@@ -78,17 +78,10 @@ class MainMenuScene(private val catalog: SpriteCatalog) {
         color: Int,
     ) {
         val primary = action == Action.CreateGame
-        val down = pressed == action
-        ui.bar(
-            batch,
-            when {
-                primary && down -> catalog.menu.primaryPressed
-                primary -> catalog.menu.primary
-                down -> catalog.menu.secondaryPressed
-                else -> catalog.menu.secondary
-            },
-            rect,
-        )
+        // 눌렸다는 것은 흐리기로 말한다. 눌린 그림으로 갈아 끼우면 그림마다 다듬긴
+        // 여백이 달라 같은 자리에 그려도 판이 한 번 튀었다 돌아온다.
+        val alpha = if (pressed == action) PRESSED_ALPHA else 1f
+        ui.bar(batch, if (primary) catalog.menu.primary else catalog.menu.secondary, rect, alpha = alpha)
         ui.label(batch, label, rect, rect.height * 0.32f, color, BUTTON_TEXT_CENTER, 0.66f)
     }
 
@@ -117,8 +110,9 @@ class MainMenuScene(private val catalog: SpriteCatalog) {
         val rect = settingsRect()
         ui.panel(
             batch,
-            if (pressed == Action.OpenSettings) catalog.menu.settingsPressed else catalog.menu.settings,
+            catalog.menu.settings,
             rect,
+            alpha = if (pressed == Action.OpenSettings) PRESSED_ALPHA else 1f,
         )
 
         val found = roomsFound
@@ -176,5 +170,6 @@ class MainMenuScene(private val catalog: SpriteCatalog) {
         const val TITLE_LINE2 = 0.70f
         const val BUTTON_TEXT_CENTER = 0.47f
         const val PROFILE_ASPECT = 2.4f
+        const val PRESSED_ALPHA = 0.65f
     }
 }

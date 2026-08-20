@@ -237,8 +237,6 @@ class SpriteCatalog(private val assets: GameAssets) {
 
     val lobbyStart: TextureRegion = lobby("start", "lobby_primary_button_normal")
 
-    val lobbyStartPressed: TextureRegion = lobby("startPressed", "lobby_primary_button_pressed")
-
     val lobbyWifi: TextureRegion = lobby("wifiStrong", "lobby_wifi_strong")
 
     val lobbyWifiWeak: TextureRegion = lobby("wifiWeak", "lobby_wifi_weak")
@@ -262,11 +260,9 @@ class SpriteCatalog(private val assets: GameAssets) {
     class MenuArt(
         val title: TextureRegion,
         val primary: TextureRegion,
-        val primaryPressed: TextureRegion,
         val secondary: TextureRegion,
         val secondaryPressed: TextureRegion,
         val settings: TextureRegion,
-        val settingsPressed: TextureRegion,
         val profile: TextureRegion,
         val playerIcon: TextureRegion,
         val netStrong: TextureRegion,
@@ -280,11 +276,9 @@ class SpriteCatalog(private val assets: GameAssets) {
     val menu = MenuArt(
         title = screen("menu", "title", "menu_title_plate"),
         primary = screen("menu", "primary", "menu_primary_button_normal"),
-        primaryPressed = screen("menu", "primaryPressed", "menu_primary_button_pressed"),
         secondary = screen("menu", "secondary", "menu_secondary_button_normal"),
         secondaryPressed = screen("menu", "secondaryPressed", "menu_secondary_button_pressed"),
         settings = screen("menu", "settings", "menu_settings_button_normal"),
-        settingsPressed = screen("menu", "settingsPressed", "menu_settings_button_pressed"),
         profile = screen("menu", "profile", "menu_profile_badge"),
         playerIcon = screen("menu", "playerIcon", "menu_player_icon"),
         netStrong = screen("menu", "netStrong", "menu_network_strong"),

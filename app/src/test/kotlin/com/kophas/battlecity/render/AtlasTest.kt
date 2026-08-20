@@ -64,7 +64,8 @@ class AtlasTest {
 
         // 쿨타임 고리 둘은 뺐다. 쿨타임은 SPECIAL 버튼 자체로 표현한다.
         assertEquals("HUD 아이콘 14종", 14, count("hud_"))
-        assertEquals("로비 아이콘 16종", 16, count("lobby_"))
+        // 눌린 그림도 뺐다. 낱장마다 다듬긴 여백이 달라 누를 때 판이 튄다.
+        assertEquals("로비 아이콘 15종", 15, count("lobby_"))
     }
 
     @Test

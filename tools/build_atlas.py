@@ -153,9 +153,13 @@ def build_effects(entries):
 #:    겹칠 수 없어 아틀라스에 넣지 않는다.
 #:  - create_room_icon / join_room_icon 은 버튼 글자 옆에 붙여 뒀다가 걷어냈다.
 #:    "CREATE GAME" 이라고 쓰여 있는데 그림을 하나 더 얹으니 어색했다.
+#:  - *_button_pressed 는 눌린 모습이 따로 그려진 것인데, 낱장마다 다듬긴 여백이
+#:    달라 같은 자리에 그려도 판이 한 번 튀었다 돌아온다. 눌림은 흐리기로 말한다.
+#:    (secondary_button_pressed 만 남긴다 — 방 목록에서 잠긴 줄의 바탕이다.)
 #: 원본은 모두 assets 에 그대로 있다.
 SKIP_ICONS = {"cooldown_25", "cooldown_75", "speaker_on",
-              "create_room_icon", "join_room_icon"}
+              "create_room_icon", "join_room_icon",
+              "primary_button_pressed", "settings_button_pressed"}
 
 
 def build_icons(entries, src, prefix, size):
