@@ -7,8 +7,30 @@
 
 | 팩 | 사용 범위 | 원본 |
 |---|---|---|
-| **Top-down Tanks Redux** | 탱크, 포탄, 폭발, 지형 타일, 환경 오브젝트 (187 스프라이트 전량) | `assets/asset1` |
-| **Tiny Battle** (1.0, 2023-08-08) | 물 / 얼음 타일, 본진 깃발, HUD 아이콘 | `assets/asset2` |
+| **Top-down Tanks Redux** | 탱크(몸체+포신), 포탄, 폭발, 궤도자국 | `assets/asset1` |
+| **Tiny Battle** (1.0) | 물, 도로 오토타일, 본진 깃발, 하트 | `assets/asset2` |
+| **Tiny Town** (1.1) | 잔디·흙·자갈, 나무 26종, 벽돌벽, 울타리, 프롭 | `assets/kenney_tiny-town` |
+| **Tiny Dungeon** (1.0) | 석재벽, 철창, 배럴, 상자, 바닥 자국 | `assets/kenney_tiny-dungeon` |
+| **Desert Shooter Pack** (1.0) | 비트맵 폰트(A~Z, 0~9), 게이지 바, UI 아이콘 | `assets/kenney_desert-shooter-pack_1.0` |
+
+## 프로젝트 자체 리소스
+
+| 파일 | 사용 범위 |
+|---|---|
+| `assets/custom/본진_건물.png` | 본진 건물 정상 / 손상 / 심한 손상 / 폭발 4프레임 |
+
+Kenney 팩이 아닌 프로젝트에 직접 추가한 리소스입니다.
+
+---
+
+미채택 팩 (팔레트·해상도가 맞지 않아 제외):
+
+| 팩 | 제외 사유 |
+|---|---|
+| **RPG Urban Pack** (1.0) | 파스텔 도시 팔레트가 Tiny 계열의 따뜻한 색과 어긋난다 |
+| **Pico-8 City** (1.0) | 8px 타일이라 16px 아트와 같은 화면에 섞을 수 없다 |
+
+선별 근거와 전체 매핑표는 [docs/ASSET_SELECTION.md](./docs/ASSET_SELECTION.md) 를 참고하세요.
 
 CC0는 크레딧 표기 의무가 없으나, 제작자에 대한 존중으로 명시합니다.
 

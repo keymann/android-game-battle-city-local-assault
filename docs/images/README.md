@@ -8,6 +8,5 @@
 | `ref_asset1_props.png` | asset1 환경 오브젝트 / 이펙트 / 포탄 |
 | `ref_asset1_terrain.png` | asset1 지형 타일 40종 |
 | `ref_asset2_index.png` | asset2 198 타일 전체 인덱스 (0~197) |
-| `phase1_vulkan.png` | Phase 1 실기 렌더 결과 (Vulkan 백엔드, Pixel 9 Pro 에뮬레이터) |
-| `phase2_stage.png` | Phase 2 랜덤 스테이지 (4:3, 4인용 24x18 블록) |
 | `phase3_hud.png` | Phase 3 — 좌측 HUD(진영기·하트·처치 수·남은 COM) |
+| `phase35_world.png` | Phase 3.5 — 픽셀아트 월드 + 벡터 탱크 |

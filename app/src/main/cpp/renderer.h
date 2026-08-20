@@ -26,8 +26,9 @@ public:
     virtual void onSurfaceDestroyed() = 0;
 
     // 텍스처. pixels 는 RGBA8888 tightly packed.
+    // nearest=true 는 픽셀아트용(도트 유지), false 는 벡터풍 스프라이트용(회전 시 매끈).
     virtual bool uploadTexture(int32_t textureId, int32_t width, int32_t height,
-                               const uint8_t* pixels) = 0;
+                               const uint8_t* pixels, bool nearest) = 0;
     virtual void releaseTexture(int32_t textureId) = 0;
 
     // 프레임. sprites 는 kFloatsPerSprite 간격의 float 배열,

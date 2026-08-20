@@ -207,7 +207,7 @@ void GlesRenderer::onSurfaceResized(int32_t /*width*/, int32_t /*height*/) {
 }
 
 bool GlesRenderer::uploadTexture(int32_t textureId, int32_t width, int32_t height,
-                                 const uint8_t* pixels) {
+                                 const uint8_t* pixels, bool nearest) {
     if (!ready_ || pixels == nullptr || width <= 0 || height <= 0) return false;
     releaseTexture(textureId);
 
@@ -216,8 +216,10 @@ bool GlesRenderer::uploadTexture(int32_t textureId, int32_t width, int32_t heigh
     glBindTexture(GL_TEXTURE_2D, handle);
     glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    // 픽셀아트는 NEAREST(도트 유지), 회전하는 벡터풍 스프라이트는 LINEAR.
+    const GLint filter = nearest ? GL_NEAREST : GL_LINEAR;
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, filter);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filter);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glBindTexture(GL_TEXTURE_2D, 0);

@@ -111,7 +111,7 @@ Java_com_kophas_battlecity_render_NativeRenderer_nativeDestroy(JNIEnv*, jobject,
 // pixels 는 반드시 direct ByteBuffer 여야 한다(복사 없이 읽는다).
 JNIEXPORT jboolean JNICALL Java_com_kophas_battlecity_render_NativeRenderer_nativeUploadTexture(
         JNIEnv* env, jobject, jlong handle, jint textureId, jint width, jint height,
-        jobject pixels) {
+        jobject pixels, jboolean nearest) {
     RendererHandle* h = fromHandle(handle);
     if (h == nullptr || !h->impl) return JNI_FALSE;
 
@@ -120,7 +120,8 @@ JNIEXPORT jboolean JNICALL Java_com_kophas_battlecity_render_NativeRenderer_nati
         BC_LOGE("텍스처 픽셀 버퍼가 direct ByteBuffer 가 아님");
         return JNI_FALSE;
     }
-    return h->impl->uploadTexture(textureId, width, height, data) ? JNI_TRUE : JNI_FALSE;
+    return h->impl->uploadTexture(textureId, width, height, data, nearest == JNI_TRUE)
+                   ? JNI_TRUE : JNI_FALSE;
 }
 
 JNIEXPORT void JNICALL Java_com_kophas_battlecity_render_NativeRenderer_nativeReleaseTexture(

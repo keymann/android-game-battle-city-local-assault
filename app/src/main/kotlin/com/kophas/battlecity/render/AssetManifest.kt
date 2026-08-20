@@ -22,17 +22,13 @@ class AssetManifest(val root: JsonValue) {
         val image: String,
         val descriptor: String?,
         val type: String,
-        val tileSize: Int,
-        val columns: Int,
-        val rows: Int,
-        val spacing: Int,
-        val sourceScale: Float,
+        /** 원본 타일 한 변의 픽셀 수. 스프라이트를 몇 배로 확대할지 판단할 때 쓴다. */
+        val sourceTile: Int,
+        /** `nearest`(픽셀아트) 또는 `linear`(회전하는 벡터풍 스프라이트). */
+        val filter: String,
     ) {
-        val isGrid: Boolean get() = type == TYPE_GRID
-
         companion object {
             const val TYPE_XML = "xml_subtexture"
-            const val TYPE_GRID = "index_grid"
         }
     }
 
@@ -44,11 +40,8 @@ class AssetManifest(val root: JsonValue) {
                     ?: error("atlases.$key.image 가 없다"),
                 descriptor = node["descriptor"]?.asString,
                 type = node["type"]?.asString ?: AtlasSpec.TYPE_XML,
-                tileSize = node["tileSize"]?.asInt ?: 0,
-                columns = node["columns"]?.asInt ?: 0,
-                rows = node["rows"]?.asInt ?: 0,
-                spacing = node["spacing"]?.asInt ?: 0,
-                sourceScale = node["sourceScale"]?.asFloat ?: 1f,
+                sourceTile = node["sourceTile"]?.asInt ?: 16,
+                filter = node["filter"]?.asString ?: "nearest",
             )
         }
 
@@ -75,9 +68,14 @@ class AssetManifest(val root: JsonValue) {
     fun tileSprites(type: String): List<String> =
         tile(type)?.get("sprites")?.asStringList ?: emptyList()
 
-    /** 특정 TileType 이 쓰는 tiny 아틀라스 인덱스들. */
-    fun tileIndices(type: String): List<Int> =
-        tile(type)?.get("indices")?.asIntList ?: emptyList()
+    /** 후보가 하나뿐인 TileType 의 스프라이트 이름. (WATER, ICE 등) */
+    fun tileSprite(type: String): String? = tile(type)?.get("sprite")?.asString
+
+    /** 지형 섹션. 잔디/흙/자갈 기본 타일과 도로·흙 구역 오토타일 매핑이 들어 있다. */
+    fun terrain(group: String): JsonValue? = root["terrain"]?.get(group)
+
+    fun terrainBase(group: String): List<String> =
+        terrain(group)?.get("base")?.asStringList ?: emptyList()
 
     fun propGroup(id: String): JsonValue? = root["props"]?.get("groups")?.get(id)
 
@@ -87,9 +85,13 @@ class AssetManifest(val root: JsonValue) {
     fun effectFrames(id: String): List<String> =
         root["effects"]?.get(id)?.get("frames")?.asStringList ?: emptyList()
 
-    val hudLifeIndex: Int get() = root["hud"]?.get("life")?.asInt ?: 0
+    fun hud(key: String): String? = root["hud"]?.get(key)?.asString
 
-    val hudDigitIndices: List<Int> get() = root["hud"]?.get("digits")?.asIntList ?: emptyList()
+    val hudLifeSprite: String get() = hud("life") ?: "battle_195"
+
+    val hudDigitPrefix: String get() = hud("digitPrefix") ?: "ui_digit_"
+
+    val hudCharPrefix: String get() = hud("charPrefix") ?: "ui_char_"
 
     companion object {
         const val DEFAULT_PATH = "manifest/assets.json"
