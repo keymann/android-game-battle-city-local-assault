@@ -45,7 +45,6 @@ class SpecialMoveTest {
             playerSpawnBlocks = intArrayOf((blocksY - 1) * blocksX),
             theme = StageTheme(
                 biome = StageTheme.Biome.GRASS,
-                roadStyle = StageTheme.RoadStyle.NONE,
                 structureDensity = 0f,
                 waterWeight = 0f,
                 iceWeight = 0f,

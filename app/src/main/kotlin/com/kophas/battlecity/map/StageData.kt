@@ -8,8 +8,8 @@ import com.kophas.battlecity.core.Constants
  * [cells] 만이 게임 로직의 진실이고 [ground] / [decor] 는 렌더 전용이다.
  * (계획서 §41-1 로직과 렌더링 분리)
  *
- * 맵은 **가로:세로 4:3** 이다. 게임이 항상 landscape 로 돌기 때문에
- * 정사각형 맵은 좌우를 크게 낭비한다. (계획서 §21 논리 해상도)
+ * 맵은 **가로:세로 16:9** 다. 게임이 항상 landscape 로 돌고 요즘 기기가 대부분
+ * 16:9 보다 넓기 때문에, 이보다 좁으면 좌우를 크게 낭비한다. (계획서 §21 논리 해상도)
  */
 class StageData(
     val blocksX: Int,
@@ -37,6 +37,8 @@ class StageData(
     val playerSpawnBlocks: IntArray,
     val theme: StageTheme,
     val seed: Long,
+    /** 생성기가 매긴 검증 결과. 로그와 테스트가 읽는다. (가이드 §14) */
+    val report: StageGenerator.Report? = null,
 ) {
     val cellsX: Int = blocksX * Constants.CELLS_PER_BLOCK
     val cellsY: Int = blocksY * Constants.CELLS_PER_BLOCK
@@ -44,7 +46,7 @@ class StageData(
     val widthPx: Float = blocksX * Constants.BLOCK_PX
     val heightPx: Float = blocksY * Constants.BLOCK_PX
 
-    /** 논리 해상도의 가로:세로. 4:3 이어야 한다. */
+    /** 논리 해상도의 가로:세로. 16:9 여야 한다. */
     val aspect: Float = widthPx / heightPx
 
     /**

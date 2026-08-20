@@ -34,7 +34,7 @@ class BattleScene(
     startSeed: Long = DEFAULT_SEED,
 ) {
     private val catalog = SpriteCatalog(assets)
-    private val generator = StageGenerator(assets.manifest)
+    private val generator = StageGenerator(assets.manifest, assets.mapGen)
     private val worldRenderer = WorldRenderer(catalog)
     private val hudRenderer = HudRenderer(catalog)
 
@@ -85,8 +85,10 @@ class BattleScene(
 
         Log.i(
             TAG,
-            "스테이지 #$stageIndex: ${stage.blocksX}x${stage.blocksY} 블록(4:3), " +
-                "바이옴=${stage.theme.biome} 도로=${stage.theme.roadStyle} " +
+            "스테이지 #$stageIndex: ${stage.blocksX}x${stage.blocksY} 블록(16:9), " +
+                "바이옴=${stage.theme.biome} " +
+                "연결=${stage.report?.hardConnectedRatio} 출구=${stage.report?.baseExitCount} " +
+                "공정=${stage.report?.fairnessScore} 점수=${stage.report?.score} | " +
                 "COM ${match.totalEnemies}기(동시 ${match.maxActiveEnemies}) 해시=${stage.gridHash}",
         )
     }

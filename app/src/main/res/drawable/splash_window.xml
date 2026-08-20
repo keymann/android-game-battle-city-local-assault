@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    시작 화면.
+
+    게임은 네이티브 렌더러가 첫 프레임을 그릴 때까지 잠깐 비어 있다. 그 사이에
+    검은 화면 대신 이 그림을 띄운다. 서피스가 준비되면 게임이 위에 그려진다.
+
+    가로 16:9 원본이라 화면비가 다른 기기에서는 가운데를 채우고 남는 곳은
+    바탕색으로 둔다. 늘리면 픽셀아트가 뭉개진다.
+-->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@color/splash_background" />
+    <item>
+        <bitmap
+            android:gravity="center"
+            android:src="@drawable/splash_landscape" />
+    </item>
+</layer-list>

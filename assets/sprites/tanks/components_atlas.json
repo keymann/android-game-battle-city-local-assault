@@ -1,0 +1,247 @@
+{
+  "columns": 4,
+  "rows": 6,
+  "cellSize": 128,
+  "sprites": [
+    {
+      "name": "player_attack_up",
+      "index": 0,
+      "row": 0,
+      "column": 0,
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "name": "player_attack_right",
+      "index": 1,
+      "row": 0,
+      "column": 1,
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "name": "player_attack_down",
+      "index": 2,
+      "row": 0,
+      "column": 2,
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "name": "player_attack_left",
+      "index": 3,
+      "row": 0,
+      "column": 3,
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "name": "player_defense_up",
+      "index": 4,
+      "row": 1,
+      "column": 0,
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "name": "player_defense_right",
+      "index": 5,
+      "row": 1,
+      "column": 1,
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "name": "player_defense_down",
+      "index": 6,
+      "row": 1,
+      "column": 2,
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "name": "player_defense_left",
+      "index": 7,
+      "row": 1,
+      "column": 3,
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "name": "player_speed_up",
+      "index": 8,
+      "row": 2,
+      "column": 0,
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "name": "player_speed_right",
+      "index": 9,
+      "row": 2,
+      "column": 1,
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "name": "player_speed_down",
+      "index": 10,
+      "row": 2,
+      "column": 2,
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "name": "player_speed_left",
+      "index": 11,
+      "row": 2,
+      "column": 3,
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "name": "enemy_attack_up",
+      "index": 12,
+      "row": 3,
+      "column": 0,
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "name": "enemy_attack_right",
+      "index": 13,
+      "row": 3,
+      "column": 1,
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "name": "enemy_attack_down",
+      "index": 14,
+      "row": 3,
+      "column": 2,
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "name": "enemy_attack_left",
+      "index": 15,
+      "row": 3,
+      "column": 3,
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "name": "enemy_defense_up",
+      "index": 16,
+      "row": 4,
+      "column": 0,
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "name": "enemy_defense_right",
+      "index": 17,
+      "row": 4,
+      "column": 1,
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "name": "enemy_defense_down",
+      "index": 18,
+      "row": 4,
+      "column": 2,
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "name": "enemy_defense_left",
+      "index": 19,
+      "row": 4,
+      "column": 3,
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "name": "enemy_speed_up",
+      "index": 20,
+      "row": 5,
+      "column": 0,
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "name": "enemy_speed_right",
+      "index": 21,
+      "row": 5,
+      "column": 1,
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "name": "enemy_speed_down",
+      "index": 22,
+      "row": 5,
+      "column": 2,
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "name": "enemy_speed_left",
+      "index": 23,
+      "row": 5,
+      "column": 3,
+      "size": [
+        128,
+        128
+      ]
+    }
+  ]
+}

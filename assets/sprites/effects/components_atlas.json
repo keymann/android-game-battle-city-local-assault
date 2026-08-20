@@ -1,0 +1,327 @@
+{
+  "columns": 8,
+  "rows": 4,
+  "cellSize": 128,
+  "sprites": [
+    {
+      "name": "shell_normal_up",
+      "index": 0,
+      "row": 0,
+      "column": 0,
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "name": "shell_normal_right",
+      "index": 1,
+      "row": 0,
+      "column": 1,
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "name": "shell_normal_down",
+      "index": 2,
+      "row": 0,
+      "column": 2,
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "name": "shell_normal_left",
+      "index": 3,
+      "row": 0,
+      "column": 3,
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "name": "shell_piercing_up",
+      "index": 4,
+      "row": 0,
+      "column": 4,
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "name": "shell_piercing_right",
+      "index": 5,
+      "row": 0,
+      "column": 5,
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "name": "shell_piercing_down",
+      "index": 6,
+      "row": 0,
+      "column": 6,
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "name": "shell_piercing_left",
+      "index": 7,
+      "row": 0,
+      "column": 7,
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "name": "muzzle_flash_up",
+      "index": 8,
+      "row": 1,
+      "column": 0,
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "name": "muzzle_flash_right",
+      "index": 9,
+      "row": 1,
+      "column": 1,
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "name": "muzzle_flash_down",
+      "index": 10,
+      "row": 1,
+      "column": 2,
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "name": "muzzle_flash_left",
+      "index": 11,
+      "row": 1,
+      "column": 3,
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "name": "impact_small",
+      "index": 12,
+      "row": 1,
+      "column": 4,
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "name": "ricochet_steel",
+      "index": 13,
+      "row": 1,
+      "column": 5,
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "name": "debris_brick",
+      "index": 14,
+      "row": 1,
+      "column": 6,
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "name": "shield_hit",
+      "index": 15,
+      "row": 1,
+      "column": 7,
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "name": "explosion_1",
+      "index": 16,
+      "row": 2,
+      "column": 0,
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "name": "explosion_2",
+      "index": 17,
+      "row": 2,
+      "column": 1,
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "name": "explosion_3",
+      "index": 18,
+      "row": 2,
+      "column": 2,
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "name": "explosion_4",
+      "index": 19,
+      "row": 2,
+      "column": 3,
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "name": "explosion_5",
+      "index": 20,
+      "row": 2,
+      "column": 4,
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "name": "explosion_6",
+      "index": 21,
+      "row": 2,
+      "column": 5,
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "name": "explosion_7",
+      "index": 22,
+      "row": 2,
+      "column": 6,
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "name": "explosion_8",
+      "index": 23,
+      "row": 2,
+      "column": 7,
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "name": "shield_1",
+      "index": 24,
+      "row": 3,
+      "column": 0,
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "name": "shield_2",
+      "index": 25,
+      "row": 3,
+      "column": 1,
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "name": "shield_3",
+      "index": 26,
+      "row": 3,
+      "column": 2,
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "name": "dash_trail_1",
+      "index": 27,
+      "row": 3,
+      "column": 3,
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "name": "dash_trail_2",
+      "index": 28,
+      "row": 3,
+      "column": 4,
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "name": "dash_trail_3",
+      "index": 29,
+      "row": 3,
+      "column": 5,
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "name": "spawn_glow",
+      "index": 30,
+      "row": 3,
+      "column": 6,
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "name": "base_warning_pulse",
+      "index": 31,
+      "row": 3,
+      "column": 7,
+      "size": [
+        128,
+        128
+      ]
+    }
+  ]
+}

@@ -1,0 +1,84 @@
+{
+  "version": 1,
+  "atlas": "terrain/components_atlas_128.png",
+  "atlasMetadata": "terrain/components_atlas.json",
+  "cellSize": 128,
+  "mapPresets": {
+    "2": { "width": 20, "height": 16, "maxActiveEnemies": 8 },
+    "3": { "width": 24, "height": 18, "maxActiveEnemies": 10 },
+    "4": { "width": 28, "height": 20, "maxActiveEnemies": 12 }
+  },
+  "densityTargets": {
+    "walkable": [0.48, 0.65],
+    "brick": [0.16, 0.26],
+    "permanentObstacle": [0.06, 0.12],
+    "water": [0.04, 0.10],
+    "cover": [0.06, 0.14],
+    "ice": [0.00, 0.08],
+    "environmentObject": [0.02, 0.05]
+  },
+  "clusterSize": {
+    "brick": [2, 7],
+    "steel": [2, 5],
+    "water": [4, 18],
+    "forest": [3, 12],
+    "ice": [4, 12],
+    "object": [1, 3]
+  },
+  "validation": {
+    "minimumHardConnectedRatio": 0.90,
+    "minimumBaseExits": 3,
+    "maximumCenterDistanceDeviation": 0.15,
+    "maximumEnemySpawnDistanceDeviation": 0.18,
+    "maximumReachableAreaRatio": 1.25,
+    "minimumMainPathWidth": 2,
+    "maximumRepairAttempts": 8,
+    "minimumAcceptScore": 85
+  },
+  "initialPlacementAllowed": {
+    "ground": [
+      "ground_dirt_clean_a",
+      "ground_dirt_stones_b",
+      "ground_cracked_a",
+      "ground_cracked_b",
+      "ground_scorched_a",
+      "ground_scorched_b",
+      "ground_dry_grass",
+      "ground_lush_grass",
+      "ice_clean_a",
+      "ice_clean_b",
+      "ice_cracked_a",
+      "ice_cracked_b"
+    ],
+    "brick": ["brick_intact_a", "brick_intact_b"],
+    "steel": ["steel_clean_a", "steel_riveted_b", "steel_reinforced_a", "steel_reinforced_b"],
+    "waterAnimation": ["water_frame_1", "water_frame_2", "water_frame_3", "water_frame_4"],
+    "forest": ["forest_canopy_a", "forest_canopy_b", "forest_dense_a", "forest_dense_b"],
+    "base": ["base_intact"],
+    "environment": [
+      "sandbag_straight",
+      "sandbag_corner",
+      "crate_intact",
+      "barrel_steel",
+      "barrel_hazard",
+      "rock_cluster",
+      "bush_cluster"
+    ]
+  },
+  "runtimeStateOnly": [
+    "brick_damage_1a",
+    "brick_damage_1b",
+    "brick_damage_2a",
+    "brick_damage_2b",
+    "brick_rubble_a",
+    "brick_rubble_b",
+    "base_shielded",
+    "base_warning_1",
+    "base_warning_2",
+    "base_damage_1",
+    "base_damage_2",
+    "base_destroyed",
+    "base_rubble",
+    "crate_broken"
+  ]
+}

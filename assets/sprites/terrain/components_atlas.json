@@ -1,0 +1,487 @@
+{
+  "columns": 8,
+  "rows": 6,
+  "cellSize": 128,
+  "sprites": [
+    {
+      "name": "ground_dirt_clean_a",
+      "index": 0,
+      "row": 0,
+      "column": 0,
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "name": "ground_dirt_stones_b",
+      "index": 1,
+      "row": 0,
+      "column": 1,
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "name": "ground_cracked_a",
+      "index": 2,
+      "row": 0,
+      "column": 2,
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "name": "ground_cracked_b",
+      "index": 3,
+      "row": 0,
+      "column": 3,
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "name": "ground_scorched_a",
+      "index": 4,
+      "row": 0,
+      "column": 4,
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "name": "ground_scorched_b",
+      "index": 5,
+      "row": 0,
+      "column": 5,
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "name": "ground_dry_grass",
+      "index": 6,
+      "row": 0,
+      "column": 6,
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "name": "ground_lush_grass",
+      "index": 7,
+      "row": 0,
+      "column": 7,
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "name": "brick_intact_a",
+      "index": 8,
+      "row": 1,
+      "column": 0,
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "name": "brick_intact_b",
+      "index": 9,
+      "row": 1,
+      "column": 1,
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "name": "brick_damage_1a",
+      "index": 10,
+      "row": 1,
+      "column": 2,
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "name": "brick_damage_1b",
+      "index": 11,
+      "row": 1,
+      "column": 3,
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "name": "brick_damage_2a",
+      "index": 12,
+      "row": 1,
+      "column": 4,
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "name": "brick_damage_2b",
+      "index": 13,
+      "row": 1,
+      "column": 5,
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "name": "brick_rubble_a",
+      "index": 14,
+      "row": 1,
+      "column": 6,
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "name": "brick_rubble_b",
+      "index": 15,
+      "row": 1,
+      "column": 7,
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "name": "steel_clean_a",
+      "index": 16,
+      "row": 2,
+      "column": 0,
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "name": "steel_riveted_b",
+      "index": 17,
+      "row": 2,
+      "column": 1,
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "name": "steel_reinforced_a",
+      "index": 18,
+      "row": 2,
+      "column": 2,
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "name": "steel_reinforced_b",
+      "index": 19,
+      "row": 2,
+      "column": 3,
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "name": "water_frame_1",
+      "index": 20,
+      "row": 2,
+      "column": 4,
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "name": "water_frame_2",
+      "index": 21,
+      "row": 2,
+      "column": 5,
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "name": "water_frame_3",
+      "index": 22,
+      "row": 2,
+      "column": 6,
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "name": "water_frame_4",
+      "index": 23,
+      "row": 2,
+      "column": 7,
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "name": "forest_canopy_a",
+      "index": 24,
+      "row": 3,
+      "column": 0,
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "name": "forest_canopy_b",
+      "index": 25,
+      "row": 3,
+      "column": 1,
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "name": "forest_dense_a",
+      "index": 26,
+      "row": 3,
+      "column": 2,
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "name": "forest_dense_b",
+      "index": 27,
+      "row": 3,
+      "column": 3,
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "name": "ice_clean_a",
+      "index": 28,
+      "row": 3,
+      "column": 4,
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "name": "ice_clean_b",
+      "index": 29,
+      "row": 3,
+      "column": 5,
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "name": "ice_cracked_a",
+      "index": 30,
+      "row": 3,
+      "column": 6,
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "name": "ice_cracked_b",
+      "index": 31,
+      "row": 3,
+      "column": 7,
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "name": "base_intact",
+      "index": 32,
+      "row": 4,
+      "column": 0,
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "name": "base_shielded",
+      "index": 33,
+      "row": 4,
+      "column": 1,
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "name": "base_warning_1",
+      "index": 34,
+      "row": 4,
+      "column": 2,
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "name": "base_warning_2",
+      "index": 35,
+      "row": 4,
+      "column": 3,
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "name": "base_damage_1",
+      "index": 36,
+      "row": 4,
+      "column": 4,
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "name": "base_damage_2",
+      "index": 37,
+      "row": 4,
+      "column": 5,
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "name": "base_destroyed",
+      "index": 38,
+      "row": 4,
+      "column": 6,
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "name": "base_rubble",
+      "index": 39,
+      "row": 4,
+      "column": 7,
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "name": "sandbag_straight",
+      "index": 40,
+      "row": 5,
+      "column": 0,
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "name": "sandbag_corner",
+      "index": 41,
+      "row": 5,
+      "column": 1,
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "name": "crate_intact",
+      "index": 42,
+      "row": 5,
+      "column": 2,
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "name": "crate_broken",
+      "index": 43,
+      "row": 5,
+      "column": 3,
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "name": "barrel_steel",
+      "index": 44,
+      "row": 5,
+      "column": 4,
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "name": "barrel_hazard",
+      "index": 45,
+      "row": 5,
+      "column": 5,
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "name": "rock_cluster",
+      "index": 46,
+      "row": 5,
+      "column": 6,
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "name": "bush_cluster",
+      "index": 47,
+      "row": 5,
+      "column": 7,
+      "size": [
+        128,
+        128
+      ]
+    }
+  ]
+}

@@ -1,0 +1,214 @@
+{
+  "sampleRate": 44100,
+  "bgm": [
+    {
+      "name": "main_menu_theme",
+      "loop": true,
+      "formats": [
+        "wav",
+        "ogg"
+      ],
+      "durationSeconds": 36.923
+    },
+    {
+      "name": "lobby_waiting_theme",
+      "loop": true,
+      "formats": [
+        "wav",
+        "ogg"
+      ],
+      "durationSeconds": 41.739
+    },
+    {
+      "name": "battle_theme",
+      "loop": true,
+      "formats": [
+        "wav",
+        "ogg"
+      ],
+      "durationSeconds": 43.636
+    },
+    {
+      "name": "final_wave_theme",
+      "loop": true,
+      "formats": [
+        "wav",
+        "ogg"
+      ],
+      "durationSeconds": 32.432
+    }
+  ],
+  "sfx": [
+    {
+      "name": "tank_move_loop",
+      "loop": true,
+      "formats": [
+        "wav",
+        "ogg"
+      ],
+      "durationSeconds": 2.0
+    },
+    {
+      "name": "tank_fire",
+      "loop": false,
+      "formats": [
+        "wav",
+        "ogg"
+      ],
+      "durationSeconds": 0.34
+    },
+    {
+      "name": "special_piercing",
+      "loop": false,
+      "formats": [
+        "wav",
+        "ogg"
+      ],
+      "durationSeconds": 0.55
+    },
+    {
+      "name": "special_shield",
+      "loop": false,
+      "formats": [
+        "wav",
+        "ogg"
+      ],
+      "durationSeconds": 0.7
+    },
+    {
+      "name": "special_dash",
+      "loop": false,
+      "formats": [
+        "wav",
+        "ogg"
+      ],
+      "durationSeconds": 0.42
+    },
+    {
+      "name": "bullet_hit_brick",
+      "loop": false,
+      "formats": [
+        "wav",
+        "ogg"
+      ],
+      "durationSeconds": 0.28
+    },
+    {
+      "name": "bullet_hit_steel",
+      "loop": false,
+      "formats": [
+        "wav",
+        "ogg"
+      ],
+      "durationSeconds": 0.32
+    },
+    {
+      "name": "brick_destroy",
+      "loop": false,
+      "formats": [
+        "wav",
+        "ogg"
+      ],
+      "durationSeconds": 0.62
+    },
+    {
+      "name": "tank_explosion",
+      "loop": false,
+      "formats": [
+        "wav",
+        "ogg"
+      ],
+      "durationSeconds": 1.25
+    },
+    {
+      "name": "player_death",
+      "loop": false,
+      "formats": [
+        "wav",
+        "ogg"
+      ],
+      "durationSeconds": 1.02
+    },
+    {
+      "name": "enemy_spawn",
+      "loop": false,
+      "formats": [
+        "wav",
+        "ogg"
+      ],
+      "durationSeconds": 0.72
+    },
+    {
+      "name": "base_warning_loop",
+      "loop": true,
+      "formats": [
+        "wav",
+        "ogg"
+      ],
+      "durationSeconds": 2.0
+    },
+    {
+      "name": "base_destroy",
+      "loop": false,
+      "formats": [
+        "wav",
+        "ogg"
+      ],
+      "durationSeconds": 2.0
+    },
+    {
+      "name": "victory",
+      "loop": false,
+      "formats": [
+        "wav",
+        "ogg"
+      ],
+      "durationSeconds": 1.52
+    },
+    {
+      "name": "game_over",
+      "loop": false,
+      "formats": [
+        "wav",
+        "ogg"
+      ],
+      "durationSeconds": 1.94
+    },
+    {
+      "name": "ui_ready",
+      "loop": false,
+      "formats": [
+        "wav",
+        "ogg"
+      ],
+      "durationSeconds": 0.28
+    },
+    {
+      "name": "countdown_tick",
+      "loop": false,
+      "formats": [
+        "wav",
+        "ogg"
+      ],
+      "durationSeconds": 0.26
+    },
+    {
+      "name": "countdown_go",
+      "loop": false,
+      "formats": [
+        "wav",
+        "ogg"
+      ],
+      "durationSeconds": 0.42
+    },
+    {
+      "name": "network_disconnect",
+      "loop": false,
+      "formats": [
+        "wav",
+        "ogg"
+      ],
+      "durationSeconds": 0.64
+    }
+  ]
+}

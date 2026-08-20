@@ -74,7 +74,6 @@ object AiFixture {
             playerSpawnBlocks = IntArray(playerCount) { (blocksY - 1) * blocksX + 2 + it * 2 },
             theme = StageTheme(
                 biome = StageTheme.Biome.GRASS,
-                roadStyle = StageTheme.RoadStyle.NONE,
                 structureDensity = 0f,
                 waterWeight = 0f,
                 iceWeight = 0f,

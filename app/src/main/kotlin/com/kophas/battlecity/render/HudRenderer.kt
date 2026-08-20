@@ -15,8 +15,8 @@ import com.kophas.battlecity.gameplay.Tank
  * P4 💀   12
  * ```
  *
- * Desert Shooter 팩의 비트맵 폰트가 들어와 숫자뿐 아니라 문자도 찍을 수 있다.
- * 논리 해상도가 4:3 이라 가로가 넓은 화면에서는 좌우에 여백이 남고, 그 여백을
+ * 아이콘은 게임 에셋 팩, 글자는 Kenney Desert Shooter 비트맵 폰트다.
+ * 논리 해상도가 16:9 라 가로가 더 넓은 화면에서는 좌우에 여백이 남고, 그 여백을
  * HUD 자리로 쓴다. 여백이 좁으면 맵 위에 겹쳐 그린다.
  *
  * 조이스틱/버튼 등 조작 UI 는 Phase 7 에서 들어온다.
@@ -33,11 +33,13 @@ class HudRenderer(private val catalog: SpriteCatalog) {
 
         for (slot in match.players) {
             val tank = world.tanks.firstOrNull { it.id == slot.tankId && it.alive }
+            drawPanel(batch, originX - unit * 0.3f, y - unit * 0.25f, unit * ROW_WIDTH_UNITS, unit * 1.4f)
             drawPlayerRow(batch, slot, originX, y, unit, match, tank)
             y += unit * ROW_SPACING
         }
 
         y += unit * 0.6f
+        drawPanel(batch, originX - unit * 0.3f, y - unit * 0.2f, unit * ENEMY_WIDTH_UNITS, unit * 1.2f)
         drawText(batch, "ENEMY", originX, y, unit * 0.85f, 1f)
         drawText(
             batch,
@@ -61,9 +63,10 @@ class HudRenderer(private val catalog: SpriteCatalog) {
         val dim = if (slot.eliminated) ELIMINATED_ALPHA else 1f
         var cursor = x
 
-        // P1..P4 라벨. 진영기가 색을, 숫자가 번호를 알려 준다.
+        // 고른 탱크 초상 + 슬롯 색 라벨. 탱크 색은 종류가 정하므로 라벨 색이
+        // 누가 누구인지 알려 주는 유일한 단서다.
         batch.draw(
-            region = catalog.playerFlag(slot.index),
+            region = catalog.playerPortrait(slot.tankType),
             x = cursor,
             y = y,
             width = unit,
@@ -72,7 +75,8 @@ class HudRenderer(private val catalog: SpriteCatalog) {
             alpha = dim,
         )
         cursor += unit * 1.1f
-        drawText(batch, "P${slot.index + 1}", cursor, y, unit, dim)
+        val label = catalog.slotMarker.colorOf(slot.index)
+        drawText(batch, "P${slot.index + 1}", cursor, y, unit, dim, label)
         cursor += unit * GLYPH_ADVANCE * 2f + unit * 0.3f
 
         if (slot.eliminated) {
@@ -88,19 +92,16 @@ class HudRenderer(private val catalog: SpriteCatalog) {
             )
             cursor += unit * 1.2f
         } else {
-            // 하트로 남은 Life 를 보여 준다. 잃은 칸은 어둡게 남긴다. (계획서 §12)
+            // 하트로 남은 Life 를 보여 준다. 빈 칸은 전용 그림이 따로 있다. (계획서 §12)
             for (i in 0 until match.rules.livesPerPlayer) {
                 val filled = i < slot.lives
                 batch.draw(
-                    region = catalog.heart,
+                    region = if (filled) catalog.heart else catalog.heartEmpty,
                     x = cursor,
                     y = y,
                     width = unit,
                     height = unit,
                     layer = Constants.Layer.HUD,
-                    red = if (filled) 1f else LOST_LIFE_SHADE,
-                    green = if (filled) 1f else LOST_LIFE_SHADE,
-                    blue = if (filled) 1f else LOST_LIFE_SHADE,
                     alpha = if (filled) 1f else LOST_LIFE_ALPHA,
                 )
                 cursor += unit * 0.85f
@@ -110,15 +111,15 @@ class HudRenderer(private val catalog: SpriteCatalog) {
 
         drawText(batch, slot.kills.toString(), cursor, y, unit, dim)
 
-        // 특수기 쿨타임 게이지. 가득 차면 쓸 수 있다. (계획서 §6, §18.2)
+        // 특수기 쿨타임. 가득 차면 쓸 수 있다. (계획서 §6, §18.2)
         if (tank != null && tank.special != com.kophas.battlecity.gameplay.BalanceConfig.Special.NONE) {
-            drawSpecialGauge(batch, tank, x, y + unit * 1.02f, unit * GAUGE_WIDTH_UNITS, unit)
+            drawSpecialCooldown(batch, tank, cursor + unit * 1.4f, y, unit)
         }
 
         // 리스폰 대기 중이면 표시를 붙인다.
         if (!slot.alive && !slot.eliminated) {
             batch.draw(
-                region = catalog.locked,
+                region = catalog.deadIcon,
                 x = x + unit * 0.25f,
                 y = y,
                 width = unit,
@@ -130,43 +131,73 @@ class HudRenderer(private val catalog: SpriteCatalog) {
     }
 
     /**
-     * 특수기 쿨타임 게이지.
+     * 상태창 바탕.
      *
-     * 가운데 조각 하나를 가로로 늘여 채운다. 캡 조각을 쓰면 짧을 때 찌그러진다.
-     * 준비가 끝나면 밝게 빛나 바로 알아볼 수 있다.
+     * 맵 위에 겹쳐 그리면 글자와 하트가 지형에 묻혀 안 읽힌다. 팩의 상태창 판을
+     * 뒤에 깐다. 가로로 그냥 늘리면 둥근 모서리가 뭉개지므로 좌·우 끝은 그대로 두고
+     * 가운데 조각만 늘린다.
      */
-    private fun drawSpecialGauge(
+    private fun drawPanel(batch: SpriteBatch, x: Float, y: Float, width: Float, height: Float) {
+        val panel = catalog.panel
+        val cap = height * 0.5f
+        val middle = (width - cap * 2f).coerceAtLeast(0f)
+
+        batch.draw(
+            region = panel.sub(0, 0, 3, 1), x = x, y = y,
+            width = cap, height = height, layer = Constants.Layer.HUD, alpha = PANEL_ALPHA,
+        )
+        batch.draw(
+            region = panel.sub(1, 0, 3, 1), x = x + cap, y = y,
+            width = middle, height = height, layer = Constants.Layer.HUD, alpha = PANEL_ALPHA,
+        )
+        batch.draw(
+            region = panel.sub(2, 0, 3, 1), x = x + cap + middle, y = y,
+            width = cap, height = height, layer = Constants.Layer.HUD, alpha = PANEL_ALPHA,
+        )
+    }
+
+    /**
+     * 특수기 쿨타임.
+     *
+     * 같은 고리를 두 번 그린다. 한 번은 어둡게 전체를, 한 번은 밝게 **아래에서
+     * 차오른 만큼만** 잘라서. 원형 마스크를 쓰려면 셰이더가 필요한데 스프라이트
+     * 배치에는 그런 것이 없다. 이 방법이면 셰이더 없이도 연속으로 차오른다.
+     */
+    private fun drawSpecialCooldown(
         batch: SpriteBatch,
         tank: Tank,
         x: Float,
         y: Float,
-        width: Float,
         unit: Float,
     ) {
-        val height = unit * catalog.gaugeHeightRatio
+        val ratio = tank.specialReadyRatio
+        val icon = catalog.cooldownRing
+
         batch.draw(
-            region = catalog.gaugeTrack,
+            region = icon,
             x = x,
             y = y,
-            width = width,
-            height = height,
+            width = unit,
+            height = unit,
             layer = Constants.Layer.HUD,
-            alpha = 0.55f,
+            red = COOLDOWN_SHADE,
+            green = COOLDOWN_SHADE,
+            blue = COOLDOWN_SHADE,
+            alpha = 0.7f,
         )
-
-        val ratio = tank.specialReadyRatio
         if (ratio <= 0f) return
 
-        val ready = ratio >= 1f
+        val filled = icon.bottomBand(ratio)
+        val height = unit * ratio
         batch.draw(
-            region = catalog.gaugeFill,
+            region = filled,
             x = x,
-            y = y,
-            width = width * ratio,
+            y = y + unit - height,
+            width = unit,
             height = height,
             layer = Constants.Layer.HUD,
             // 발동 중에는 더 밝게 두어 지금 효과가 걸려 있음을 알린다.
-            alpha = if (ready || tank.specialActive) 1f else 0.75f,
+            alpha = if (ratio >= 1f || tank.specialActive) 1f else 0.85f,
         )
     }
 
@@ -178,6 +209,7 @@ class HudRenderer(private val catalog: SpriteCatalog) {
         y: Float,
         size: Float,
         alpha: Float,
+        color: Int = 0xFFFFFF,
     ) {
         var cursor = x
         for (char in text) {
@@ -189,6 +221,9 @@ class HudRenderer(private val catalog: SpriteCatalog) {
                     width = size,
                     height = size,
                     layer = Constants.Layer.HUD,
+                    red = ((color ushr 16) and 0xFF) / 255f,
+                    green = ((color ushr 8) and 0xFF) / 255f,
+                    blue = (color and 0xFF) / 255f,
                     alpha = alpha,
                 )
             }
@@ -204,14 +239,18 @@ class HudRenderer(private val catalog: SpriteCatalog) {
         const val MIN_PANEL_UNITS = 8f
         const val ROW_SPACING = 1.55f
 
-        /** 특수기 게이지 폭. HUD 한 칸 기준. */
-        const val GAUGE_WIDTH_UNITS = 5.2f
+        /** 상태창 바탕 폭. HUD 한 칸 기준. */
+        const val ROW_WIDTH_UNITS = 8.6f
+        const val ENEMY_WIDTH_UNITS = 6.4f
+        const val PANEL_ALPHA = 0.88f
+
+        /** 쿨타임 고리의 비어 있는 부분 밝기. */
+        const val COOLDOWN_SHADE = 0.35f
 
         /** 글리프 간격. 폰트 도트가 16px 칸 안에서 여백을 가지고 있어 1보다 작다. */
         const val GLYPH_ADVANCE = 0.7f
 
         const val ELIMINATED_ALPHA = 0.4f
-        const val LOST_LIFE_SHADE = 0.25f
-        const val LOST_LIFE_ALPHA = 0.55f
+        const val LOST_LIFE_ALPHA = 0.65f
     }
 }
