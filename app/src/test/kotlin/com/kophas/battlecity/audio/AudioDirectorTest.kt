@@ -21,14 +21,19 @@ class AudioDirectorTest {
         val loopsStopped = ArrayList<String>()
         val music = ArrayList<String>()
         val vibrations = ArrayList<Long>()
+        val volumes = ArrayList<Float>()
+        val musicVolumes = ArrayList<Float>()
+        val loopVolumes = ArrayList<Float>()
         var musicStopped = 0
 
         override fun play(clip: String, volume: Float) {
             played += clip
+            volumes += volume
         }
 
         override fun startLoop(clip: String, volume: Float) {
             loopsStarted += clip
+            loopVolumes += volume
         }
 
         override fun stopLoop(clip: String) {
@@ -37,6 +42,15 @@ class AudioDirectorTest {
 
         override fun playMusic(clip: String, volume: Float) {
             music += clip
+            musicVolumes += volume
+        }
+
+        override fun setMusicVolume(volume: Float) {
+            musicVolumes += volume
+        }
+
+        override fun setLoopVolume(clip: String, volume: Float) {
+            loopVolumes += volume
         }
 
         override fun stopMusic() {
@@ -214,5 +228,61 @@ class AudioDirectorTest {
         assertTrue(playback.played.isEmpty())
         assertTrue(playback.vibrations.isEmpty())
         assertNull(director.track)
+    }
+
+    // --- 기기별 소리 크기 (계획서 §44.2) ---------------------------------
+
+    @Test
+    fun `소리 크기 배율이 효과음에 곱해진다`() {
+        director.play(AudioDirector.Event.TANK_FIRE)
+        val full = playback.volumes.last()
+
+        director.setVolumes(bgm = 1f, sfx = 0.5f)
+        now += 1_000
+        director.play(AudioDirector.Event.TANK_FIRE)
+
+        assertEquals(full * 0.5f, playback.volumes.last(), 0.001f)
+    }
+
+    @Test
+    fun `소리를 0으로 내리면 아무것도 내지 않는다`() {
+        director.setVolumes(bgm = 0f, sfx = 0f)
+        director.play(AudioDirector.Event.TANK_FIRE)
+
+        assertTrue("소리가 나면 안 된다", playback.played.isEmpty())
+    }
+
+    @Test
+    fun `이미 도는 반복음도 크기를 따라간다`() {
+        director.setLoop(AudioDirector.Loop.TANK_MOVE, true)
+        val before = playback.loopVolumes.size
+
+        director.setVolumes(bgm = 1f, sfx = 0.25f)
+
+        assertTrue("반복음 크기를 안 바꿨다", playback.loopVolumes.size > before)
+        assertTrue(playback.loopVolumes.last() < playback.loopVolumes.first())
+    }
+
+    @Test
+    fun `배경음을 0으로 내리면 멈추고 올리면 다시 난다`() {
+        director.setTrack(AudioDirector.Track.BATTLE)
+        assertEquals(1, playback.music.size)
+
+        director.setVolumes(bgm = 0f, sfx = 1f)
+        assertTrue("배경음이 멈춰야 한다", playback.musicStopped > 0)
+
+        // 다시 올리면 같은 곡이 다시 나야 한다. 크기만 바꿔서는 멈춘 곡이 안 돌아온다.
+        director.setVolumes(bgm = 0.8f, sfx = 1f)
+        assertEquals(2, playback.music.size)
+        assertEquals(AudioDirector.Track.BATTLE, director.track)
+    }
+
+    @Test
+    fun `배경음 크기는 곡을 다시 틀지 않고 바뀐다`() {
+        director.setTrack(AudioDirector.Track.BATTLE)
+        director.setVolumes(bgm = 0.4f, sfx = 1f)
+
+        assertEquals("곡을 다시 틀면 처음부터 나 버린다", 1, playback.music.size)
+        assertEquals(0, playback.musicStopped)
     }
 }

@@ -117,6 +117,14 @@ class LobbyState(
     private fun freeColor(slotIndex: Int): Int =
         (0 until paletteSize).firstOrNull { isColorFree(it, slotIndex) } ?: slotIndex
 
+    /** 준비 상태만 바꾼다. 고른 탱크와 색은 건드리지 않는다. */
+    fun markReady(index: Int, ready: Boolean) {
+        val slot = slots.getOrNull(index) ?: return
+        if (!slot.connected) return
+        slot.ready = ready
+        if (!ready) countdownTicks = 0
+    }
+
     fun touch(index: Int, nowMs: Long) {
         slots.getOrNull(index)?.lastSeenMs = nowMs
     }
@@ -161,6 +169,23 @@ class LobbyState(
     fun markStarted() {
         started = true
         countdownTicks = 0
+    }
+
+    /**
+     * 판이 끝나고 로비로 되돌린다. 들어와 있는 사람은 그대로 둔다. (계획서 §33)
+     *
+     * [reset] 과 다르다. reset 은 방을 비우고, 이쪽은 자리를 유지한 채 준비만 푼다.
+     * 다시 하려고 모여 있는 사람을 내보낼 이유가 없다.
+     */
+    fun reopen(nowMs: Long) {
+        started = false
+        countdownTicks = 0
+        for (slot in slots) {
+            if (!slot.connected) continue
+            // 방장은 준비한 것으로 둔다. 시작을 누르는 사람이 자기 준비를 기다릴 일은 없다.
+            slot.ready = slot.host
+            slot.lastSeenMs = nowMs
+        }
     }
 
     fun reset() {

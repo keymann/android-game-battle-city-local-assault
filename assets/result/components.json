@@ -1,0 +1,266 @@
+{
+  "columns": 4,
+  "rows": 4,
+  "sourceSize": [
+    1254,
+    1254
+  ],
+  "components": [
+    {
+      "name": "victory_banner",
+      "index": 0,
+      "row": 0,
+      "column": 0,
+      "sourceCell": [
+        0,
+        0,
+        314,
+        314
+      ],
+      "outputSize": [
+        309,
+        187
+      ]
+    },
+    {
+      "name": "game_over_banner",
+      "index": 1,
+      "row": 0,
+      "column": 1,
+      "sourceCell": [
+        314,
+        0,
+        313,
+        314
+      ],
+      "outputSize": [
+        337,
+        187
+      ]
+    },
+    {
+      "name": "winner_medal",
+      "index": 2,
+      "row": 0,
+      "column": 2,
+      "sourceCell": [
+        627,
+        0,
+        313,
+        314
+      ],
+      "outputSize": [
+        337,
+        185
+      ]
+    },
+    {
+      "name": "winner_card",
+      "index": 3,
+      "row": 0,
+      "column": 3,
+      "sourceCell": [
+        940,
+        0,
+        314,
+        314
+      ],
+      "outputSize": [
+        205,
+        212
+      ]
+    },
+    {
+      "name": "rank_1_badge",
+      "index": 4,
+      "row": 1,
+      "column": 0,
+      "sourceCell": [
+        0,
+        314,
+        314,
+        313
+      ],
+      "outputSize": [
+        229,
+        190
+      ]
+    },
+    {
+      "name": "rank_2_badge",
+      "index": 5,
+      "row": 1,
+      "column": 1,
+      "sourceCell": [
+        314,
+        314,
+        313,
+        313
+      ],
+      "outputSize": [
+        229,
+        190
+      ]
+    },
+    {
+      "name": "rank_3_badge",
+      "index": 6,
+      "row": 1,
+      "column": 2,
+      "sourceCell": [
+        627,
+        314,
+        313,
+        313
+      ],
+      "outputSize": [
+        229,
+        191
+      ]
+    },
+    {
+      "name": "rank_4_badge",
+      "index": 7,
+      "row": 1,
+      "column": 3,
+      "sourceCell": [
+        940,
+        314,
+        314,
+        313
+      ],
+      "outputSize": [
+        228,
+        189
+      ]
+    },
+    {
+      "name": "result_row_cyan",
+      "index": 8,
+      "row": 2,
+      "column": 0,
+      "sourceCell": [
+        0,
+        627,
+        314,
+        313
+      ],
+      "outputSize": [
+        301,
+        115
+      ]
+    },
+    {
+      "name": "result_row_orange",
+      "index": 9,
+      "row": 2,
+      "column": 1,
+      "sourceCell": [
+        314,
+        627,
+        313,
+        313
+      ],
+      "outputSize": [
+        296,
+        114
+      ]
+    },
+    {
+      "name": "result_row_lime",
+      "index": 10,
+      "row": 2,
+      "column": 2,
+      "sourceCell": [
+        627,
+        627,
+        313,
+        313
+      ],
+      "outputSize": [
+        294,
+        114
+      ]
+    },
+    {
+      "name": "result_row_violet",
+      "index": 11,
+      "row": 2,
+      "column": 3,
+      "sourceCell": [
+        940,
+        627,
+        314,
+        313
+      ],
+      "outputSize": [
+        293,
+        114
+      ]
+    },
+    {
+      "name": "stage_clear_card",
+      "index": 12,
+      "row": 3,
+      "column": 0,
+      "sourceCell": [
+        0,
+        940,
+        314,
+        314
+      ],
+      "outputSize": [
+        188,
+        232
+      ]
+    },
+    {
+      "name": "primary_action_button",
+      "index": 13,
+      "row": 3,
+      "column": 1,
+      "sourceCell": [
+        314,
+        940,
+        313,
+        314
+      ],
+      "outputSize": [
+        306,
+        146
+      ]
+    },
+    {
+      "name": "secondary_action_button",
+      "index": 14,
+      "row": 3,
+      "column": 2,
+      "sourceCell": [
+        627,
+        940,
+        313,
+        314
+      ],
+      "outputSize": [
+        328,
+        139
+      ]
+    },
+    {
+      "name": "home_button",
+      "index": 15,
+      "row": 3,
+      "column": 3,
+      "sourceCell": [
+        940,
+        940,
+        314,
+        314
+      ],
+      "outputSize": [
+        204,
+        119
+      ]
+    }
+  ]
+}

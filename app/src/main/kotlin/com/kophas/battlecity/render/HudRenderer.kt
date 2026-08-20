@@ -23,6 +23,21 @@ import com.kophas.battlecity.gameplay.Tank
  */
 class HudRenderer(private val catalog: SpriteCatalog) {
 
+    /**
+     * 이 기기가 겪는 왕복 지연. 못 쟀거나 혼자 하는 판이면 음수. (계획서 §44.2)
+     *
+     * 평균 지연이 아니라 **내 기기의** 지연이다. 화면이 튀는 것이 내 탓인지 남의
+     * 탓인지 알 수 없으면 아무것도 할 수 없다. 숫자로 보여 주면 공유기 곁으로
+     * 옮겨 앉는 것만으로 나아지는지 스스로 판단할 수 있다.
+     */
+    var latencyMs: Int = -1
+
+    /** 접속이 살아 있는가. 끊기면 숫자 대신 끊긴 표시가 나간다. */
+    var online: Boolean = true
+
+    /** 네트워크 표시를 그릴지. 혼자 하는 판에서는 뜻이 없다. */
+    var showNetwork: Boolean = false
+
     fun render(batch: SpriteBatch, viewport: Viewport, match: MatchState, world: GameWorld) {
         val unit = viewport.worldToScreenLength(Constants.BLOCK_PX) * UNIT_RATIO
         if (unit <= 0f) return
@@ -44,6 +59,50 @@ class HudRenderer(private val catalog: SpriteCatalog) {
         drawPanel(batch, originX - unit * 0.3f, y - unit * 0.2f, unit * ENEMY_WIDTH_UNITS, unit * 1.2f)
         val label = "ENEMY ${match.enemiesRemaining}-${match.totalEnemies}"
         drawText(batch, label, originX, y, unit * 0.8f, 1f)
+
+        if (showNetwork) {
+            y += unit * 1.4f
+            drawNetwork(batch, originX, y, unit)
+        }
+    }
+
+    /**
+     * 접속 상태와 왕복 지연.
+     *
+     * ```
+     * 📶 42MS
+     * ```
+     *
+     * 색으로 한 번, 숫자로 한 번 말한다. 색만으로는 얼마나 나쁜지 모르고, 숫자만
+     * 두면 좋은 값인지 나쁜 값인지 판단할 기준이 없다.
+     */
+    private fun drawNetwork(batch: SpriteBatch, x: Float, y: Float, unit: Float) {
+        val ms = latencyMs
+        val color = when {
+            !online -> BAD_COLOR
+            ms < 0 -> DIM_COLOR
+            ms <= LATENCY_GOOD_MS -> GOOD_COLOR
+            ms <= LATENCY_POOR_MS -> WARN_COLOR
+            else -> BAD_COLOR
+        }
+        drawPanel(batch, x - unit * 0.3f, y - unit * 0.2f, unit * NETWORK_WIDTH_UNITS, unit * 1.2f)
+        batch.draw(
+            region = if (online) catalog.netOnline else catalog.netOffline,
+            x = x,
+            y = y,
+            width = unit * 0.9f,
+            height = unit * 0.9f,
+            layer = Constants.Layer.HUD,
+            red = red(color),
+            green = green(color),
+            blue = blue(color),
+        )
+        val text = when {
+            !online -> "LOST"
+            ms < 0 -> "--MS"
+            else -> "${ms.coerceAtMost(MAX_SHOWN_MS)}MS"
+        }
+        drawText(batch, text, x + unit * 1.1f, y, unit * 0.7f, 1f, color)
     }
 
     private fun drawPlayerRow(
@@ -186,6 +245,17 @@ class HudRenderer(private val catalog: SpriteCatalog) {
     }
 
     private companion object {
+        /** 이 값까지는 쾌적하다. Protocol 과 같은 기준을 쓴다. */
+        const val LATENCY_GOOD_MS = 60
+        const val LATENCY_POOR_MS = 180
+        const val MAX_SHOWN_MS = 999
+        const val NETWORK_WIDTH_UNITS = 5.2f
+
+        const val GOOD_COLOR = 0x8BE04B
+        const val WARN_COLOR = 0xF5A623
+        const val BAD_COLOR = 0xE2543C
+        const val DIM_COLOR = 0x8A93A0
+
         /** HUD 한 칸의 크기. 블록(64px) 대비 비율. */
         const val UNIT_RATIO = 0.55f
 

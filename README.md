@@ -176,9 +176,19 @@ app/
 ### 게임 상태 머신
 
 ```text
-BOOT → MAIN_MENU → CREATE / JOIN → LOBBY → TANK_SELECT → COUNTDOWN → PLAYING
-    → VICTORY / GAME_OVER → RESULT → LOBBY / MENU
+         ┌──CREATE─────────────────┐
+  MENU ──┤                         ▼
+         └──JOIN──▶ ROOMS ──선택──▶ LOBBY ──START──▶ BATTLE ──승패──▶ RESULT
+    ▲                  │              ▲   ◀──LOBBY───────────────────┘ │
+    │                  │              └───PLAY AGAIN────────────────────┘ │
+    └───MAIN MENU──────┴───────────────────────────────────────────────────┘
 ```
+
+앱을 처음 띄울 때만 시작 그림을 2초 보여 준 뒤 메뉴로 넘어갑니다.
+
+`GameHost.screen` 하나가 지금 무엇을 그리고 손가락을 어디로 보낼지 정합니다.
+설정 화면만 예외로, 다른 화면 **위에** 덮입니다.
+자세한 것은 [docs/SCREENS.md](./docs/SCREENS.md) 에 있습니다.
 
 ---
 
@@ -270,7 +280,8 @@ app/src/main/
 스테이지 랜덤 생성 설계는 [docs/STAGE_GENERATION.md](./docs/STAGE_GENERATION.md),
 COM AI 설계는 [docs/AI.md](./docs/AI.md),
 로컬 멀티플레이 설계는 [docs/NETWORK.md](./docs/NETWORK.md),
-사운드·진동·저사양 대응은 [docs/AUDIO.md](./docs/AUDIO.md) 를 참고하세요.
+사운드·진동·저사양 대응은 [docs/AUDIO.md](./docs/AUDIO.md),
+화면 전환·방 설정·결과 화면은 [docs/SCREENS.md](./docs/SCREENS.md) 를 참고하세요.
 
 크레딧은 [CREDITS.md](./CREDITS.md) 에 있습니다.
 
@@ -291,6 +302,7 @@ COM AI 설계는 [docs/AI.md](./docs/AI.md),
 | Phase 6 | 로컬 멀티플레이 — Host, Join, Lobby, 상태 동기화, Disconnect 처리 | ✅ 완료 |
 | Phase 7 | 모바일 UI — Virtual Joystick, Fire/Special, HUD, 로비 화면 | ✅ 완료 |
 | Phase 8 | 최종화 — 사운드, 이펙트, 진동, 최적화, 저사양/Tablet/Fold/해상도 테스트 | ✅ 완료 |
+| Phase 9 | 화면 완성 — 메인 메뉴, 방 설정(본진 보호·아군 오사·맵 크기·소리), 결과 화면, 카운트다운 소리, 네트워크 지연 표시 | ✅ 완료 |
 
 ### MVP 순서
 
@@ -347,6 +359,28 @@ Tank Explosion / Player Death / Enemy Spawn / Base Warning / Base Destroy / Vict
 seed 로 생성된 4인용 4:3 스테이지(24×18 블록). 지형·도로 오토타일, 흙 구역,
 벽돌·석재 구조물, 환경 오브젝트, 본진이 모두 랜덤 배치됩니다.
 월드는 16px 픽셀아트, 회전하는 탱크만 벡터풍 팩을 씁니다.
+
+![Phase 9 메인 메뉴](docs/images/phase9_menu.png)
+
+메인 메뉴에서 방을 만들거나 남의 방에 들어갑니다. 오른쪽 위는 같은 망에 열린 방이
+있는지 살핀 결과입니다 — 없는데 JOIN 을 눌러 빈 화면을 보고 있는 일을 줄입니다.
+
+![Phase 9 방 목록](docs/images/phase9_rooms.png)
+
+JOIN GAME 을 누르면 같은 망에 열린 방이 나옵니다. 방장 이름 · 방을 연 시각 · 인원이
+한 줄에 보이고, 로비에서 기다리는 방만 나옵니다. 정원이 찬 방은 지우지 않고 잠급니다 —
+자리가 날 수도 있고, 방이 있다는 것 자체가 알 만한 정보이기 때문입니다.
+
+![Phase 9 설정](docs/images/phase9_settings.png)
+
+한 화면에 두 종류가 있습니다. 왼쪽 **방 규칙**(맵 크기 · 시드 · 아군 오사 · 본진 보호 ·
+동시 COM 수)은 방장만 정하고 판을 열 때 모두에게 걸립니다. 오른쪽 **소리 크기**는
+이 기기에만 걸리고 손을 떼는 즉시 반영되며 다음에도 남습니다.
+
+![Phase 9 결과](docs/images/phase9_result.png)
+
+처치 수 → 남은 Life → 남은 HP 순으로 순위를 가릅니다. PLAY AGAIN 은 방장만 누를 수
+있고, 다른 사람이 모두 결과 화면을 떠나면 방장이라도 누를 수 없습니다.
 
 ![Phase 7](docs/images/phase7_controls.png)
 

@@ -4,6 +4,9 @@
     assets/sprites/{terrain,tanks,effects}   원본 판 + 이름표(JSON)
     assets/hud/components                    HUD 아이콘
     assets/lobby/components                  로비 아이콘
+    assets/main_menu/components              메인 메뉴
+    assets/lobby_settings/components         방 설정
+    assets/result/components                 결과 화면
     assets/font/font_sheet.png               비트맵 폰트 글리프
         -> app/src/main/assets/atlas/game.png / game.xml
 
@@ -18,6 +21,7 @@
 
 import json
 import os
+import subprocess
 import shutil
 import sys
 
@@ -43,6 +47,8 @@ SHELL, FLASH, IMPACT = 40, 48, 56
 HUD = 64
 #: 로비는 게임 화면보다 크게 그린다. 손가락으로 누를 것들이라 작으면 안 된다.
 LOBBY = 96
+#: 메뉴·설정·결과의 판과 버튼. 가로로 길게 늘여 쓰므로 가로 해상도가 넉넉해야 한다.
+SCREEN = 160
 
 ATLAS_WIDTH = 1024
 
@@ -141,8 +147,19 @@ def build_effects(entries):
         entries.append((name, out))
 
 
-#: 쓰지 않는 아이콘. 쿨타임은 SPECIAL 버튼 자체에 표현하므로 따로 둘 것이 없다.
-SKIP_ICONS = {"cooldown_25", "cooldown_75"}
+#: 쓰지 않는 아이콘.
+#:  - 쿨타임은 SPECIAL 버튼 자체에 표현하므로 따로 둘 것이 없다.
+#:  - speaker_on 은 BGM / SFX 아이콘이 이미 켜짐 상태를 말한다. 같은 자리에 둘을
+#:    겹칠 수 없어 아틀라스에 넣지 않는다.
+#:  - create_room_icon / join_room_icon 은 버튼 글자 옆에 붙여 뒀다가 걷어냈다.
+#:    "CREATE GAME" 이라고 쓰여 있는데 그림을 하나 더 얹으니 어색했다.
+#:  - *_button_pressed 는 눌린 모습이 따로 그려진 것인데, 낱장마다 다듬긴 여백이
+#:    달라 같은 자리에 그려도 판이 한 번 튀었다 돌아온다. 눌림은 흐리기로 말한다.
+#:    (secondary_button_pressed 만 남긴다 — 방 목록에서 잠긴 줄의 바탕이다.)
+#: 원본은 모두 assets 에 그대로 있다.
+SKIP_ICONS = {"cooldown_25", "cooldown_75", "speaker_on",
+              "create_room_icon", "join_room_icon",
+              "primary_button_pressed", "settings_button_pressed"}
 
 
 def build_icons(entries, src, prefix, size):
@@ -157,6 +174,81 @@ def build_icons(entries, src, prefix, size):
         A.run(["magick", os.path.join(src, filename), "-trim", "+repage",
                "-filter", "Box", "-resize", f"{size}x{size}", "-depth", "8", out])
         entries.append((name, out))
+
+
+def build_screen(entries, folder, prefix, size):
+    """메뉴 · 설정 · 결과 화면 조각.
+
+    낱장 PNG 를 쓰지 않는다. 그 파일들은 4x4 격자 눈금으로 잘려 있는데 판 그림은
+    한 칸보다 넓어서, 넓은 띠(배너 · 버튼)가 옆 칸까지 밀고 들어가 두 조각이
+    한 파일에 섞여 있다. 판에서 **빈 줄로 갈라** 직접 뜬다. 이름과 순서는
+    components.json 이 정한 대로다.
+    """
+    sheet = f"assets/{folder}/components_sheet_rgba.png"
+    with open(f"assets/{folder}/components.json", encoding="utf-8") as f:
+        names = [c["name"] for c in sorted(json.load(f)["components"],
+                                           key=lambda c: c["index"])]
+
+    boxes = A.find_cells(sheet)
+    if len(boxes) != len(names):
+        # 조각 수가 어긋나면 이름이 통째로 밀린다. 조용히 넘어가면 안 된다.
+        raise SystemExit(f"{folder}: 조각 {len(boxes)}개, 이름 {len(names)}개로 어긋난다")
+
+    for name, box in zip(names, boxes):
+        if name in SKIP_ICONS:
+            continue
+        out = f"{A.SPRITES}/{prefix}{name}.png"
+        A.crop(sheet, box, out)
+        A.run(["magick", out, "-trim", "+repage",
+               "-filter", "Box", "-resize", f"{size}x{size}", "-depth", "8", out])
+        entries.append((f"{prefix}{name}", out))
+
+
+#: 콜론 도트 모양. 폰트 시트에 없어서 같은 화풍으로 직접 그린다.
+#: `.` 투명 · `#` 테두리 · `W` 밝은 면 · `s`,`S` 그림자
+COLON_ART = [
+    "................",
+    "................",
+    "................",
+    ".....######.....",
+    ".....##WW##.....",
+    ".....##ss##.....",
+    ".....##SS##.....",
+    ".....######.....",
+    "................",
+    "................",
+    ".....######.....",
+    ".....##WW##.....",
+    ".....##ss##.....",
+    ".....##SS##.....",
+    ".....######.....",
+    "................",
+]
+
+COLON_PALETTE = {
+    ".": (0, 0, 0, 0),
+    "#": (0x47, 0x32, 0x4B, 0xFF),
+    "W": (0xFF, 0xFF, 0xFF, 0xFF),
+    "s": (0x81, 0x75, 0x9B, 0xFF),
+    "S": (0x99, 0x9A, 0xC4, 0xFF),
+}
+
+
+def build_colon(entries):
+    """시각을 `08:15` 로 쓰려면 콜론이 있어야 한다.
+
+    Kenney 시트에는 글자와 숫자, 그리고 `-` `+` `%` 밖에 없다. 콜론은 점 두 개라
+    시트의 다른 글자에서 색을 그대로 빌려 오면 같은 폰트로 보인다. 빌린 색은
+    `ui_minus` 에서 잰 것이다.
+    """
+    raw = bytearray()
+    for row in COLON_ART:
+        for cell in row:
+            raw.extend(COLON_PALETTE[cell])
+    out = f"{A.SPRITES}/ui_colon.png"
+    subprocess.run(["magick", "-size", "16x16", "-depth", "8", "rgba:-", out],
+                   input=bytes(raw), check=True)
+    entries.append(("ui_colon", out))
 
 
 def build_font(entries):
@@ -193,7 +285,11 @@ def main():
     build_effects(entries)
     build_icons(entries, "assets/hud/components", "hud_", HUD)
     build_icons(entries, "assets/lobby/components", "lobby_", LOBBY)
+    build_screen(entries, "main_menu", "menu_", SCREEN)
+    build_screen(entries, "lobby_settings", "set_", SCREEN)
+    build_screen(entries, "result", "result_", SCREEN)
     build_font(entries)
+    build_colon(entries)
 
     entries = [(n, p) for n, p in entries if not n.startswith("_")]
     A.pack(entries, os.path.join(OUT_DIR, "game.png"),

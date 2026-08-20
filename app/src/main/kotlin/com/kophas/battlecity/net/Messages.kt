@@ -15,6 +15,8 @@ object Messages {
         val players: Int,
         val maxPlayers: Int,
         val started: Boolean,
+        /** 방을 연 시각. 방 목록에서 언제 열린 방인지 보여 준다. */
+        val createdAt: Long = 0L,
     )
 
     fun writeAnnounce(writer: PacketWriter, value: Announce): PacketWriter =
@@ -23,12 +25,14 @@ object Messages {
             .byte(value.players)
             .byte(value.maxPlayers)
             .bool(value.started)
+            .long(value.createdAt)
 
     fun readAnnounce(reader: PacketReader) = Announce(
         hostName = reader.text(),
         players = reader.byte(),
         maxPlayers = reader.byte(),
         started = reader.bool(),
+        createdAt = reader.long(),
     )
 
     // --- 입장 -------------------------------------------------------------
@@ -71,11 +75,28 @@ object Messages {
         val host: Boolean,
     )
 
-    data class LobbyUpdate(val slots: List<LobbySlot>, val countdownTicks: Int)
+    /**
+     * 로비 현황. 방 규칙도 함께 실린다.
+     *
+     * 규칙을 판이 시작될 때만 보내면, 아직 판이 안 열린 로비에서 참가자가 설정 화면을
+     * 열었을 때 **제 기기의 기본값**을 방 규칙인 양 보게 된다. 방장이 본진 보호를
+     * 껐는데 켜져 있다고 읽히면 안 된다.
+     */
+    data class LobbyUpdate(
+        val slots: List<LobbySlot>,
+        val countdownTicks: Int,
+        val mapSize: Int = 1,
+        val friendlyFire: Boolean = true,
+        val maxActiveEnemies: Int = 0,
+        val baseProtection: Boolean = true,
+    )
 
     fun writeLobby(writer: PacketWriter, value: LobbyUpdate): PacketWriter {
         Protocol.header(writer, Protocol.Type.LOBBY)
             .short(value.countdownTicks)
+            .byte(value.mapSize)
+            .byte(value.maxActiveEnemies)
+            .byte(flags(value.friendlyFire, value.baseProtection, false))
             .byte(value.slots.size)
         for (slot in value.slots) {
             writer.byte(slot.index)
@@ -89,6 +110,9 @@ object Messages {
 
     fun readLobby(reader: PacketReader): LobbyUpdate {
         val countdown = reader.short()
+        val mapSize = reader.byte()
+        val maxActive = reader.byte()
+        val ruleFlags = reader.byte()
         val count = reader.byte()
         val slots = ArrayList<LobbySlot>(count)
         repeat(count) {
@@ -107,7 +131,14 @@ object Messages {
                 host = flags and 4 != 0,
             )
         }
-        return LobbyUpdate(slots, countdown)
+        return LobbyUpdate(
+            slots = slots,
+            countdownTicks = countdown,
+            mapSize = mapSize,
+            friendlyFire = ruleFlags and 1 != 0,
+            maxActiveEnemies = maxActive,
+            baseProtection = ruleFlags and 2 != 0,
+        )
     }
 
     /**
@@ -145,6 +176,11 @@ object Messages {
         val playerCount: Int,
         val gridHash: Long,
         val startTick: Long,
+        /** 방장이 정한 규칙. 판정에 영향을 주므로 함께 보낸다. */
+        val mapSize: Int = 1,
+        val friendlyFire: Boolean = true,
+        val maxActiveEnemies: Int = 0,
+        val baseProtection: Boolean = true,
     )
 
     fun writeStart(writer: PacketWriter, value: Start): PacketWriter =
@@ -154,14 +190,31 @@ object Messages {
             .byte(value.playerCount)
             .long(value.gridHash)
             .long(value.startTick)
+            .byte(value.mapSize)
+            .byte(value.maxActiveEnemies)
+            .byte(flags(value.friendlyFire, value.baseProtection, false))
 
-    fun readStart(reader: PacketReader) = Start(
-        seed = reader.long(),
-        stageIndex = reader.short(),
-        playerCount = reader.byte(),
-        gridHash = reader.long(),
-        startTick = reader.long(),
-    )
+    fun readStart(reader: PacketReader): Start {
+        val seed = reader.long()
+        val stageIndex = reader.short()
+        val playerCount = reader.byte()
+        val gridHash = reader.long()
+        val startTick = reader.long()
+        val mapSize = reader.byte()
+        val maxActive = reader.byte()
+        val rules = reader.byte()
+        return Start(
+            seed = seed,
+            stageIndex = stageIndex,
+            playerCount = playerCount,
+            gridHash = gridHash,
+            startTick = startTick,
+            mapSize = mapSize,
+            friendlyFire = rules and 1 != 0,
+            maxActiveEnemies = maxActive,
+            baseProtection = rules and 2 != 0,
+        )
+    }
 
     // --- 조종 입력 --------------------------------------------------------
 
@@ -311,4 +364,26 @@ object Messages {
 
     private fun flags(a: Boolean, b: Boolean, c: Boolean): Int =
         (if (a) 1 else 0) or (if (b) 2 else 0) or (if (c) 4 else 0)
+
+    // --- 지연 측정 · 결과 화면 -------------------------------------------
+
+    /**
+     * 왕복 시간 측정. 보낸 쪽의 시계를 그대로 실어 보내고 받은 쪽은 되돌려만 준다.
+     *
+     * 두 기기의 시계를 맞출 필요가 없다. 값을 해석하는 쪽이 언제나 보낸 쪽이라,
+     * 돌아온 값을 제 시계에서 빼면 그것이 곧 왕복 시간이다.
+     */
+    fun writePing(writer: PacketWriter, stamp: Long): PacketWriter =
+        Protocol.header(writer, Protocol.Type.PING).long(stamp)
+
+    fun writePong(writer: PacketWriter, stamp: Long): PacketWriter =
+        Protocol.header(writer, Protocol.Type.PONG).long(stamp)
+
+    fun readStamp(reader: PacketReader): Long = reader.long()
+
+    /** 결과 화면에 있는지. 방장이 PLAY AGAIN 을 열어 둘지 정하는 데 쓴다. */
+    fun writePresence(writer: PacketWriter, present: Boolean): PacketWriter =
+        Protocol.header(writer, Protocol.Type.PRESENCE).bool(present)
+
+    fun readPresence(reader: PacketReader): Boolean = reader.bool()
 }

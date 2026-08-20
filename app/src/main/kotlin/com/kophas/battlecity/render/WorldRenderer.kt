@@ -259,14 +259,25 @@ class WorldRenderer(
         val (px, py) = stage.blockToPx(stage.baseBlock)
         val width = viewport.worldToScreenLength(Constants.BLOCK_PX)
 
-        val region = if (world.map.baseDestroyed) {
-            if (baseDestroyedAt < 0f) baseDestroyedAt = timeSeconds
-            val frames = catalog.baseDestroyFrames
-            val index = ((timeSeconds - baseDestroyedAt) * catalog.baseDestroyFps).toInt()
-            // 재생이 끝나면 잔해로 남는다.
-            if (index >= frames.size) catalog.baseWreck else frames[index]
-        } else {
-            catalog.baseIntact
+        val region = when {
+            world.map.baseDestroyed -> {
+                if (baseDestroyedAt < 0f) baseDestroyedAt = timeSeconds
+                val frames = catalog.baseDestroyFrames
+                val index = ((timeSeconds - baseDestroyedAt) * catalog.baseDestroyFps).toInt()
+                // 재생이 끝나면 잔해로 남는다.
+                if (index >= frames.size) catalog.baseWreck else frames[index]
+            }
+
+            // 보호막이 남아 있으면 한눈에 보여야 한다. 한 발을 견딜 수 있다는 뜻이다.
+            world.map.baseShielded -> catalog.baseShielded
+
+            // 적이 코앞이면 깜빡여 경고한다.
+            baseInDanger(world) -> {
+                val frames = catalog.baseWarnFrames
+                frames[((timeSeconds * catalog.baseWarnFps).toInt()) % frames.size]
+            }
+
+            else -> catalog.baseIntact
         }
 
         val height = width * (region.height.toFloat() / region.width)
@@ -290,6 +301,16 @@ class WorldRenderer(
      * 스프라이트 캔버스는 차체보다 넓다. 포신이 밖으로 뻗기 때문이다. 그래서
      * 탱크가 차지하는 칸이 아니라 **중심을 기준으로** 캔버스 크기만큼 그린다.
      */
+    /** 본진 가까이 적이 왔는가. 경고 표시에 쓴다. */
+    private fun baseInDanger(world: GameWorld): Boolean {
+        val (baseX, baseY) = world.baseCellCenter()
+        return world.tanks.any { tank ->
+            tank.alive && tank.faction == Tank.Faction.ENEMY &&
+                kotlin.math.abs(tank.centerX - baseX) < BASE_ALERT_PX &&
+                kotlin.math.abs(tank.centerY - baseY) < BASE_ALERT_PX
+        }
+    }
+
     private fun drawTanks(
         world: GameWorld,
         batch: SpriteBatch,
@@ -464,6 +485,9 @@ class WorldRenderer(
 
     private companion object {
         const val CONCEALED_ALPHA = 0.35f
+
+        /** 본진에서 이 거리 안에 적이 있으면 깜빡인다. */
+        const val BASE_ALERT_PX = 64f * 4f
 
         /** 포탄 그림은 실제 판정 크기보다 크게 그린다. 작으면 눈에 안 띈다. */
         const val PROJECTILE_SPRITE_SCALE = 3f

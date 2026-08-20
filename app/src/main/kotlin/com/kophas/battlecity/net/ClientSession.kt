@@ -49,6 +49,15 @@ class ClientSession(
     var host: Peer = Peer.NONE
         private set
 
+    /**
+     * Host 까지의 왕복 시간. 아직 못 쟀으면 -1.
+     *
+     * 화면에 보여 주는 값이라 튀는 것을 그대로 두면 숫자가 쉴 새 없이 바뀌어
+     * 읽을 수 없다. 새 값을 조금씩만 반영해 흔들림을 눌러 준다.
+     */
+    var latencyMs: Int = -1
+        private set
+
     /** 최근 두 장. 그 사이를 메워 그린다. */
     var previous: Messages.Snapshot? = null
         private set
@@ -63,6 +72,7 @@ class ClientSession(
     private var lastJoinMs = 0L
     private var lastSnapshotMs = 0L
     private var previousSnapshotMs = 0L
+    private var lastPingMs = 0L
     private var tankType = 0
     private var colorIndex = 0
     private var chosenName = playerName
@@ -99,6 +109,17 @@ class ClientSession(
         send(Messages.writeInput(writer, input))
     }
 
+    /** 결과 화면에 있는지 알린다. 방장이 PLAY AGAIN 을 열어 둘지 정한다. (계획서 §33) */
+    fun sendPresence(present: Boolean) {
+        if (host == Peer.NONE) return
+        send(Messages.writePresence(writer, present))
+    }
+
+    /** 판이 끝나고 로비로 돌아간다. 다음 START 를 기다린다. */
+    fun returnToLobby() {
+        if (state == State.PLAYING) state = State.LOBBY
+    }
+
     fun leave() {
         if (host != Peer.NONE) send(Protocol.header(writer, Protocol.Type.LEAVE))
         state = State.DISCONNECTED
@@ -114,7 +135,10 @@ class ClientSession(
             State.SEARCHING -> discover(now)
             // 답이 없으면 다시 보낸다. 첫 패킷이 사라지면 영영 기다리게 된다.
             State.JOINING -> if (now - lastJoinMs >= JOIN_RETRY_MS) sendJoin()
-            State.LOBBY, State.PLAYING -> heartbeat(now)
+            State.LOBBY, State.PLAYING -> {
+                heartbeat(now)
+                ping(now)
+            }
             State.DISCONNECTED -> Unit
         }
 
@@ -184,6 +208,19 @@ class ClientSession(
 
             Protocol.Type.HEARTBEAT -> lastHeardMs = now
 
+            Protocol.Type.PING -> {
+                lastHeardMs = now
+                send(Messages.writePong(writer, Messages.readStamp(reader)))
+            }
+
+            Protocol.Type.PONG -> {
+                lastHeardMs = now
+                val sample = (now - Messages.readStamp(reader)).toInt().coerceIn(0, MAX_LATENCY_MS)
+                latencyMs = if (latencyMs < 0) sample else {
+                    (latencyMs * (1f - SMOOTHING) + sample * SMOOTHING).toInt()
+                }
+            }
+
             Protocol.Type.HOST_CLOSED -> disconnect()
 
             else -> Unit
@@ -200,6 +237,13 @@ class ClientSession(
     private fun sendJoin() {
         lastJoinMs = clock()
         send(Messages.writeJoin(writer, Messages.Join(chosenName, tankType, colorIndex)))
+    }
+
+    private fun ping(now: Long) {
+        if (host == Peer.NONE) return
+        if (now - lastPingMs < Protocol.PING_INTERVAL_MS) return
+        lastPingMs = now
+        send(Messages.writePing(writer, now))
     }
 
     private fun heartbeat(now: Long) {
@@ -221,5 +265,9 @@ class ClientSession(
     private companion object {
         const val DISCOVER_INTERVAL_MS = 700L
         const val JOIN_RETRY_MS = 400L
+        const val MAX_LATENCY_MS = 9999
+
+        /** 새 측정값을 이만큼만 반영한다. 숫자가 덜 흔들린다. */
+        const val SMOOTHING = 0.3f
     }
 }

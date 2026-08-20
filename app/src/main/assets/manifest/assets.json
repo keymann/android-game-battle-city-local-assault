@@ -211,11 +211,66 @@
       "host": "lobby_host_badge",
       "disconnected": "lobby_disconnected",
       "start": "lobby_primary_button_normal",
-      "startPressed": "lobby_primary_button_pressed",
-      "secondary": "lobby_secondary_button",
-      "wifiStrong": "lobby_wifi_strong",
+        "secondary": "lobby_secondary_button",
+      "settings": "lobby_settings_button",
+    "wifiStrong": "lobby_wifi_strong",
       "wifiWeak": "lobby_wifi_weak"
     },
+    "menu": {
+      "comment": "메인 메뉴 (계획서 §27).",
+      "title": "menu_title_plate",
+      "primary": "menu_primary_button_normal",
+        "secondary": "menu_secondary_button_normal",
+      "secondaryPressed": "menu_secondary_button_pressed",
+      "settings": "menu_settings_button_normal",
+            "profile": "menu_profile_badge",
+      "playerIcon": "menu_player_icon",
+      "netStrong": "menu_network_strong",
+      "netWeak": "menu_network_weak",
+      "netOff": "menu_network_disconnected",
+      "statusOn": "menu_status_indicator_active",
+      "statusOff": "menu_status_indicator_inactive"
+    },
+
+    "settings": {
+      "comment": "방 설정 (로비에서 방장만 연다).",
+      "panel": "set_settings_panel",
+      "segment": "set_segment_normal",
+      "segmentSelected": "set_segment_selected",
+      "toggleOn": "set_toggle_on",
+      "toggleOff": "set_toggle_off",
+      "sliderTrack": "set_slider_track",
+      "sliderThumb": "set_slider_thumb",
+      "dropdown": "set_dropdown_button",
+      "dice": "set_randomize_dice",
+      "apply": "set_apply_button",
+      "close": "set_close_button",
+      "reset": "set_reset_button",
+      "bgmIcon": "set_bgm_icon",
+      "sfxIcon": "set_sfx_icon",
+        "speakerMuted": "set_speaker_muted"
+    },
+
+    "result": {
+      "comment": "게임 결과 화면 (계획서 §33).",
+      "victory": "result_victory_banner",
+      "gameOver": "result_game_over_banner",
+      "winnerCard": "result_winner_card",
+      "medal": "result_winner_medal",
+      "stageClear": "result_stage_clear_card",
+      "primary": "result_primary_action_button",
+      "secondary": "result_secondary_action_button",
+      "home": "result_home_button",
+      "rowByColor": [
+        "result_result_row_cyan", "result_result_row_orange",
+        "result_result_row_lime", "result_result_row_violet"
+      ],
+      "rankBadges": [
+        "result_rank_1_badge", "result_rank_2_badge",
+        "result_rank_3_badge", "result_rank_4_badge"
+      ]
+    },
+
     "controls": {
       "comment": "Phase 7 에서 쓴다. 지금은 그리지 않는다.",
       "joystickBase": "hud_joystick_base",

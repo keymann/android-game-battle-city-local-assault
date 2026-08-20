@@ -53,8 +53,11 @@ class GameSurfaceView @JvmOverloads constructor(
                 }
             }
 
-            MotionEvent.ACTION_UP, MotionEvent.ACTION_POINTER_UP ->
-                host.onTouchUp(event.getPointerId(event.actionIndex))
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_POINTER_UP -> {
+                // 뗀 자리도 함께 넘긴다. 버튼은 누른 자리에서 떼야 눌린 것으로 본다.
+                val index = event.actionIndex
+                host.onTouchUp(event.getPointerId(index), event.getX(index), event.getY(index))
+            }
 
             MotionEvent.ACTION_CANCEL -> host.onTouchCancel()
         }
