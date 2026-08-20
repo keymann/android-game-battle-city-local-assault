@@ -40,6 +40,16 @@ class GameHost(private val assetManager: AssetManager) : GameLoop.Callbacks {
 
     var preferVulkan: Boolean = true
 
+    /** 이 기기가 맡을 역할. 화면이 붙기 전에 정해야 한다. (계획서 §4.2) */
+    var netRole: NetRole = NetRole.LOCAL
+
+    /** Client 로 붙을 때 직접 지정한 Host 주소. null 이면 브로드캐스트로 찾는다. */
+    var hostAddress: String? = null
+
+    var playerName: String = "PLAYER"
+
+    private var netDriver: NetDriver? = null
+
     val backend: RendererBackend get() = renderer.backend
 
     fun onSurfaceAvailable(surface: Surface, width: Int, height: Int) {
@@ -69,11 +79,14 @@ class GameHost(private val assetManager: AssetManager) : GameLoop.Callbacks {
 
     fun release() {
         loop.stop()
+        netDriver?.close()
+        netDriver = null
         renderer.detachSurface()
         renderer.close()
     }
 
     override fun onUpdate(tickIndex: Long, tickSeconds: Float) {
+        netDriver?.onTick()
         scene?.update(tickSeconds)
     }
 
@@ -115,6 +128,8 @@ class GameHost(private val assetManager: AssetManager) : GameLoop.Callbacks {
             is SurfaceCommand.Attach -> attach(command)
             is SurfaceCommand.Resize -> renderer.resize(command.width, command.height)
             SurfaceCommand.Detach -> {
+                netDriver?.close()
+                netDriver = null
                 renderer.detachSurface()
                 assets = null
                 scene = null
@@ -133,8 +148,19 @@ class GameHost(private val assetManager: AssetManager) : GameLoop.Callbacks {
         val source = AssetSource.of(assetManager)
         val loaded = GameAssets.load(source, renderer)
         assets = loaded
+
+        // 세션을 먼저 연다. 자리 배정이 씬보다 앞서야 사람이 잡은 자리에 AI 가 안 붙는다.
+        val driver = NetDriver(netRole, playerName, hostAddress)
+        netDriver = driver
+
         // 밸런스 값은 코드가 아니라 balance.json 에서 온다. (계획서 §41-19)
-        val newScene = BattleScene(loaded, BalanceConfig.load(source))
+        val newScene = BattleScene(
+            assets = loaded,
+            balance = BalanceConfig.load(source),
+            role = netRole,
+            remoteSlots = driver.remoteSlots,
+        )
+        driver.attachScene(newScene)
         scene = newScene
         viewport.resizeWorld(newScene.logicalWidth, newScene.logicalHeight)
     }

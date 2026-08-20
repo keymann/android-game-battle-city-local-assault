@@ -7,6 +7,8 @@ import androidx.activity.ComponentActivity
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import com.kophas.battlecity.game.NetRole
+import com.kophas.battlecity.net.UdpSelfTest
 
 /**
  * Phase 1 진입점.
@@ -40,6 +42,21 @@ class MainActivity : ComponentActivity() {
         // 저사양 폴백 경로를 실기기에서 강제로 검증하기 위한 디버그 스위치. (계획서 §24)
         //   adb shell am start -n com.kophas.battlecity/.MainActivity --ez preferVulkan false
         gameView.host.preferVulkan = intent?.getBooleanExtra(EXTRA_PREFER_VULKAN, true) ?: true
+
+        // 로컬 대전 역할. 조작 UI 가 붙기 전까지는 실행 인자로 정한다. (계획서 §4.2)
+        //   adb shell am start -n .../.MainActivity --es netRole host
+        //   adb shell am start -n .../.MainActivity --es netRole client --es hostAddress 192.168.0.5
+        gameView.host.netRole = when (intent?.getStringExtra(EXTRA_NET_ROLE)) {
+            "host" -> NetRole.HOST
+            "client" -> NetRole.CLIENT
+            else -> NetRole.LOCAL
+        }
+        gameView.host.hostAddress = intent?.getStringExtra(EXTRA_HOST_ADDRESS)
+        intent?.getStringExtra(EXTRA_PLAYER_NAME)?.let { gameView.host.playerName = it }
+
+        if (intent?.getBooleanExtra(EXTRA_NET_SELF_TEST, false) == true) {
+            UdpSelfTest.runAsync()
+        }
         setContentView(gameView)
     }
 
@@ -60,5 +77,9 @@ class MainActivity : ComponentActivity() {
 
     private companion object {
         const val EXTRA_PREFER_VULKAN = "preferVulkan"
+        const val EXTRA_NET_ROLE = "netRole"
+        const val EXTRA_HOST_ADDRESS = "hostAddress"
+        const val EXTRA_PLAYER_NAME = "playerName"
+        const val EXTRA_NET_SELF_TEST = "netSelfTest"
     }
 }

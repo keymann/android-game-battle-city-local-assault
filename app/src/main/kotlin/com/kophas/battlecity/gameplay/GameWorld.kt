@@ -112,6 +112,34 @@ class GameWorld(
         return tank
     }
 
+    /**
+     * Host 가 보낸 탱크를 그대로 받아 놓는다. (계획서 §35 Host -> Client)
+     *
+     * Client 는 규칙을 굴리지 않는다. 능력치를 다시 계산하지도, 스폰 연출을 내지도
+     * 않는다. 화면에 그릴 것을 세계에 앉히기만 한다. id 는 Host 가 정한 것을 쓴다.
+     * 그래야 다음 스냅샷에서 같은 탱크를 알아본다.
+     */
+    fun adoptRemoteTank(
+        id: Int,
+        faction: Tank.Faction,
+        type: Tank.Type,
+        ownerSlot: Int,
+        x: Float,
+        y: Float,
+        direction: Direction,
+    ): Tank? {
+        val tank = tanks.firstOrNull { it.id == id } ?: tankPool.obtainAt(id) ?: return null
+        if (tank !in tanks) tanks += tank
+        tank.faction = faction
+        tank.type = type
+        tank.colorSlot = ownerSlot
+        tank.ownerSlot = ownerSlot
+        tank.maxHp = balance.rules.maxHp
+        tank.spawnAt(x, y, direction)
+        tank.spawnGuardRemaining = 0f
+        return tank
+    }
+
     fun despawn(tank: Tank) {
         tank.alive = false
         tanks.remove(tank)
@@ -142,6 +170,17 @@ class GameWorld(
             gameOver = true
             listener?.onBaseDestroyed()
         }
+    }
+
+    /**
+     * 연출만 흘려보낸다. Client 가 쓴다. (계획서 §4.2)
+     *
+     * 이동도 충돌도 하지 않는다. 그것은 Host 가 정하고 스냅샷으로 내려 준다.
+     * 폭발 애니메이션까지 멈추면 화면이 죽은 것처럼 보이므로 그것만 굴린다.
+     */
+    fun updateEffectsOnly(deltaSeconds: Float) {
+        for (explosion in explosions.active) explosion.update(deltaSeconds)
+        explosions.releaseIf { it.finished.also { done -> if (done) it.active = false } }
     }
 
     // -----------------------------------------------------------------------
