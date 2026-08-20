@@ -2,6 +2,7 @@ package com.kophas.battlecity.render
 
 import com.kophas.battlecity.core.Constants
 import com.kophas.battlecity.gameplay.BalanceConfig
+import com.kophas.battlecity.gameplay.Explosion
 import com.kophas.battlecity.gameplay.GameWorld
 import com.kophas.battlecity.gameplay.Projectile
 import com.kophas.battlecity.gameplay.Tank
@@ -20,6 +21,9 @@ class WorldRenderer(
     private var stage: StageData? = null
     private var groundRegions: Array<TextureRegion> = emptyArray()
     private var objectRegions: Array<TextureRegion> = emptyArray()
+
+    /** 저사양 기기에서 켠다. 없어도 게임이 되는 연출만 끈다. (계획서 §24) */
+    var reducedEffects: Boolean = false
 
     /** 본진이 파괴된 시각. 파괴 애니메이션은 게임 상태가 아니라 연출이라 여기서 센다. */
     private var baseDestroyedAt: Float = -1f
@@ -305,7 +309,7 @@ class WorldRenderer(
             val centerX = viewport.worldToScreenX(tank.centerX)
             val centerY = viewport.worldToScreenY(tank.centerY)
 
-            if (tank.specialActive && tank.special == BalanceConfig.Special.DASH) {
+            if (!reducedEffects && tank.specialActive && tank.special == BalanceConfig.Special.DASH) {
                 drawDashTrail(batch, tank, centerX, centerY, spriteSize, timeSeconds)
             }
 
@@ -432,12 +436,17 @@ class WorldRenderer(
         for (explosion in world.explosions.active) {
             if (!explosion.active) continue
 
-            val art = catalog.effectOf(explosion.kind)
-            val index = explosion.frameIndex.coerceIn(0, art.frames.lastIndex)
+            // 총구 화염만 프레임이 아니라 방향으로 고른다.
+            val region = if (explosion.kind == Explosion.Kind.MUZZLE) {
+                catalog.muzzleOf(explosion.direction)
+            } else {
+                val art = catalog.effectOf(explosion.kind)
+                art.frames[explosion.frameIndex.coerceIn(0, art.frames.lastIndex)]
+            }
             val size = viewport.worldToScreenLength(explosion.size)
 
             batch.draw(
-                region = art.frames[index],
+                region = region,
                 x = viewport.worldToScreenX(explosion.x),
                 y = viewport.worldToScreenY(explosion.y),
                 width = size,

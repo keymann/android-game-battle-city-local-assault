@@ -3,6 +3,7 @@ package com.kophas.battlecity.game
 import android.util.Log
 import com.kophas.battlecity.ai.AiDirector
 import com.kophas.battlecity.ai.AiSettings
+import com.kophas.battlecity.audio.AudioDirector
 import com.kophas.battlecity.core.Direction
 import com.kophas.battlecity.gameplay.BalanceConfig
 import com.kophas.battlecity.gameplay.GameWorld
@@ -58,6 +59,23 @@ class BattleScene(
      */
     var profiles: List<PlayerProfile> = emptyList()
 
+    /** 소리와 진동. 없으면 조용히 돌아간다. (계획서 §34) */
+    var audio: AudioDirector? = null
+
+    /** 이 기기가 조종하는 자리. 진동은 이 사람에게만 준다. */
+    var localSlot: Int = 0
+
+    /**
+     * 저사양 기기에서 연출을 줄인다. (계획서 §24)
+     *
+     * 규칙은 건드리지 않는다. 대시 잔상처럼 **없어도 게임이 되는 것**만 뺀다.
+     * 판정을 바꾸면 같은 seed 로 다른 결과가 나와 네트워크가 어긋난다.
+     */
+    var reducedEffects: Boolean = false
+
+    /** 승패 소리는 한 번만 낸다. */
+    private var resultAnnounced = false
+
     private val catalog = SpriteCatalog(assets)
     private val generator = StageGenerator(assets.manifest, assets.mapGen)
     private val worldRenderer = WorldRenderer(catalog)
@@ -95,6 +113,7 @@ class BattleScene(
         world = GameWorld(stage, balance)
         world.listener = MatchBridge()
 
+        resultAnnounced = false
         director = AiDirector(balance, aiSettings, seed)
         director.bind(world)
         slotOfTank.clear()
@@ -195,6 +214,7 @@ class BattleScene(
 
         reapDestroyedTanks()
         respawnPlayers()
+        updateAudio()
 
         if (match.phase != MatchState.Phase.PLAYING) {
             if (resultHoldRemaining <= 0f) {
@@ -203,6 +223,41 @@ class BattleScene(
             }
             resultHoldRemaining -= tickSeconds
             if (resultHoldRemaining <= 0f) nextStage()
+        }
+    }
+
+    /**
+     * 이어지는 소리와 배경음. (계획서 §34)
+     *
+     * 매 틱 부르지만 [AudioDirector] 가 같은 것을 두 번 시작하지 않으므로
+     * 여기서는 "지금 상태가 이렇다" 만 알려 주면 된다.
+     */
+    private fun updateAudio() {
+        val sound = audio ?: return
+        val tank = tankOfSlot(localSlot)
+        sound.setLoop(AudioDirector.Loop.TANK_MOVE, tank != null && tank.moving)
+
+        // 본진 가까이 적이 오면 경고음이 돈다. 화면 밖에서 벌어지는 일을 알린다.
+        val (baseX, baseY) = world.baseCellCenter()
+        val warning = !world.map.baseDestroyed && world.tanks.any { enemy ->
+            enemy.alive && enemy.faction == Tank.Faction.ENEMY &&
+                kotlin.math.abs(enemy.centerX - baseX) < BASE_ALERT_PX &&
+                kotlin.math.abs(enemy.centerY - baseY) < BASE_ALERT_PX
+        }
+        sound.setLoop(AudioDirector.Loop.BASE_WARNING, warning)
+
+        sound.updateBattleMusic(match.enemiesRemaining, match.totalEnemies)
+
+        if (!resultAnnounced && match.phase != MatchState.Phase.PLAYING) {
+            resultAnnounced = true
+            sound.stopAllLoops()
+            sound.play(
+                if (match.phase == MatchState.Phase.VICTORY) {
+                    AudioDirector.Event.VICTORY
+                } else {
+                    AudioDirector.Event.GAME_OVER
+                },
+            )
         }
     }
 
@@ -242,6 +297,7 @@ class BattleScene(
     // -----------------------------------------------------------------------
 
     fun render(batch: SpriteBatch, viewport: Viewport) {
+        worldRenderer.reducedEffects = reducedEffects
         worldRenderer.render(world, batch, viewport, elapsedSeconds)
         hudRenderer.render(batch, viewport, match, world)
     }
@@ -258,7 +314,37 @@ class BattleScene(
     /** [GameWorld] 의 판정 결과를 [MatchState] 규칙으로 옮긴다. */
     private inner class MatchBridge : GameWorld.Listener {
 
+        override fun onTankSpawned(tank: Tank) {
+            if (tank.faction == Tank.Faction.ENEMY) audio?.play(AudioDirector.Event.ENEMY_SPAWN)
+        }
+
+        override fun onFired(tank: Tank) {
+            audio?.play(AudioDirector.Event.TANK_FIRE)
+            if (tank.ownerSlot == localSlot) audio?.vibrate(AudioDirector.Haptic.TANK_FIRE)
+        }
+
+        override fun onSteelHit(x: Float, y: Float) {
+            audio?.play(AudioDirector.Event.BULLET_HIT_STEEL)
+        }
+
+        override fun onProjectileHit(x: Float, y: Float) {
+            audio?.play(AudioDirector.Event.BULLET_HIT_BRICK)
+        }
+
+        override fun onSpecialActivated(tank: Tank, special: BalanceConfig.Special) {
+            audio?.play(
+                when (special) {
+                    BalanceConfig.Special.PIERCING -> AudioDirector.Event.SPECIAL_PIERCING
+                    BalanceConfig.Special.SHIELD -> AudioDirector.Event.SPECIAL_SHIELD
+                    BalanceConfig.Special.DASH -> AudioDirector.Event.SPECIAL_DASH
+                    BalanceConfig.Special.NONE -> return
+                },
+            )
+            if (tank.ownerSlot == localSlot) audio?.vibrate(AudioDirector.Haptic.SPECIAL)
+        }
+
         override fun onTankDamaged(tank: Tank, amount: Int, attackerId: Int) {
+            if (tank.ownerSlot == localSlot) audio?.vibrate(AudioDirector.Haptic.TAKE_DAMAGE)
             val dealer = slotOfTank[attackerId] ?: -1
             if (tank.faction == Tank.Faction.ENEMY) {
                 match.onEnemyDamaged(dealer, amount)
@@ -268,6 +354,12 @@ class BattleScene(
         }
 
         override fun onTankDestroyed(tank: Tank, killerId: Int) {
+            if (tank.faction == Tank.Faction.PLAYER) {
+                audio?.play(AudioDirector.Event.PLAYER_DEATH)
+                if (tank.ownerSlot == localSlot) audio?.vibrate(AudioDirector.Haptic.PLAYER_DEATH)
+            } else {
+                audio?.play(AudioDirector.Event.TANK_EXPLOSION)
+            }
             val killerSlot = slotOfTank[killerId] ?: -1
             if (tank.faction == Tank.Faction.ENEMY) {
                 match.onEnemyDestroyed(killerSlot)
@@ -277,11 +369,14 @@ class BattleScene(
         }
 
         override fun onBrickDestroyed(cellX: Int, cellY: Int) {
+            audio?.play(AudioDirector.Event.BRICK_DESTROY)
             // 벽이 사라지면 길이 바뀐다. AI 격자를 낡은 것으로 표시한다.
             director.onMapChanged()
         }
 
         override fun onBaseDestroyed() {
+            audio?.play(AudioDirector.Event.BASE_DESTROY)
+            audio?.vibrate(AudioDirector.Haptic.BASE_DESTROY)
             match.onBaseDestroyed()
         }
     }
@@ -293,5 +388,8 @@ class BattleScene(
 
         /** 승패가 갈린 뒤 결과를 보여 주는 시간. 결과 화면은 Phase 8 에서 붙는다. */
         const val RESULT_HOLD_SECONDS = 3f
+
+        /** 본진에서 이 거리 안에 적이 오면 경고음이 돈다. */
+        const val BASE_ALERT_PX = 64f * 5f
     }
 }

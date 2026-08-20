@@ -259,10 +259,16 @@ class SpriteCatalog(private val assets: GameAssets) {
         Explosion.Kind.TANK to frameArt("tankExplosion", "explosion_4"),
         Explosion.Kind.BULLET_HIT to frameArt("bulletHit", "impact_small"),
         Explosion.Kind.BRICK_BREAK to frameArt("brickBreak", "debris_brick"),
+        Explosion.Kind.STEEL_HIT to frameArt("steelHit", "ricochet_steel"),
         Explosion.Kind.SPAWN to frameArt("spawn", "spawn_glow"),
+        // 총구 화염은 방향이 있어 프레임 대신 방향으로 고른다. 자리만 채워 둔다.
+        Explosion.Kind.MUZZLE to frameArt("bulletHit", "impact_small"),
     )
 
     fun effectOf(kind: Explosion.Kind): FrameArt = effects.getValue(kind)
+
+    /** 총구 화염. 유일하게 방향이 있는 이펙트다. */
+    fun muzzleOf(direction: Direction): TextureRegion = muzzleFlash[direction.ordinal]
 
     // --- 스테이지 스프라이트 ----------------------------------------------
 

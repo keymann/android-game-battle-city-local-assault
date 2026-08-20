@@ -45,6 +45,15 @@ class GameWorld(
 
         fun onTankDestroyed(tank: Tank, killerId: Int) = Unit
 
+        /** 탱크가 나왔다. 소리와 연출이 여기에 붙는다. */
+        fun onTankSpawned(tank: Tank) = Unit
+
+        /** 포탄이 나갔다. */
+        fun onFired(tank: Tank) = Unit
+
+        /** 강철에 튕겼다. 부수지 못했다는 것을 알린다. */
+        fun onSteelHit(x: Float, y: Float) = Unit
+
         /** 특수기를 발동했다. (계획서 §6) */
         fun onSpecialActivated(tank: Tank, special: BalanceConfig.Special) = Unit
 
@@ -109,6 +118,7 @@ class GameWorld(
         tanks += tank
         nextTankId++
         spawnExplosion(Explosion.Kind.SPAWN, tank.centerX, tank.centerY, Tank.SIZE)
+        listener?.onTankSpawned(tank)
         return tank
     }
 
@@ -365,6 +375,8 @@ class GameWorld(
         if (!tank.canFire) return null
         val projectile = launchProjectile(tank, power, piercing) ?: return null
         tank.fireCooldownRemaining = tank.fireCooldown
+        muzzleFlash(tank)
+        listener?.onFired(tank)
         return projectile
     }
 
@@ -386,6 +398,18 @@ class GameWorld(
             piercing = piercing,
         )
         return projectile
+    }
+
+    /** 총구 화염. 포신 끝에서 진행 방향으로 뻗는다. */
+    private fun muzzleFlash(tank: Tank) {
+        val offset = Tank.SIZE * 0.55f
+        spawnExplosion(
+            kind = Explosion.Kind.MUZZLE,
+            centerX = tank.centerX + tank.direction.dx * offset,
+            centerY = tank.centerY + tank.direction.dy * offset,
+            size = Constants.CELL_PX * 1.5f,
+            direction = tank.direction,
+        )
     }
 
     private fun updateProjectiles(deltaSeconds: Float) {
@@ -457,6 +481,7 @@ class GameWorld(
         val impacts = impactCells(projectile, cellX, cellY)
         var stopped = false
         var brokeSomething = false
+        var steelHit = false
 
         for ((ix, iy) in impacts) {
             val result = map.damageCell(ix, iy, projectile.piercing)
@@ -484,7 +509,12 @@ class GameWorld(
                     )
                 }
 
-                TileMap.DamageResult.BLOCKED -> stopped = true
+                TileMap.DamageResult.BLOCKED -> {
+                    stopped = true
+                    if (map.typeAt(ix, iy) == TileType.STEEL) {
+                        steelHit = true
+                    }
+                }
 
                 TileMap.DamageResult.NONE -> Unit
             }
@@ -492,10 +522,15 @@ class GameWorld(
         }
 
         if (stopped) {
-            explodeProjectile(
-                projectile,
-                if (brokeSomething) Explosion.Kind.BRICK_BREAK else Explosion.Kind.BULLET_HIT,
-            )
+            // 무엇에 막혔는지가 눈에 보여야 한다. 강철에 튕긴 것과 벽돌을 부순 것은
+            // 다음에 어디를 노려야 하는지가 달라진다.
+            val kind = when {
+                brokeSomething -> Explosion.Kind.BRICK_BREAK
+                steelHit -> Explosion.Kind.STEEL_HIT
+                else -> Explosion.Kind.BULLET_HIT
+            }
+            if (steelHit) listener?.onSteelHit(projectile.centerX, projectile.centerY)
+            explodeProjectile(projectile, kind)
         }
     }
 
@@ -533,7 +568,9 @@ class GameWorld(
 
     private fun explodeProjectile(projectile: Projectile, kind: Explosion.Kind) {
         projectile.active = false
-        listener?.onProjectileHit(projectile.centerX, projectile.centerY)
+        if (kind != Explosion.Kind.STEEL_HIT) {
+            listener?.onProjectileHit(projectile.centerX, projectile.centerY)
+        }
         spawnExplosion(kind, projectile.centerX, projectile.centerY, Constants.CELL_PX * 1.5f)
     }
 
@@ -612,21 +649,26 @@ class GameWorld(
         }
     }
 
-    fun spawnExplosion(kind: Explosion.Kind, centerX: Float, centerY: Float, size: Float) {
+    fun spawnExplosion(
+        kind: Explosion.Kind,
+        centerX: Float,
+        centerY: Float,
+        size: Float,
+        direction: Direction = Direction.UP,
+    ) {
         val explosion = explosions.obtain() ?: return
         val frames = when (kind) {
-            Explosion.Kind.TANK -> 5
-            Explosion.Kind.BULLET_HIT -> 3
-            Explosion.Kind.BRICK_BREAK -> 3
-            Explosion.Kind.SPAWN -> 5
+            Explosion.Kind.TANK -> 8
+            Explosion.Kind.SPAWN -> 4
+            else -> 1
         }
         val fps = when (kind) {
-            Explosion.Kind.TANK -> 18f
-            Explosion.Kind.BULLET_HIT -> 24f
-            Explosion.Kind.BRICK_BREAK -> 20f
-            Explosion.Kind.SPAWN -> 14f
+            Explosion.Kind.TANK -> 20f
+            Explosion.Kind.SPAWN -> 8f
+            Explosion.Kind.MUZZLE -> 16f
+            else -> 12f
         }
-        explosion.start(kind, centerX, centerY, size, frames, fps)
+        explosion.start(kind, centerX, centerY, size, frames, fps, direction)
     }
 
     // -----------------------------------------------------------------------

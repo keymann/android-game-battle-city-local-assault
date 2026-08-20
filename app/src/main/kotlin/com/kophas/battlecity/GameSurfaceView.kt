@@ -19,7 +19,7 @@ class GameSurfaceView @JvmOverloads constructor(
     attrs: AttributeSet? = null,
 ) : SurfaceView(context, attrs), SurfaceHolder.Callback {
 
-    val host = GameHost(context.assets)
+    val host = GameHost(context.assets, context)
 
     init {
         holder.addCallback(this)
