@@ -191,6 +191,35 @@ class LobbyFlowTest {
         assertEquals(1, hostView().slots.count { it.connected })
     }
 
+    // --- Phase 10 감사 수정 -----------------------------------------------
+
+    @Test
+    fun `방 규칙이 바뀌면 참가자 준비가 풀린다`() {
+        pump()
+        clientDriver.toggleReady()
+        pump()
+        assertTrue(hostView().slots[1].ready)
+
+        // 준비했던 판과 다른 판이 열린다. 무엇에 준비했는지 모르는 준비는 준비가 아니다.
+        hostDriver.roomSettings = hostDriver.roomSettings.copy(baseProtection = false)
+        pump()
+
+        assertFalse("규칙이 바뀌었는데 준비가 남았다", hostView().slots[1].ready)
+        assertTrue("방장은 준비한 채로 둔다", hostView().slots[0].ready)
+    }
+
+    @Test
+    fun `같은 규칙을 다시 넣으면 준비를 건드리지 않는다`() {
+        pump()
+        clientDriver.toggleReady()
+        pump()
+
+        hostDriver.roomSettings = hostDriver.roomSettings.copy()
+        pump()
+
+        assertTrue(hostView().slots[1].ready)
+    }
+
     private companion object {
         init {
             // 시험이 쓰는 포트가 겹치지 않게만 해 두면 된다.

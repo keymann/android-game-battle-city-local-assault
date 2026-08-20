@@ -164,6 +164,22 @@ class MatchState(
         evaluate()
     }
 
+    /**
+     * 연결이 끊긴 자리를 탈락으로 굳힌다. (계획서 §37)
+     *
+     * 남은 Life 는 보지 않는다. 조종할 사람이 없는 탱크를 살려 두면 남은 사람에게는
+     * 움직이지 않는 표적일 뿐이고, 승패 계산에도 끼어든다. 점수는 끊긴 순간 값으로 남는다.
+     */
+    fun onPlayerDisconnected(slotIndex: Int) {
+        val slot = players.getOrNull(slotIndex) ?: return
+        if (slot.eliminated) return
+        slot.tankId = -1
+        slot.lives = 0
+        slot.lastHp = 0
+        slot.eliminated = true
+        evaluate()
+    }
+
     fun onPlayerDamaged(slotIndex: Int, dealerSlot: Int, amount: Int, remainingHp: Int) {
         players.getOrNull(slotIndex)?.lastHp = remainingHp
         players.getOrNull(dealerSlot)?.let { it.damageDealt += amount }

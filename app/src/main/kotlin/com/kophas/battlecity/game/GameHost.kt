@@ -487,10 +487,8 @@ class GameHost(
         driver.onMatchStarted = { enterBattle() }
         driver.onJoined = { enterLobby() }
         driver.onDenied = { reason -> onJoinDenied(reason) }
-        driver.onDisconnected = {
-            audio?.stopAllLoops()
-            audio?.play(AudioDirector.Event.NETWORK_LOST)
-        }
+        driver.onDisconnected = { onHostLost() }
+        driver.onStartRejected = { onStartRejected() }
         driver.attachScene(newScene)
         scene = newScene
         viewport.resizeWorld(newScene.logicalWidth, newScene.logicalHeight)
@@ -537,6 +535,44 @@ class GameHost(
         driver?.setResultPresence(true)
         screen = Screen.RESULT
         audio?.stopAllLoops()
+    }
+
+    /**
+     * Host 를 잃었다. (계획서 §37)
+     *
+     * 전투 화면에는 나가는 길이 없다. 그대로 두면 멈춘 화면에 갇히므로 결과 화면으로
+     * 보낸다. 승자와 점수는 확정하지 않는다. 끝까지 간 판이 아니기 때문이다.
+     * 로비에서 잃었으면 돌아갈 방이 없으니 곧바로 메뉴로 돌린다.
+     */
+    private fun onHostLost() {
+        audio?.stopAllLoops()
+        audio?.play(AudioDirector.Event.NETWORK_LOST)
+
+        val current = scene
+        if (current == null || screen == Screen.MENU || screen == Screen.ROOMS) {
+            returnToMenu()
+            return
+        }
+        if (screen == Screen.LOBBY) {
+            returnToMenu()
+            roomListScene?.lastDenial = "HOST DISCONNECTED"
+            screen = Screen.ROOMS
+            return
+        }
+        resultScene?.showPresence = false
+        resultScene?.showHostLost(current.matchState, current.stage, current.localSlot)
+        screen = Screen.RESULT
+    }
+
+    /**
+     * 맵이 어긋나 판을 열지 못했다. (계획서 §35)
+     *
+     * 방을 나가고 목록으로 돌려보낸다. 같은 방에 다시 들어가 봐야 같은 결과다.
+     */
+    private fun onStartRejected() {
+        returnToMenu()
+        roomListScene?.lastDenial = "MAP MISMATCH"
+        screen = Screen.ROOMS
     }
 
     private fun enterBattle() {

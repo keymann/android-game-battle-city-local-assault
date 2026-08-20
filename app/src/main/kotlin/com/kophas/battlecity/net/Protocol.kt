@@ -22,8 +22,12 @@ object Protocol {
     /** 패킷 앞머리. 같은 포트를 쓰는 남의 트래픽을 걸러 낸다. */
     const val MAGIC: Int = 0x42544C43 // "BTLC"
 
-    /** 프로토콜이 바뀌면 올린다. 다르면 접속을 거절한다. */
-    const val VERSION: Int = 1
+    /**
+     * 프로토콜이 바뀌면 올린다. 다르면 접속을 거절한다.
+     *
+     * 2: 스냅샷에 바뀐 셀과 본진 보호막을 싣는다. START 에 이번 판 맵 해시를 싣는다.
+     */
+    const val VERSION: Int = 2
 
     /** 호스트가 여는 포트. */
     const val PORT: Int = 47654
@@ -58,6 +62,25 @@ object Protocol {
 
     /** 이 왕복 시간을 넘으면 끊길락 말락 한 것으로 본다. */
     const val LATENCY_POOR_MS: Int = 180
+
+    /**
+     * 바뀐 셀을 스냅샷 몇 장에 걸쳐 거듭 보낼지. (계획서 §36)
+     *
+     * 스냅샷은 최신 값 채널이라 재전송이 없다. 세 장에 걸쳐 같은 셀을 보내면
+     * 연속 두 번 유실까지 견딘다.
+     */
+    const val TILE_REDUNDANCY: Int = 3
+
+    /** 스냅샷 한 장에 실을 수 있는 셀 수. 패킷이 MTU 를 넘지 않게 잡았다. */
+    const val MAX_TILE_CHANGES: Int = 100
+
+    /**
+     * 이 시간 동안 새 입력이 없으면 이동을 멈춘다. (계획서 §37)
+     *
+     * 참가자는 매 틱 입력을 보내므로 정상 상황에서는 걸리지 않는다. 연결이 끊기고
+     * 타임아웃으로 자리가 비기까지 4초 동안 탱크가 계속 달리는 것을 막는다.
+     */
+    const val INPUT_IDLE_MS: Long = 300
 
     /** 로비에서 START 를 누른 뒤 세는 시간. (계획서 §38) */
     const val COUNTDOWN_SECONDS: Int = 3

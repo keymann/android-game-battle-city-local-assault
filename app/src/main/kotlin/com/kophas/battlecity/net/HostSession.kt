@@ -77,10 +77,26 @@ class HostSession(
         lobby.openAsHost(hostName, hostTankType, createdAtMs)
     }
 
-    /** 판을 시작할 때 쓸 값. 맵을 만들어 본 뒤 해시까지 넣어 준다. */
-    fun prepareMatch(start: Messages.Start) {
+    /**
+     * 판을 시작할 때 쓸 값. 맵을 만들어 본 뒤 해시까지 넣어 준다.
+     *
+     * 방 규칙이 바뀌었으면 참가자 준비를 모두 해제한다. 준비했던 판과 다른 판이
+     * 열리기 때문이다. (계획서 §28)
+     */
+    fun prepareMatch(start: Messages.Start, nowMs: Long = clock()) {
+        val before = pendingStart
         pendingStart = start
+        if (lobby.started) return
+        if (!rulesChanged(before, start)) return
+        lobby.clearReady()
+        broadcastLobby(nowMs, force = true)
     }
+
+    private fun rulesChanged(before: Messages.Start, after: Messages.Start): Boolean =
+        before.mapSize != after.mapSize ||
+            before.friendlyFire != after.friendlyFire ||
+            before.maxActiveEnemies != after.maxActiveEnemies ||
+            before.baseProtection != after.baseProtection
 
     fun requestStart(): Boolean = lobby.beginCountdown()
 
@@ -212,7 +228,9 @@ class HostSession(
             send(from, Messages.writeJoinAck(writer, Messages.JoinAck(existing, join.tankType, color)))
             return
         }
-        if (lobby.started) {
+        // 세는 중에 들어오면 인원이 달라져 서로 다른 맵이 나온다. 시작한 것과
+        // 같이 취급해 돌려보낸다. (계획서 §35)
+        if (lobby.started || lobby.countdownTicks > 0) {
             send(from, deny(Protocol.Deny.ALREADY_STARTED))
             return
         }

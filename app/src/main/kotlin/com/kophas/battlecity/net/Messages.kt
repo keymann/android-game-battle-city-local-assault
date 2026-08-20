@@ -274,6 +274,14 @@ object Messages {
 
     data class ScoreState(val slot: Int, val kills: Int, val lives: Int, val eliminated: Boolean)
 
+    /**
+     * 바뀐 셀 하나. [type] 은 변화량이 아니라 **지금 종류**다.
+     *
+     * 순서가 뒤바뀌어 도착해도 다음 스냅샷이 바로잡는다. 변화량을 보내면 한 번만
+     * 어긋나도 그 뒤가 전부 틀어진다.
+     */
+    data class TileChange(val index: Int, val type: Int)
+
     data class Snapshot(
         val tick: Long,
         val phase: Int,
@@ -282,6 +290,10 @@ object Messages {
         val tanks: List<TankState>,
         val projectiles: List<ProjectileState>,
         val scores: List<ScoreState>,
+        /** 본진 보호막이 아직 남아 있는가. (계획서 §14) */
+        val baseShielded: Boolean = false,
+        /** 최근에 바뀐 셀. Client 는 이것으로만 맵을 고친다. */
+        val tiles: List<TileChange> = emptyList(),
     )
 
     fun writeSnapshot(writer: PacketWriter, value: Snapshot): PacketWriter {
@@ -289,7 +301,7 @@ object Messages {
             .long(value.tick)
             .byte(value.phase)
             .short(value.enemiesRemaining)
-            .bool(value.baseDestroyed)
+            .byte(flags(value.baseDestroyed, value.baseShielded, false))
             .byte(value.tanks.size)
         for (tank in value.tanks) {
             writer.short(tank.id)
@@ -310,6 +322,10 @@ object Messages {
         for (score in value.scores) {
             writer.byte(score.slot).short(score.kills).byte(score.lives).bool(score.eliminated)
         }
+        writer.byte(value.tiles.size)
+        for (tile in value.tiles) {
+            writer.short(tile.index).byte(tile.type)
+        }
         return writer
     }
 
@@ -317,7 +333,7 @@ object Messages {
         val tick = reader.long()
         val phase = reader.byte()
         val enemies = reader.short()
-        val baseDestroyed = reader.bool()
+        val baseFlags = reader.byte()
 
         val tankCount = reader.byte()
         val tanks = ArrayList<TankState>(tankCount)
@@ -357,7 +373,23 @@ object Messages {
             scores += ScoreState(reader.byte(), reader.short(), reader.byte(), reader.bool())
         }
 
-        return Snapshot(tick, phase, enemies, baseDestroyed, tanks, projectiles, scores)
+        val tileCount = reader.byte()
+        val tiles = ArrayList<TileChange>(tileCount)
+        repeat(tileCount) {
+            tiles += TileChange(reader.short(), reader.byte())
+        }
+
+        return Snapshot(
+            tick = tick,
+            phase = phase,
+            enemiesRemaining = enemies,
+            baseDestroyed = baseFlags and 1 != 0,
+            tanks = tanks,
+            projectiles = projectiles,
+            scores = scores,
+            baseShielded = baseFlags and 2 != 0,
+            tiles = tiles,
+        )
     }
 
     // ---------------------------------------------------------------------

@@ -39,10 +39,57 @@ class TileMap(val stage: StageData) {
         baseShielded = enabled
     }
 
+    /**
+     * 판이 열린 뒤 바뀐 셀. 셀 번호 -> 마지막으로 바뀐 차례.
+     *
+     * Host 가 이것을 스냅샷에 실어 Client 에게 보낸다. Client 는 규칙을 굴리지 않으므로
+     * 알려 주지 않으면 부서진 벽이 화면에 그대로 남는다. 순서를 지키려고 값이 아니라
+     * **지금 종류**를 보내므로, 늦게 온 변경이 최신 상태를 되돌리지 않는다.
+     */
+    private val changedAt = LinkedHashMap<Int, Long>()
+
+    /** 지금 몇 번째 스냅샷인가. Host 가 스냅샷을 뜰 때마다 올린다. */
+    private var changeSerial: Long = 0
+
+    /**
+     * 최근 [window] 차례 안에 바뀐 셀을 [limit] 개까지 돌려준다.
+     *
+     * 같은 변경을 여러 차례 거듭 보내는 이유는 스냅샷이 최신 값 채널이라 재전송이
+     * 없기 때문이다. 세 번 보내면 연속 두 번 유실까지 견딘다.
+     */
+    fun collectChanges(window: Int, limit: Int): List<Int> {
+        changeSerial++
+        val oldest = changeSerial - window
+        changedAt.entries.removeAll { it.value < oldest }
+        // 오래된 것부터 보낸다. 한 번에 다 못 실으면 다음 차례로 넘어간다.
+        return changedAt.keys.take(limit)
+    }
+
+    /** 지금 이 셀의 종류. 스냅샷에 실을 값이다. */
+    fun typeAtIndex(index: Int): TileType =
+        if (index !in cells.indices) TileType.STEEL else TileType.fromId(cells[index])
+
+    /** Host 가 알려 준 셀을 그대로 놓는다. Client 만 쓴다. */
+    fun applyRemoteCell(index: Int, type: TileType) {
+        if (index !in cells.indices) return
+        if (cells[index] == type.id) return
+        cells[index] = type.id
+        // 부서진 자리에는 그림이 없다. 남겨 두면 사라진 벽이 계속 그려진다.
+        if (type == TileType.EMPTY) sprites[index] = -1
+    }
+
+    /** Host 가 알려 준 본진 상태를 그대로 놓는다. Client 만 쓴다. */
+    fun applyRemoteBase(destroyed: Boolean, shielded: Boolean) {
+        baseDestroyed = destroyed
+        baseShielded = shielded
+    }
+
     fun reset() {
         stage.cells.copyInto(cells)
         stage.cellSprite.copyInto(sprites)
         baseDestroyed = false
+        changedAt.clear()
+        changeSerial = 0
     }
 
     fun inBounds(cellX: Int, cellY: Int): Boolean =
@@ -64,8 +111,16 @@ class TileMap(val stage: StageData) {
     fun setType(cellX: Int, cellY: Int, type: TileType, spriteIndex: Int = -1) {
         if (!inBounds(cellX, cellY)) return
         val i = cellY * cellsX + cellX
+        if (cells[i] == type.id) return
         cells[i] = type.id
         sprites[i] = spriteIndex.toShort()
+        // 바뀐 자리를 적어 둔다. 다시 바뀌면 뒤로 보내 최근 것부터 살아남게 한다.
+        changedAt.remove(i)
+        changedAt[i] = changeSerial
+        // 혼자 하는 판에서는 아무도 걷어 가지 않는다. 한 판 내내 쌓이지 않게 막는다.
+        while (changedAt.size > MAX_TRACKED_CHANGES) {
+            changedAt.remove(changedAt.keys.first())
+        }
     }
 
     /** 사분면으로 쪼개지 않고 스프라이트를 통째로 그려야 하는 셀인가. */
@@ -229,5 +284,8 @@ class TileMap(val stage: StageData) {
 
     private companion object {
         const val EPSILON = 0.001f
+
+        /** 들고 있을 변경 셀의 최대 수. 걷어 가는 쪽이 없어도 여기서 멈춘다. */
+        const val MAX_TRACKED_CHANGES = 512
     }
 }
