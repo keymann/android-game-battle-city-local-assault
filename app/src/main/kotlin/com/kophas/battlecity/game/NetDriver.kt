@@ -172,12 +172,15 @@ class NetDriver(
         } else {
             Rng.advanceSeed(clock())
         }
+        // 이번 판 맵을 미리 만들어 그 해시를 싣는다. 지난 판 해시를 실으면 참가자가
+        // 무엇과 견주어야 할지 알 수 없다. 만들어 둔 맵은 판을 열 때 그대로 쓴다.
+        val players = session.lobby.connectedCount
         session.prepareMatch(
             Messages.Start(
                 seed = seed,
                 stageIndex = stageIndex,
-                playerCount = 0,
-                gridHash = currentScene?.stageGridHash ?: 0L,
+                playerCount = players,
+                gridHash = currentScene?.prepareStage(seed, stageIndex, players) ?: 0L,
                 startTick = 0,
                 mapSize = roomSettings.mapSize.ordinal,
                 friendlyFire = roomSettings.friendlyFire,
@@ -247,6 +250,9 @@ class NetDriver(
     /** 호스트와 끊겼을 때 부른다. (계획서 §37) */
     var onDisconnected: (() -> Unit)? = null
 
+    /** 맵이 어긋나 판을 열지 못했을 때 부른다. (계획서 §35) */
+    var onStartRejected: (() -> Unit)? = null
+
     /** 자리를 받았을 때. 방 목록에서 로비로 넘어가는 신호다. */
     var onJoined: (() -> Unit)? = null
 
@@ -311,6 +317,8 @@ class NetDriver(
             override fun onPlayerLeft(slot: Int) {
                 humanSlots -= slot
                 Log.i(TAG, "${slot + 1}번 자리가 끊겼다. 남은 사람은 계속한다")
+                // 판이 돌고 있으면 그 자리를 탈락으로 굳히고 탱크를 걷어낸다.
+                if (started) gameSlotOf.getOrNull(slot)?.takeIf { it >= 0 }?.let { scene?.dropSlot(it) }
             }
 
             override fun onMatchStart(start: Messages.Start) {
@@ -320,7 +328,8 @@ class NetDriver(
             }
 
             override fun onInput(slot: Int, input: Messages.Input) {
-                scene?.applyRemoteInput(slot, input)
+                val gameSlot = gameSlotOf.getOrNull(slot) ?: -1
+                if (gameSlot >= 0) scene?.applyRemoteInput(gameSlot, input)
             }
         }
         host = session
@@ -361,14 +370,16 @@ class NetDriver(
             }
 
             override fun onMatchStart(start: Messages.Start) {
+                // 판을 열기 전에 맵부터 맞춰 본다. 같은 seed 로 다른 맵이 나왔다면
+                // 그대로 두면 서로 다른 벽에 부딪히며 판이 어긋난다. (계획서 §35)
+                val expected = scene?.prepareStage(start.seed, start.stageIndex, start.playerCount)
+                if (expected != null && expected != start.gridHash) {
+                    Log.e(TAG, "맵이 어긋났다 host=${start.gridHash} client=$expected")
+                    onStartRejected?.invoke()
+                    return
+                }
                 started = true
                 beginWithProfiles(start)
-                val expected = scene?.stageGridHash
-                if (expected != null && expected != start.gridHash) {
-                    // 같은 seed 로 다른 맵이 나왔다는 뜻이다. 그대로 두면 서로 다른
-                    // 벽에 부딪히며 판이 어긋난다. 조용히 넘기면 안 된다.
-                    Log.e(TAG, "맵이 어긋났다 host=${start.gridHash} client=$expected")
-                }
             }
 
             override fun onDisconnected() {
@@ -392,6 +403,15 @@ class NetDriver(
      * 그 사람이 게임에서는 2번이 된다. 빈 자리를 그대로 두면 아무도 조종하지 않는
      * 탱크가 맵에 서 있게 된다.
      */
+    /**
+     * 로비 자리 번호 -> 게임 자리 번호. 없으면 -1.
+     *
+     * 접속한 자리만 앞에서부터 채우므로 두 번호가 어긋난다. 2번이 비고 3번만 들어와
+     * 있으면 그 사람은 게임에서 2번이다. 입력과 끊김 처리가 이 표를 거쳐야 엉뚱한
+     * 탱크를 건드리지 않는다.
+     */
+    private val gameSlotOf = IntArray(Protocol.MAX_PLAYERS) { -1 }
+
     private fun beginWithProfiles(start: Messages.Start) {
         val currentScene = scene ?: return
         // 방 규칙은 START 한 통에 실려 온다. 참가자도 이것으로 같은 맵을 만든다.
@@ -415,6 +435,9 @@ class NetDriver(
                 colorIndex = slot.colorIndex,
             )
         }
+        gameSlotOf.fill(-1)
+        connected.forEachIndexed { ordinal, slot -> gameSlotOf[slot.index] = ordinal }
+
         // 자리 번호가 밀렸을 수 있다. 이 기기가 몇 번째가 됐는지 다시 잡는다.
         val ordinal = connected.indexOfFirst { it.index == localSlot }
         if (ordinal >= 0) {

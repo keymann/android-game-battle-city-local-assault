@@ -7,6 +7,7 @@ import com.kophas.battlecity.net.Messages
 import com.kophas.battlecity.net.Protocol
 import com.kophas.battlecity.render.SpriteBatch
 import com.kophas.battlecity.render.SpriteCatalog
+import com.kophas.battlecity.render.StageBox
 import com.kophas.battlecity.render.TextLayout
 import com.kophas.battlecity.render.TextureRegion
 
@@ -55,8 +56,16 @@ class LobbyScene(private val catalog: SpriteCatalog) {
 
     val view = View()
 
-    private var width = 0f
-    private var height = 0f
+    /**
+     * 16:9 조각. 단말 화면비에 맞춰 늘리지 않는다. (계획서 §21, §22)
+     *
+     * 아래 좌표는 모두 이 조각 안쪽 값이다. 그리거나 손가락을 받을 때만 화면 좌표로
+     * 옮긴다.
+     */
+    private var box = StageBox.NONE
+
+    private val width: Float get() = box.width
+    private val height: Float get() = box.height
     private var startPressed = false
     private var backPressed = false
 
@@ -65,11 +74,14 @@ class LobbyScene(private val catalog: SpriteCatalog) {
     private var draft = ""
 
     fun resize(width: Int, height: Int) {
-        this.width = width.toFloat()
-        this.height = height.toFloat()
+        box = StageBox.fit(width.toFloat(), height.toFloat())
     }
 
-    fun onTap(x: Float, y: Float): Action {
+    fun onTap(screenX: Float, screenY: Float): Action {
+        // 손가락은 화면 좌표로 온다. 여기서 한 번만 조각 안쪽 좌표로 옮긴다.
+        val x = screenX - box.x
+        val y = screenY - box.y
+
         if (editingName) return tapKeyboard(x, y)
 
         if (hitsSettings(x, y)) return Action.OpenSettings
@@ -130,8 +142,8 @@ class LobbyScene(private val catalog: SpriteCatalog) {
         val plateTop = unit * 0.3f
         batch.draw(
             region = catalog.lobbyTitle,
-            x = (width - plateWidth) * 0.5f,
-            y = plateTop,
+            x = box.x + (width - plateWidth) * 0.5f,
+            y = box.y + plateTop,
             width = plateWidth,
             height = plateHeight,
             layer = Constants.Layer.HUD,
@@ -165,8 +177,8 @@ class LobbyScene(private val catalog: SpriteCatalog) {
 
             batch.draw(
                 region = catalog.lobbySlots[index % catalog.lobbySlots.size],
-                x = x,
-                y = top,
+                x = box.x + x,
+                y = box.y + top,
                 width = cardWidth,
                 height = cardHeight,
                 layer = Constants.Layer.HUD,
@@ -179,8 +191,8 @@ class LobbyScene(private val catalog: SpriteCatalog) {
                 val portraitSize = cardHeight * 0.52f
                 batch.draw(
                     region = portrait,
-                    x = x + cardWidth * 0.5f - portraitSize * 0.5f,
-                    y = top + cardHeight * 0.24f,
+                    x = box.x + x + cardWidth * 0.5f - portraitSize * 0.5f,
+                    y = box.y + top + cardHeight * 0.24f,
                     width = portraitSize,
                     height = portraitSize,
                     layer = Constants.Layer.HUD,
@@ -201,8 +213,8 @@ class LobbyScene(private val catalog: SpriteCatalog) {
             val badgeSize = unit * 1.3f
             batch.draw(
                 region = badge,
-                x = x + cardWidth * 0.5f - badgeSize * 0.5f,
-                y = top + cardHeight - badgeSize * 1.1f,
+                x = box.x + x + cardWidth * 0.5f - badgeSize * 0.5f,
+                y = box.y + top + cardHeight - badgeSize * 1.1f,
                 width = badgeSize,
                 height = badgeSize,
                 layer = Constants.Layer.HUD,
@@ -213,8 +225,8 @@ class LobbyScene(private val catalog: SpriteCatalog) {
             if (slot?.host == true) {
                 batch.draw(
                     region = catalog.lobbyHost,
-                    x = x + cardWidth - badgeSize * 0.8f,
-                    y = top,
+                    x = box.x + x + cardWidth - badgeSize * 0.8f,
+                    y = box.y + top,
                     width = badgeSize * 0.7f,
                     height = badgeSize * 0.7f,
                     layer = Constants.Layer.HUD,
@@ -253,8 +265,8 @@ class LobbyScene(private val catalog: SpriteCatalog) {
         val rect = backRect()
         batch.draw(
             region = catalog.lobbySecondary,
-            x = rect[0],
-            y = rect[1],
+            x = box.x + rect[0],
+            y = box.y + rect[1],
             width = rect[2],
             height = rect[3],
             layer = Constants.Layer.HUD,
@@ -271,8 +283,8 @@ class LobbyScene(private val catalog: SpriteCatalog) {
         val rect = settingsRect()
         batch.draw(
             region = catalog.lobbySettings,
-            x = rect[0],
-            y = rect[1],
+            x = box.x + rect[0],
+            y = box.y + rect[1],
             width = rect[2],
             height = rect[3],
             layer = Constants.Layer.HUD,
@@ -290,8 +302,8 @@ class LobbyScene(private val catalog: SpriteCatalog) {
         // 다듬긴 여백이 달라 같은 자리에 그려도 판이 한 번 튀었다 돌아온다.
         batch.draw(
             region = catalog.lobbyStart,
-            x = x,
-            y = y,
+            x = box.x + x,
+            y = box.y + y,
             width = buttonWidth,
             height = buttonHeight,
             layer = Constants.Layer.HUD,
@@ -335,8 +347,8 @@ class LobbyScene(private val catalog: SpriteCatalog) {
         val size = unit * 1.2f
         batch.draw(
             region = if (view.connected) catalog.lobbyWifi else catalog.lobbyWifiWeak,
-            x = unit * 0.6f,
-            y = unit * 0.6f,
+            x = box.x + unit * 0.6f,
+            y = box.y + unit * 0.6f,
             width = size,
             height = size,
             layer = Constants.Layer.HUD,
@@ -568,8 +580,8 @@ class LobbyScene(private val catalog: SpriteCatalog) {
             catalog.glyph(char)?.let { glyph ->
                 batch.draw(
                     region = glyph,
-                    x = cursor,
-                    y = y,
+                    x = box.x + cursor,
+                    y = box.y + y,
                     width = size,
                     height = size,
                     // 판과 같은 층에 그린다. 아래층에 두면 판이 글자를 덮는다.

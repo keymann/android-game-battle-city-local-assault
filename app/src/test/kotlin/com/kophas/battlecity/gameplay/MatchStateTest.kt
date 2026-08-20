@@ -259,4 +259,61 @@ class MatchStateTest {
         match.onEnemyDamaged(dealerSlot = 1, amount = 25)
         assertEquals(75, match.players[1].damageDealt)
     }
+
+    // --- 연결 끊김 (계획서 §37, 감사 `13-CLIENT-08`) ----------------------
+
+    @Test
+    fun `연결이 끊기면 남은 Life 와 무관하게 탈락한다`() {
+        val match = MatchState(2, balance)
+        val slot = match.players[1]
+        assertTrue("아직 Life 가 남아 있다", slot.lives > 0)
+
+        match.onPlayerDisconnected(1)
+
+        assertTrue(slot.eliminated)
+        assertEquals(0, slot.lives)
+        assertFalse("조종할 탱크가 없다", slot.alive)
+    }
+
+    @Test
+    fun `끊긴 사람의 점수는 그 순간 값으로 남는다`() {
+        val match = MatchState(2, balance)
+        match.onPlayerSpawned(1, tankId = 7)
+        match.onEnemyDestroyed(killerSlot = 1)
+        val kills = match.players[1].kills
+
+        match.onPlayerDisconnected(1)
+
+        assertEquals(kills, match.players[1].kills)
+    }
+
+    @Test
+    fun `혼자 남으면 판은 이어진다`() {
+        val match = MatchState(2, balance)
+        match.onPlayerDisconnected(1)
+
+        assertEquals(MatchState.Phase.PLAYING, match.phase)
+    }
+
+    @Test
+    fun `모두 끊기면 판이 끝난다`() {
+        val match = MatchState(2, balance)
+        match.onPlayerDisconnected(0)
+        match.onPlayerDisconnected(1)
+
+        assertEquals(MatchState.Phase.GAME_OVER, match.phase)
+        assertEquals(MatchState.EndReason.ALL_PLAYERS_ELIMINATED, match.endReason)
+    }
+
+    @Test
+    fun `이미 탈락한 자리를 다시 끊어도 달라지지 않는다`() {
+        val match = MatchState(2, balance)
+        match.onPlayerDisconnected(1)
+        val before = match.phase
+
+        match.onPlayerDisconnected(1)
+
+        assertEquals(before, match.phase)
+        assertTrue(match.players[1].eliminated)
+    }
 }

@@ -30,6 +30,15 @@ class ResultScene(private val catalog: SpriteCatalog) {
     private var winners: List<Int> = emptyList()
     private var enemiesDestroyed = 0
     private var reason: MatchState.EndReason = MatchState.EndReason.NONE
+
+    /**
+     * Host 를 잃어 판이 깨졌는가. (계획서 §37)
+     *
+     * 이때는 승자와 점수를 확정하지 않는다. 마지막으로 받은 값일 뿐 그것이 결과라는
+     * 보장이 없다. 다시 하기와 로비도 잠근다. 돌아갈 방이 이미 없다.
+     */
+    var hostLost: Boolean = false
+        private set
     private var totalEnemies = 0
     private var stageNumber = 1
     private var localSlot = -1
@@ -53,7 +62,7 @@ class ResultScene(private val catalog: SpriteCatalog) {
 
     private var pressed = -1
 
-    val playAgainEnabled: Boolean get() = playAgainAllowed(isHost, peersPresent)
+    val playAgainEnabled: Boolean get() = !hostLost && playAgainAllowed(isHost, peersPresent)
 
     fun resize(width: Int, height: Int) = ui.resize(width, height)
 
@@ -69,7 +78,16 @@ class ResultScene(private val catalog: SpriteCatalog) {
         this.localSlot = localSlot
         this.isHost = isHost
         this.peersPresent = peersPresent
+        this.hostLost = false
         pressed = -1
+    }
+
+    /** Host 를 잃었다. 마지막으로 받은 성적표만 남기고 결과는 확정하지 않는다. */
+    fun showHostLost(match: MatchState, stageIndex: Int, localSlot: Int) {
+        show(match, stageIndex, localSlot, isHost = false, peersPresent = 0)
+        hostLost = true
+        victory = false
+        winners = emptyList()
     }
 
     // -----------------------------------------------------------------------
@@ -84,7 +102,7 @@ class ResultScene(private val catalog: SpriteCatalog) {
         if (button < 0 || button != buttonAt(x, y)) return Action.None
         return when (button) {
             BTN_AGAIN -> if (playAgainEnabled) Action.PlayAgain else Action.None
-            BTN_LOBBY -> Action.ReturnToLobby
+            BTN_LOBBY -> if (hostLost) Action.None else Action.ReturnToLobby
             BTN_HOME -> Action.MainMenu
             else -> Action.None
         }
@@ -168,7 +186,7 @@ class ResultScene(private val catalog: SpriteCatalog) {
         drawButtons(batch)
     }
 
-    private fun reasonText(): String? = when (reason) {
+    private fun reasonText(): String? = if (hostLost) "HOST DISCONNECTED" else when (reason) {
         MatchState.EndReason.BASE_DESTROYED -> "BASE DESTROYED"
         MatchState.EndReason.ALL_PLAYERS_ELIMINATED -> "ALL PLAYERS DOWN"
         MatchState.EndReason.ALL_ENEMIES_DESTROYED -> "ALL COM DESTROYED"
@@ -182,7 +200,8 @@ class ResultScene(private val catalog: SpriteCatalog) {
         ui.panel(batch, art.winnerCard, rect)
 
         val top = ranking.firstOrNull()
-        val champion = if (victory) top else null
+        // Host 를 잃었으면 승자를 세우지 않는다. 끝까지 간 판이 아니다.
+        val champion = if (victory && !hostLost) top else null
         ui.centered(batch, "WINNER", rect.centerX, rect.y + rect.height * 0.11f, unit * 0.45f, ScreenUi.DIM)
         if (champion == null) {
             ui.centered(batch, "NONE", rect.centerX, rect.centerY - unit * 0.4f, unit * 0.8f, ScreenUi.DIM)
@@ -309,7 +328,8 @@ class ResultScene(private val catalog: SpriteCatalog) {
     private fun drawButtons(batch: SpriteBatch) {
         val art = catalog.result
         drawButton(batch, 0, art.primary, BTN_AGAIN, "PLAY AGAIN", playAgainEnabled)
-        drawButton(batch, 1, art.secondary, BTN_LOBBY, "LOBBY", true)
+        // 방이 사라졌으면 돌아갈 로비도 없다.
+        drawButton(batch, 1, art.secondary, BTN_LOBBY, "LOBBY", !hostLost)
         drawButton(batch, 2, art.home, BTN_HOME, "MAIN MENU", true)
     }
 
@@ -338,7 +358,7 @@ class ResultScene(private val catalog: SpriteCatalog) {
         if (id == BTN_AGAIN && !enabled) {
             ui.centered(
                 batch,
-                if (isHost) "NO PLAYERS LEFT" else "HOST ONLY",
+                if (hostLost) "ROOM IS GONE" else if (isHost) "NO PLAYERS LEFT" else "HOST ONLY",
                 rect.centerX,
                 rect.bottom + ui.unit * 0.1f,
                 ui.unit * 0.36f,

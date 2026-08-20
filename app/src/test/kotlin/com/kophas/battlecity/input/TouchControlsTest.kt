@@ -195,4 +195,41 @@ class TouchControlsTest {
         assertTrue(controls.specialCenterY() < controls.fireCenterY())
         assertTrue(controls.restingStickX() < 2400f * 0.5f)
     }
+
+    // --- 16:9 유지 (계획서 §21, §22) --------------------------------------
+
+    @Test
+    fun `단추는 화면비와 무관하게 같은 자리다`() {
+        val wide = TouchControls().apply { resize(2856, 1280) }
+        val square = TouchControls().apply { resize(1440, 1080) }
+
+        // 조각 안에서 재면 두 기기가 같은 값이다. 화면 너비로 재면 어긋난다.
+        val wideRatio = (wide.fireCenterX() - wide.stageBox.x) / wide.stageBox.width
+        val squareRatio = (square.fireCenterX() - square.stageBox.x) / square.stageBox.width
+        assertEquals(wideRatio, squareRatio, 0.001f)
+    }
+
+    @Test
+    fun `가로로 긴 화면에서 단추가 조각 안에 있다`() {
+        val controls = TouchControls().apply { resize(2856, 1280) }
+        val box = controls.stageBox
+
+        assertTrue("발사 단추가 조각을 벗어났다", controls.fireCenterX() <= box.x + box.width)
+        assertTrue("발사 단추가 조각을 벗어났다", controls.fireCenterX() >= box.x)
+        assertTrue("띠가 생겨야 한다", box.x > 0f)
+    }
+
+    @Test
+    fun `조이스틱 구역도 조각 기준이다`() {
+        val controls = TouchControls().apply { resize(2856, 1280) }
+        val box = controls.stageBox
+
+        // 왼쪽 검은 띠를 짚어도 조이스틱이 서지 않아야 한다... 는 아니다.
+        // 띠는 조각 왼쪽이므로 구역 안이다. 조각 오른쪽 끝은 구역 밖이어야 한다.
+        controls.onDown(1, box.x + box.width * 0.9f, box.centerY)
+        assertFalse("오른쪽 끝은 조이스틱 자리가 아니다", controls.state.stickActive)
+
+        controls.onDown(2, box.x + box.width * 0.1f, box.centerY)
+        assertTrue("왼쪽은 조이스틱 자리다", controls.state.stickActive)
+    }
 }

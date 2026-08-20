@@ -23,6 +23,7 @@ import com.kophas.battlecity.render.NativeRenderer
 import com.kophas.battlecity.render.RendererBackend
 import com.kophas.battlecity.render.SpriteBatch
 import com.kophas.battlecity.render.SpriteCatalog
+import com.kophas.battlecity.render.StageBox
 import com.kophas.battlecity.render.Viewport
 import java.util.concurrent.atomic.AtomicReference
 
@@ -487,10 +488,8 @@ class GameHost(
         driver.onMatchStarted = { enterBattle() }
         driver.onJoined = { enterLobby() }
         driver.onDenied = { reason -> onJoinDenied(reason) }
-        driver.onDisconnected = {
-            audio?.stopAllLoops()
-            audio?.play(AudioDirector.Event.NETWORK_LOST)
-        }
+        driver.onDisconnected = { onHostLost() }
+        driver.onStartRejected = { onStartRejected() }
         driver.attachScene(newScene)
         scene = newScene
         viewport.resizeWorld(newScene.logicalWidth, newScene.logicalHeight)
@@ -537,6 +536,44 @@ class GameHost(
         driver?.setResultPresence(true)
         screen = Screen.RESULT
         audio?.stopAllLoops()
+    }
+
+    /**
+     * Host 를 잃었다. (계획서 §37)
+     *
+     * 전투 화면에는 나가는 길이 없다. 그대로 두면 멈춘 화면에 갇히므로 결과 화면으로
+     * 보낸다. 승자와 점수는 확정하지 않는다. 끝까지 간 판이 아니기 때문이다.
+     * 로비에서 잃었으면 돌아갈 방이 없으니 곧바로 메뉴로 돌린다.
+     */
+    private fun onHostLost() {
+        audio?.stopAllLoops()
+        audio?.play(AudioDirector.Event.NETWORK_LOST)
+
+        val current = scene
+        if (current == null || screen == Screen.MENU || screen == Screen.ROOMS) {
+            returnToMenu()
+            return
+        }
+        if (screen == Screen.LOBBY) {
+            returnToMenu()
+            roomListScene?.lastDenial = "HOST DISCONNECTED"
+            screen = Screen.ROOMS
+            return
+        }
+        resultScene?.showPresence = false
+        resultScene?.showHostLost(current.matchState, current.stage, current.localSlot)
+        screen = Screen.RESULT
+    }
+
+    /**
+     * 맵이 어긋나 판을 열지 못했다. (계획서 §35)
+     *
+     * 방을 나가고 목록으로 돌려보낸다. 같은 방에 다시 들어가 봐야 같은 결과다.
+     */
+    private fun onStartRejected() {
+        returnToMenu()
+        roomListScene?.lastDenial = "MAP MISMATCH"
+        screen = Screen.ROOMS
     }
 
     private fun enterBattle() {
@@ -705,7 +742,10 @@ class GameHost(
         if (currentScene.logicalWidth != viewport.logicalWidth) {
             viewport.resizeWorld(currentScene.logicalWidth, currentScene.logicalHeight)
         }
-        viewport.update(width, height, insets)
+        // 월드도 UI 와 같은 16:9 조각 안에 담는다. 월드만 화면 전체를 쓰면 가로로 긴
+        // 단말에서 맵과 조작 UI 가 서로 다른 자리를 기준으로 놓인다.
+        val stage = Viewport.Insets.of(StageBox.fit(width.toFloat(), height.toFloat()), width, height)
+        viewport.update(width, height, insets.outerOf(stage))
         currentScene.render(batch, viewport)
         // 조작 UI 는 맵 위에, 화면 픽셀 좌표로 그린다. 맵과 함께 늘었다 줄었다 하면
         // 안 된다. 손가락 크기는 해상도가 아니라 기기 크기를 따르기 때문이다.

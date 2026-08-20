@@ -4,6 +4,7 @@ import com.kophas.battlecity.core.Direction
 import com.kophas.battlecity.gameplay.GameWorld
 import com.kophas.battlecity.gameplay.MatchState
 import com.kophas.battlecity.gameplay.Tank
+import com.kophas.battlecity.map.TileType
 
 /**
  * 게임 상태와 패킷 사이를 옮긴다. (계획서 §35)
@@ -11,8 +12,9 @@ import com.kophas.battlecity.gameplay.Tank
  * Host 는 [capture] 로 지금 상태를 담고, Client 는 [apply] 로 받은 상태를 자기
  * [GameWorld] 에 얹는다. Client 는 규칙을 굴리지 않는다. 받은 것을 그리기만 한다.
  *
- * 맵은 오가지 않는다. seed 가 같으면 어느 기기에서나 같은 맵이 나오기 때문이다.
- * 그래서 여기서 다루는 것은 **움직이는 것**뿐이다.
+ * 맵 자체는 오가지 않는다. seed 가 같으면 어느 기기에서나 같은 맵이 나오기 때문이다.
+ * 다만 **부서진 자리**는 보내야 한다. Client 는 규칙을 굴리지 않으므로 알려 주지
+ * 않으면 사라진 벽이 화면에 그대로 남는다.
  */
 object SnapshotBridge {
 
@@ -47,6 +49,10 @@ object SnapshotBridge {
             scores = match.players.map { slot ->
                 Messages.ScoreState(slot.index, slot.kills, slot.lives, slot.eliminated)
             },
+            baseShielded = world.map.baseShielded,
+            tiles = world.map
+                .collectChanges(Protocol.TILE_REDUNDANCY, Protocol.MAX_TILE_CHANGES)
+                .map { Messages.TileChange(it, world.map.typeAtIndex(it).id.toInt()) },
         )
 
     /**
@@ -64,6 +70,8 @@ object SnapshotBridge {
         previous: Messages.Snapshot?,
         alpha: Float,
     ) {
+        applyTiles(world, latest)
+
         val before = previous?.tanks?.associateBy { it.id }.orEmpty()
 
         val seen = HashSet<Int>()
@@ -87,6 +95,18 @@ object SnapshotBridge {
         }
 
         applyProjectiles(world, latest, previous, alpha)
+    }
+
+    /**
+     * 부서진 자리와 본진 상태를 그대로 놓는다.
+     *
+     * 셀마다 지금 종류를 받으므로 순서가 뒤바뀌어도 다음 스냅샷이 바로잡는다.
+     */
+    private fun applyTiles(world: GameWorld, latest: Messages.Snapshot) {
+        for (tile in latest.tiles) {
+            world.map.applyRemoteCell(tile.index, TileType.fromId(tile.type.toByte()))
+        }
+        world.map.applyRemoteBase(latest.baseDestroyed, latest.baseShielded)
     }
 
     private fun applyProjectiles(

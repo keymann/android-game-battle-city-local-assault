@@ -1,6 +1,7 @@
 package com.kophas.battlecity.input
 
 import com.kophas.battlecity.core.Direction
+import com.kophas.battlecity.render.StageBox
 import kotlin.math.abs
 import kotlin.math.hypot
 
@@ -89,8 +90,19 @@ class TouchControls(private val layout: Layout = Layout()) {
 
     val state = State()
 
-    private var width = 0f
-    private var height = 0f
+    /**
+     * 16:9 조각. 단말 화면비에 맞춰 늘리지 않는다. (계획서 §21, §22)
+     *
+     * 화면 너비에 맞춰 늘리면 가로로 긴 단말에서 발사 단추가 엄지에서 멀어진다.
+     * 게임 월드와 같은 조각 안에 두면 어느 기기에서나 같은 자리다.
+     */
+    private var box = StageBox.NONE
+
+    /** 지금 쓰는 16:9 조각. 그리는 쪽과 시험이 읽는다. */
+    val stageBox: StageBox get() = box
+
+    private val width: Float get() = box.width
+    private val height: Float get() = box.height
 
     private var stickPointer = NO_POINTER
     private var firePointer = NO_POINTER
@@ -101,8 +113,7 @@ class TouchControls(private val layout: Layout = Layout()) {
     private var specialPending = false
 
     fun resize(width: Int, height: Int) {
-        this.width = width.toFloat()
-        this.height = height.toFloat()
+        box = StageBox.fit(width.toFloat(), height.toFloat())
     }
 
     fun onDown(pointerId: Int, x: Float, y: Float) {
@@ -119,7 +130,7 @@ class TouchControls(private val layout: Layout = Layout()) {
                 state.specialPressed = true
             }
 
-            x <= width * layout.stickZoneRatio && stickPointer == NO_POINTER -> {
+            x - box.x <= width * layout.stickZoneRatio && stickPointer == NO_POINTER -> {
                 stickPointer = pointerId
                 state.stickActive = true
                 state.stickOriginX = x
@@ -205,20 +216,20 @@ class TouchControls(private val layout: Layout = Layout()) {
 
     fun specialRadius(): Float = shortSide() * layout.specialRadiusRatio
 
-    fun fireCenterX(): Float = width * layout.fireCenterX
+    fun fireCenterX(): Float = box.x + width * layout.fireCenterX
 
-    fun fireCenterY(): Float = height * layout.fireCenterY
+    fun fireCenterY(): Float = box.y + height * layout.fireCenterY
 
-    fun specialCenterX(): Float = width * layout.specialCenterX
+    fun specialCenterX(): Float = box.x + width * layout.specialCenterX
 
-    fun specialCenterY(): Float = height * layout.specialCenterY
+    fun specialCenterY(): Float = box.y + height * layout.specialCenterY
 
     /** 손을 안 댔을 때 조이스틱을 그려 둘 자리. 어디를 짚으면 되는지 알려 준다. */
-    fun restingStickX(): Float = width * RESTING_X
+    fun restingStickX(): Float = box.x + width * RESTING_X
 
-    fun restingStickY(): Float = height * RESTING_Y
+    fun restingStickY(): Float = box.y + height * RESTING_Y
 
-    private fun shortSide(): Float = minOf(width, height)
+    private fun shortSide(): Float = box.shortSide
 
     private fun hits(x: Float, y: Float, centerX: Float, centerY: Float, radius: Float): Boolean {
         // 넉넉함을 네모 검사에도 똑같이 준다. 한쪽만 주면 모서리에서 판정이 어긋난다.

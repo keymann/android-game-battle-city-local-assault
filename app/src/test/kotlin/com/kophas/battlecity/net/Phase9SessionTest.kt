@@ -130,8 +130,6 @@ class Phase9SessionTest {
         pump(client)
 
         host.reopenLobby(now)
-        client.setReady(true, 0, 1, "GST")
-        pump(client)
 
         var second: Messages.Start? = null
         client.listener = object : ClientSession.Listener {
@@ -140,6 +138,8 @@ class Phase9SessionTest {
             }
         }
         host.prepareMatch(Messages.Start(9L, 1, 0, 0L, 0, mapSize = 2, friendlyFire = false))
+        client.setReady(true, 0, 1, "GST")
+        pump(client)
         assertTrue("다시 시작할 수 있어야 한다", host.requestStart())
         repeat(Protocol.COUNTDOWN_SECONDS * 60 + 4) { host.update() }
         pump(client)
@@ -257,15 +257,13 @@ class Phase9SessionTest {
     @Test
     fun `방 규칙이 START 에 실려 참가자에게 간다`() {
         val client = joinedClient(50008, "손님")
-        client.setReady(true, 0, 1, "GST")
-        pump(client)
-
         var received: Messages.Start? = null
         client.listener = object : ClientSession.Listener {
             override fun onMatchStart(start: Messages.Start) {
                 received = start
             }
         }
+        // 규칙을 먼저 정한다. 규칙이 바뀌면 준비가 풀리므로 순서가 뒤바뀌면 시작할 수 없다.
         host.prepareMatch(
             Messages.Start(
                 seed = 42L,
@@ -279,6 +277,8 @@ class Phase9SessionTest {
                 baseProtection = false,
             ),
         )
+        client.setReady(true, 0, 1, "GST")
+        pump(client)
         host.requestStart()
         repeat(Protocol.COUNTDOWN_SECONDS * 60 + 4) { host.update() }
         pump(client)

@@ -94,18 +94,27 @@ Host 로그, Client 로그, 패킷 캡처, 지연·유실 주입 결과는 **없
 
 ## 7. 회귀 테스트
 
-이번 감사에서 코드를 고치지 않았다. 회귀 테스트 대상이 없다.
+감사 자체에서는 코드를 고치지 않았다. 아래는 [Phase 10](PHASE10_PLAN.md) 에서 고친 뒤
+같은 빌드로 다시 돌린 결과다.
 
-| 수정 항목 | 수정 commit | 재실행 테스트 | 결과 | 증거 |
-|---|---|---|---|---|
-| — | — | — | — | — |
+| 수정 항목 | 재실행 테스트 | 결과 | 증거 |
+|---|---|---|---|
+| `13-HOST-03` | 없음 (화면 전환은 기기 두 대가 필요하다) | 코드만 확인 | `GameHost.onHostLost`, `ResultScene.showHostLost` |
+| `10-MAP-04` | `TileSyncTest` 6건 | PASS | Host 가 부순 벽이 Client 맵에서도 사라진다 |
+| `10-BASE-06` | `TileSyncTest` `본진 파괴와 보호막이 Client 에 닿는다` | PASS | — |
+| `05-COMMIT-02` | 없음 (연결이 필요하다) | 코드만 확인 | `BattleScene.prepareStage` 로 이번 판 해시를 싣는다 |
+| `13-CLIENT-08` | `MatchStateTest` 연결 끊김 5건 | PASS | 남은 Life 와 무관하게 탈락, 판은 이어진다 |
+| `07-INPUT-07` | 없음 (씬에 렌더러가 필요하다) | 코드만 확인 | `BattleScene.stopIdleTanks` |
+| `04-SETTINGS-05` | `LobbyFlowTest` 2건, `SessionTest` 1건 | PASS | 규칙이 바뀌면 참가자 준비가 풀린다 |
+
+전체 테스트는 `./gradlew :app:testDebugUnitTest` 로 다시 돌렸다. 429건, 실패 0건이다.
 
 ## 8. 최종 판정
 
-- Release ready: **NO**
-- P0 미해결 수: **1** (`13-HOST-03`)
-- P1 미해결 수: **6** (`10-MAP-04`, `10-BASE-06`, `05-COMMIT-02`, `13-CLIENT-08`, `07-INPUT-07`, `04-SETTINGS-05`)
-- 필수 수정: 위 P0·P1 일곱 건
+- Release ready: **NO** (감사 시점 기준. Phase 10 수정 뒤에도 실기기 검증 전까지 바뀌지 않는다)
+- P0 미해결 수: **1** → Phase 10 에서 고쳤다. 실기기 확인은 아직이다
+- P1 미해결 수: **6** → Phase 10 에서 모두 고쳤다. 그중 셋은 실기기 확인이 아직이다
+- 필수 수정: 위 P0·P1 일곱 건 (Phase 10 에서 처리)
 - 후속 수동 테스트: 실기기 2대 연결부터 다시 시작한다. 연결이 성립해야 §12·§20·§21을 판정할 수 있다
 - 최종 근거: 체크리스트 §24 출시 판정 규칙에 따라 P0 FAIL 한 건만으로 출시 불가다. 여기에 더해
   장애 주입 테스트를 한 번도 수행하지 못해 `CONDITIONAL` 조건도 충족하지 못한다

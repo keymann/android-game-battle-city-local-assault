@@ -63,6 +63,9 @@ class LobbyState(
     /** @return 배정한 자리. 방이 찼거나 이미 시작했으면 null. */
     fun join(name: String, tankType: Int, colorIndex: Int, nowMs: Long): Slot? {
         if (started) return null
+        // 세는 중에 새로 들어오면 인원이 달라져 서로 다른 맵을 만든다. 세기가 끝날
+        // 때까지 받지 않는다. (계획서 §35 맵은 seed 로만 보낸다)
+        if (countdownTicks > 0) return null
         val slot = slots.firstOrNull { !it.connected } ?: return null
         slot.name = PlayerProfile.sanitize(name, slot.index)
         slot.tankType = tankType
@@ -123,6 +126,20 @@ class LobbyState(
         if (!slot.connected) return
         slot.ready = ready
         if (!ready) countdownTicks = 0
+    }
+
+    /**
+     * 참가자 준비를 모두 해제한다. 방장은 그대로 둔다.
+     *
+     * 방 규칙이 바뀌면 준비했던 판과 다른 판이 열린다. 무엇에 준비했는지 모르는
+     * 준비는 준비가 아니다. (계획서 §28)
+     */
+    fun clearReady() {
+        for (slot in slots) {
+            if (!slot.connected || slot.host) continue
+            slot.ready = false
+        }
+        countdownTicks = 0
     }
 
     fun touch(index: Int, nowMs: Long) {

@@ -3,12 +3,14 @@ package com.kophas.battlecity.render
 import com.kophas.battlecity.core.Constants
 
 /**
- * 전체 화면 UI 를 그리는 공용 도구. 메뉴 · 로비 · 설정 · 결과가 함께 쓴다.
+ * 전체 화면 UI 를 그리는 공용 도구. 메뉴 · 방 목록 · 설정 · 결과가 함께 쓴다.
  *
  * 화면마다 같은 코드를 다시 쓰지 않으려고 모았다. 판 위에 글자를 얹는 일이 매번
  * 똑같은데, 그 계산이 조금씩 어긋나면 화면마다 정렬이 달라 보인다.
  *
- * 좌표는 화면 픽셀이다. 맵이 없으므로 논리 해상도라는 것이 없다.
+ * 좌표는 **[StageBox] 안쪽 픽셀**이다. 단말 화면비에 맞춰 늘리지 않고 16:9 한 조각에
+ * 그린다. 그 조각을 화면 어디에 놓을지는 [resize] 가 정하고, 그리거나 손가락을 받을
+ * 때만 바깥 좌표로 옮긴다. 그래서 화면을 그리는 코드는 단말을 몰라도 된다.
  */
 class ScreenUi(private val catalog: SpriteCatalog) {
 
@@ -22,18 +24,19 @@ class ScreenUi(private val catalog: SpriteCatalog) {
             point.first in x..(x + width) && point.second in y..(y + height)
     }
 
-    var width: Float = 0f
+    /** 16:9 조각. 화면 어디에 놓였는지는 여기에만 있다. */
+    var box: StageBox = StageBox.NONE
         private set
 
-    var height: Float = 0f
-        private set
+    val width: Float get() = box.width
 
-    /** 한 칸. 화면 높이 기준이라 기기가 달라도 비율이 유지된다. */
+    val height: Float get() = box.height
+
+    /** 한 칸. 조각 높이 기준이라 기기가 달라도 비율이 유지된다. */
     val unit: Float get() = height * UNIT_RATIO
 
     fun resize(width: Int, height: Int) {
-        this.width = width.toFloat()
-        this.height = height.toFloat()
+        box = StageBox.fit(width.toFloat(), height.toFloat())
     }
 
     fun rect(xRatio: Float, yRatio: Float, widthRatio: Float, heightUnits: Float): Rect =
@@ -83,8 +86,8 @@ class ScreenUi(private val catalog: SpriteCatalog) {
     ) {
         batch.draw(
             region = region,
-            x = rect.x,
-            y = rect.y,
+            x = box.x + rect.x,
+            y = box.y + rect.y,
             width = rect.width,
             height = rect.height,
             layer = Constants.Layer.HUD,
@@ -115,20 +118,22 @@ class ScreenUi(private val catalog: SpriteCatalog) {
         val g = green(color)
         val b = blue(color)
 
+        val left = box.x + rect.x
+        val top = box.y + rect.y
         batch.draw(
-            region = region.sub(0, 0, BAR_SLICES, 1), x = rect.x, y = rect.y,
+            region = region.sub(0, 0, BAR_SLICES, 1), x = left, y = top,
             width = cap, height = rect.height, layer = Constants.Layer.HUD,
             red = r, green = g, blue = b, alpha = alpha,
         )
         if (middle > 0f) {
             batch.draw(
-                region = region.sub(1, 0, BAR_SLICES, 1), x = rect.x + cap, y = rect.y,
+                region = region.sub(1, 0, BAR_SLICES, 1), x = left + cap, y = top,
                 width = middle, height = rect.height, layer = Constants.Layer.HUD,
                 red = r, green = g, blue = b, alpha = alpha,
             )
         }
         batch.draw(
-            region = region.sub(2, 0, BAR_SLICES, 1), x = rect.x + cap + middle, y = rect.y,
+            region = region.sub(2, 0, BAR_SLICES, 1), x = left + cap + middle, y = top,
             width = cap, height = rect.height, layer = Constants.Layer.HUD,
             red = r, green = g, blue = b, alpha = alpha,
         )
@@ -145,8 +150,8 @@ class ScreenUi(private val catalog: SpriteCatalog) {
     ) {
         batch.draw(
             region = region,
-            x = centerX - size * 0.5f,
-            y = centerY - size * 0.5f,
+            x = box.x + centerX - size * 0.5f,
+            y = box.y + centerY - size * 0.5f,
             width = size,
             height = size,
             layer = Constants.Layer.HUD,
@@ -171,8 +176,8 @@ class ScreenUi(private val catalog: SpriteCatalog) {
             catalog.glyph(char)?.let { glyph ->
                 batch.draw(
                     region = glyph,
-                    x = cursor,
-                    y = y,
+                    x = box.x + cursor,
+                    y = box.y + y,
                     width = size,
                     height = size,
                     // 판과 같은 층에 그린다. 아래층에 두면 판이 글자를 덮는다.
@@ -222,7 +227,8 @@ class ScreenUi(private val catalog: SpriteCatalog) {
         centered(batch, value, rect.centerX, rect.y + rect.height * centerRatio - fitted * 0.5f, fitted, color, alpha)
     }
 
-    fun hits(rect: Rect, x: Float, y: Float): Boolean = (x to y) in rect
+    /** 손가락은 화면 좌표로 온다. 조각 안쪽 좌표로 옮겨서 견준다. */
+    fun hits(rect: Rect, x: Float, y: Float): Boolean = ((x - box.x) to (y - box.y)) in rect
 
     private fun red(color: Int): Float = ((color ushr 16) and 0xFF) / 255f
 

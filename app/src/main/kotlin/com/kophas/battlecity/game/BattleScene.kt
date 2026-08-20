@@ -10,8 +10,10 @@ import com.kophas.battlecity.gameplay.GameWorld
 import com.kophas.battlecity.gameplay.MatchState
 import com.kophas.battlecity.gameplay.PlayerProfile
 import com.kophas.battlecity.gameplay.Tank
+import com.kophas.battlecity.map.StageData
 import com.kophas.battlecity.map.StageGenerator
 import com.kophas.battlecity.net.Messages
+import com.kophas.battlecity.net.Protocol
 import com.kophas.battlecity.net.SnapshotBridge
 import com.kophas.battlecity.render.GameAssets
 import com.kophas.battlecity.render.HudRenderer
@@ -122,6 +124,14 @@ class BattleScene(
     var logicalHeight: Float = 0f
         private set
 
+    /**
+     * 자리마다 마지막으로 입력이 닿은 시각. 유령 이동을 막는 데 쓴다.
+     *
+     * 참가자는 매 틱 입력을 보낸다. 그 흐름이 끊기면 연결이 끊긴 것이므로 탱크를
+     * 세워야 한다. 세우지 않으면 자리가 비기까지 4초 동안 혼자 달린다. (계획서 §37)
+     */
+    private val lastInputAt = FloatArray(Protocol.MAX_PLAYERS) { -1f }
+
     init {
         buildStage()
     }
@@ -129,8 +139,7 @@ class BattleScene(
     // -----------------------------------------------------------------------
 
     private fun buildStage() {
-        // 맵 크기는 방 설정이 한 단계 좁히거나 넓힌다.
-        val stage = generator.generate(seed, room.gridPlayerCount(playerCount), stageIndex)
+        val stage = takeStage(seed, stageIndex, playerCount)
         match = MatchState(playerCount, balance, profiles, room.maxActiveEnemies)
         world = GameWorld(stage, balance, GameWorld.Config(friendlyFire = room.friendlyFire))
         world.map.enableBaseShield(room.baseProtection)
@@ -138,6 +147,7 @@ class BattleScene(
 
         resultAnnounced = false
         finishReported = false
+        lastInputAt.fill(-1f)
         director = AiDirector(balance, aiSettings, seed)
         director.bind(world)
         slotOfTank.clear()
@@ -187,6 +197,35 @@ class BattleScene(
 
     val stageGridHash: Long get() = world.stage.gridHash
 
+    /** 미리 만들어 둔 스테이지. 해시를 먼저 알아야 해서 판보다 앞서 만든다. */
+    private var preparedStage: StageData? = null
+    private var preparedKey: Triple<Long, Int, Int>? = null
+
+    /**
+     * 판을 열기 전에 스테이지를 미리 만들고 해시를 돌려준다. (계획서 §35)
+     *
+     * Host 는 START 에 **이번 판** 해시를 실어야 한다. 판을 연 뒤에 해시를 담으면
+     * 이미 늦고, 판을 열기 전 해시는 지난 판 것이다. 만들어 둔 스테이지는 판을 열 때
+     * 그대로 쓰므로 같은 맵을 두 번 만들지 않는다.
+     */
+    fun prepareStage(seed: Long, stageIndex: Int, playerCount: Int): Long {
+        val key = Triple(seed, stageIndex, playerCount)
+        if (preparedKey != key) {
+            preparedStage = generator.generate(seed, room.gridPlayerCount(playerCount), stageIndex)
+            preparedKey = key
+        }
+        return preparedStage?.gridHash ?: 0L
+    }
+
+    private fun takeStage(seed: Long, stageIndex: Int, playerCount: Int): StageData {
+        val key = Triple(seed, stageIndex, playerCount)
+        val ready = preparedStage?.takeIf { preparedKey == key }
+        preparedStage = null
+        preparedKey = null
+        // 맵 크기는 방 설정이 한 단계 좁히거나 넓힌다.
+        return ready ?: generator.generate(seed, room.gridPlayerCount(playerCount), stageIndex)
+    }
+
     /** Host 가 정한 seed 로 판을 다시 연다. Client 가 START 를 받았을 때 부른다. */
     fun beginStage(seed: Long, stageIndex: Int, playerCount: Int) {
         this.seed = seed
@@ -197,6 +236,7 @@ class BattleScene(
 
     /** Client 가 올린 조종 입력을 그 자리의 탱크에 그대로 먹인다. */
     fun applyRemoteInput(slot: Int, input: Messages.Input) {
+        if (slot in lastInputAt.indices) lastInputAt[slot] = elapsedSeconds
         val tank = world.tanks.firstOrNull { it.ownerSlot == slot && it.alive } ?: return
         if (input.direction != Messages.Input.NO_DIRECTION) {
             world.steer(tank, Direction.VALUES[input.direction.coerceIn(0, 3)])
@@ -236,6 +276,7 @@ class BattleScene(
         }
 
         director.update(world, match, tickSeconds)
+        stopIdleTanks()
         world.update(tickSeconds)
         match.update(tickSeconds)
 
@@ -303,6 +344,36 @@ class BattleScene(
                 },
             )
         }
+    }
+
+    /**
+     * 입력이 끊긴 사람의 탱크를 세운다.
+     *
+     * 사람이 잡은 자리만 본다. COM 자리는 AI 가 매 틱 방향을 정하므로 여기서 손대면
+     * 움직이지 못한다.
+     */
+    private fun stopIdleTanks() {
+        val limit = Protocol.INPUT_IDLE_MS / 1000f
+        for (slot in humanSlots) {
+            val stamp = lastInputAt.getOrNull(slot) ?: continue
+            if (stamp < 0f || elapsedSeconds - stamp <= limit) continue
+            world.tanks.firstOrNull { it.ownerSlot == slot && it.alive }?.moving = false
+        }
+    }
+
+    /**
+     * 연결이 끊긴 자리를 정리한다. (계획서 §37)
+     *
+     * 탱크를 걷어내고 탈락으로 굳힌다. 남은 사람은 그대로 판을 이어 간다.
+     */
+    fun dropSlot(slot: Int) {
+        world.tanks.firstOrNull { it.ownerSlot == slot && it.alive }?.let { tank ->
+            director.detach(tank.id)
+            slotOfTank.remove(tank.id)
+            world.despawn(tank)
+        }
+        if (slot in lastInputAt.indices) lastInputAt[slot] = -1f
+        match.onPlayerDisconnected(slot)
     }
 
     /** 부서진 탱크를 풀로 돌려보낸다. 파괴 통보는 리스너에서 이미 끝났다. */

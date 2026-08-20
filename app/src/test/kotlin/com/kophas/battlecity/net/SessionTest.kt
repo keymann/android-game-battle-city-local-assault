@@ -44,6 +44,31 @@ class SessionTest {
     // --- 방 찾기와 입장 ---------------------------------------------------
 
     @Test
+    fun `카운트다운 중에는 새로 들어올 수 없다`() {
+        val client = joinedClient(50021, "손님")
+        client.setReady(true, 0, 1, "GST")
+        pump(client)
+        host.prepareMatch(Messages.Start(1L, 0, 0, 0L, 0))
+        assertTrue(host.requestStart())
+
+        // 세는 중에 인원이 늘면 서로 다른 크기의 맵을 만든다. (계획서 §35)
+        var denied = -1
+        val late = newClient(50022, "지각")
+        late.listener = object : ClientSession.Listener {
+            override fun onDenied(reason: Int) {
+                denied = reason
+            }
+        }
+        late.join(hostPeerAddress(), 0)
+        pump(client, late)
+
+        assertEquals(Protocol.Deny.ALREADY_STARTED, denied)
+        assertEquals("자리를 내주지 않아야 한다", 2, host.lobby.connectedCount)
+    }
+
+    private fun hostPeerAddress() = Peer("10.0.0.1", Protocol.PORT)
+
+    @Test
     fun `브로드캐스트로 방을 찾는다`() {
         val client = newClient(50001, "손님")
         var found: Messages.Announce? = null

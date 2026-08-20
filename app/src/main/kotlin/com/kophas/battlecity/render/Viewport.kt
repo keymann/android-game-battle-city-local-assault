@@ -105,8 +105,29 @@ class Viewport(
         val right: Int = 0,
         val bottom: Int = 0,
     ) {
+        /** 둘 중 더 안쪽으로 들어간 값. 안전 영역과 16:9 띠를 함께 지킬 때 쓴다. */
+        fun outerOf(other: Insets): Insets = Insets(
+            left = maxOf(left, other.left),
+            top = maxOf(top, other.top),
+            right = maxOf(right, other.right),
+            bottom = maxOf(bottom, other.bottom),
+        )
+
         companion object {
             val NONE = Insets()
+
+            /**
+             * 16:9 조각 바깥을 여백으로 본다. (계획서 §21, §22)
+             *
+             * 게임 월드도 UI 와 같은 조각 안에 담는다. 월드만 화면 전체를 쓰면 가로로
+             * 긴 단말에서 맵과 UI 가 서로 다른 자리를 기준으로 놓여 어긋난다.
+             */
+            fun of(box: StageBox, screenWidth: Int, screenHeight: Int): Insets = Insets(
+                left = box.x.toInt(),
+                top = box.y.toInt(),
+                right = (screenWidth - box.x - box.width).toInt().coerceAtLeast(0),
+                bottom = (screenHeight - box.y - box.height).toInt().coerceAtLeast(0),
+            )
         }
     }
 }
