@@ -11,6 +11,7 @@
 | `game/GameSettingsScene.kt` | 방 규칙 (로비에서 방장만) |
 | `game/SoundSettingsScene.kt` | 이 기기의 소리 크기 (메인 메뉴) |
 | `game/SettingsLayout.kt` | 설정판 두 장이 함께 쓰는 자리 계산 |
+| `game/LoopQueue.kt` | 손가락이 만든 일감을 루프 스레드로 넘긴다 |
 | `game/ResultScene.kt` | 순위 · 승자 · 다음 판 |
 | `game/RoomSettings.kt` | 방 규칙 · 기기 설정 값 |
 | `game/SettingsStore.kt` | 기기 설정을 남긴다 |
@@ -37,6 +38,11 @@
 
 `GameHost.screen` 하나가 지금 무엇을 그리고 손가락을 어디로 보낼지 정한다. 화면
 하나가 다른 화면의 사정을 알 필요가 없도록 갈림길은 전부 이 자리에 모았다.
+
+손가락은 **어디를 눌렀는지만** 그 자리에서 가른다. 눌러서 일어나는 일은
+`LoopQueue` 에 쌓아 두고 게임 루프 스레드가 다음 틱에 꺼내 실행한다. 세션을 손가락이
+온 스레드에서 만지면 패킷이 조용히 사라지기 때문이다
+(→ [NETWORK.md](NETWORK.md) §3).
 
 설정 화면은 **두 장으로 갈라 두었다.** 어느 쪽이든 열리면 **혼자 화면을 다 쓴다.**
 뒤 화면이 비쳐 보이면 어느 쪽을 누르는 것인지 헷갈리고, 판 밖으로 삐져나온 글자가

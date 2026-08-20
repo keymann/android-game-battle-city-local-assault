@@ -1,5 +1,6 @@
 package com.kophas.battlecity.net
 
+import android.util.Log
 import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.net.NetworkInterface
@@ -42,7 +43,7 @@ class UdpTransport(port: Int) : Transport {
             outgoing.put(data, 0, length)
             outgoing.flip()
             channel.send(outgoing, InetSocketAddress(to.address, to.port))
-        }
+        }.onFailure { report("$to 로 보내기", it) }
     }
 
     override fun broadcast(port: Int, data: ByteArray, length: Int) {
@@ -53,7 +54,7 @@ class UdpTransport(port: Int) : Transport {
                 outgoing.put(data, 0, length)
                 outgoing.flip()
                 channel.send(outgoing, InetSocketAddress(address, port))
-            }
+            }.onFailure { report("$address 로 뿌리기", it) }
         }
     }
 
@@ -71,11 +72,33 @@ class UdpTransport(port: Int) : Transport {
         }
     }
 
+    /**
+     * 통로에서 난 문제를 알린다.
+     *
+     * 예전에는 `runCatching` 이 받아 그냥 삼켰다. 그래서 패킷이 나가지 않는데도
+     * 아무 흔적이 없었다 — 손가락이 온 스레드에서 소켓을 만져
+     * `NetworkOnMainThreadException` 이 나던 것을 알아채는 데 오래 걸렸다.
+     * (→ [com.kophas.battlecity.game.LoopQueue])
+     *
+     * 같은 실패는 한 번만 찍는다. 60Hz 로 부르는 자리라 그러지 않으면 로그가 덮인다.
+     */
+    private fun report(what: String, error: Throwable) {
+        val kind = "$what:${error.javaClass.name}"
+        if (kind == lastFailure) return
+        lastFailure = kind
+        Log.w(TAG, "$what 실패: ${error.javaClass.simpleName} ${error.message}")
+    }
+
+    /** 마지막으로 찍은 실패. 같은 것이 이어지면 조용히 넘긴다. */
+    private var lastFailure: String? = null
+
     override fun close() {
         runCatching { channel.close() }
     }
 
     private companion object {
+        const val TAG = "BattleCity"
+
         fun localAddress(): String =
             runCatching {
                 NetworkInterface.getNetworkInterfaces().toList()

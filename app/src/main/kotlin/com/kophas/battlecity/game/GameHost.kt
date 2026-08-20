@@ -62,6 +62,14 @@ class GameHost(
 
     private val pendingCommand = AtomicReference<SurfaceCommand?>(null)
 
+    /**
+     * 손가락이 만든 일감. UI 스레드가 쌓고 루프 스레드가 꺼내 쓴다.
+     *
+     * 세션을 만지는 일은 모두 여기를 거친다. UI 스레드에서 소켓을 만지면 안드로이드가
+     * 막아 패킷이 조용히 사라진다. (→ [LoopQueue])
+     */
+    private val touchWork = LoopQueue()
+
     private val renderer = NativeRenderer()
     private val batch = SpriteBatch()
 
@@ -88,17 +96,27 @@ class GameHost(
     private var balance: BalanceConfig? = null
     private var catalog: SpriteCatalog? = null
     private var scene: BattleScene? = null
+    /** 두 스레드가 함께 본다. 손가락이 세션을 찾을 때와 루프가 굴릴 때다. */
+    @Volatile
     private var netDriver: NetDriver? = null
     private var insets = Viewport.Insets.NONE
 
+    /**
+     * 지금 보고 있는 화면.
+     *
+     * 루프 스레드가 바꾸고(참가자는 자리를 받는 순간 로비로 넘어간다) 손가락이 읽는다.
+     * 손가락이 옛 화면을 보고 있으면 누른 곳과 다른 화면이 받는다.
+     */
+    @Volatile
     private var screen: Screen = Screen.MENU
 
     /**
      * 화면 위에 덮인 설정판. 두 장이 함께 열리는 일은 없다.
      *
      * 게임 설정은 로비에서 방장만, 사운드 설정은 메인 메뉴에서 연다. 열려 있는
-     * 동안에는 손가락과 그림이 모두 이 판으로만 간다.
+     * 동안에는 손가락과 그림이 모두 이 판으로만 간다. 여는 것은 루프 스레드다.
      */
+    @Volatile
     private var overlay: Overlay = Overlay.NONE
     private var surfaceWidth = 0
     private var surfaceHeight = 0
@@ -176,7 +194,7 @@ class GameHost(
 
     fun release() {
         loop.stop()
-        closeRoom()
+        closeRoomOffMainThread()
         scanner?.close()
         scanner = null
         playback?.release()
@@ -245,11 +263,12 @@ class GameHost(
     fun onTouchUp(pointerId: Int, x: Float, y: Float) {
         when (overlay) {
             Overlay.GAME_SETTINGS -> {
-                gameSettingsScene?.onUp(x, y)?.let { applyGameSettingsAction(it) }
+                // 판을 닫고 규칙을 세션에 넘기는 일은 루프 스레드가 한다.
+                gameSettingsScene?.onUp(x, y)?.let { action -> touchWork.post { applyGameSettingsAction(action) } }
                 return
             }
             Overlay.SOUND -> {
-                soundSettingsScene?.onUp(x, y)?.let { applySoundSettingsAction(it) }
+                soundSettingsScene?.onUp(x, y)?.let { action -> touchWork.post { applySoundSettingsAction(action) } }
                 return
             }
             Overlay.NONE -> Unit
@@ -260,13 +279,13 @@ class GameHost(
                     // 누른 자리에서 손을 떼야 눌린 것으로 본다. 끌어서 벗어나면 취소다.
                     val action = menu.onTap(x, y)
                     menu.onRelease()
-                    handleMenuAction(action)
+                    touchWork.post { handleMenuAction(action) }
                 }
             }
-            Screen.ROOMS -> roomListScene?.onUp(x, y)?.let { handleRoomListAction(it) }
+            Screen.ROOMS -> roomListScene?.onUp(x, y)?.let { action -> touchWork.post { handleRoomListAction(action) } }
             Screen.LOBBY -> lobbyScene?.onRelease()
             Screen.BATTLE -> touch.onUp(pointerId)
-            Screen.RESULT -> resultScene?.onUp(x, y)?.let { handleResultAction(it) }
+            Screen.RESULT -> resultScene?.onUp(x, y)?.let { action -> touchWork.post { handleResultAction(action) } }
         }
     }
 
@@ -306,11 +325,23 @@ class GameHost(
         }
     }
 
+    /**
+     * 로비에서 누른 자리를 읽는다.
+     *
+     * 어디를 눌렀는지는 여기(UI 스레드)에서 곧바로 가른다. 씬이 눌린 상태와 글자판을
+     * 들고 있어 다음 그림에 그대로 나가야 한다. 세션을 만지는 일만 루프로 넘긴다.
+     */
     private fun handleLobbyTap(x: Float, y: Float) {
         val lobby = lobbyScene ?: return
-        val driver = netDriver ?: return
+        if (netDriver == null) return
         tap()
-        when (val action = lobby.onTap(x, y)) {
+        val action = lobby.onTap(x, y)
+        if (action != LobbyScene.Action.None) touchWork.post { applyLobbyAction(action) }
+    }
+
+    private fun applyLobbyAction(action: LobbyScene.Action) {
+        val driver = netDriver ?: return
+        when (action) {
             LobbyScene.Action.ToggleReady -> {
                 driver.toggleReady()
                 audio?.play(AudioDirector.Event.UI_READY)
@@ -574,6 +605,24 @@ class GameHost(
         scene = null
     }
 
+    /**
+     * 앱을 접으면서 방을 닫는다. 손가락이 온 스레드에서 부른다.
+     *
+     * 마지막 인사(참가자는 LEAVE, 방장은 HOST_CLOSED)도 소켓을 만지는 일이라 메인
+     * 스레드에서는 나가지 않는다. 루프는 이미 멈춰서 넘길 곳이 없으므로 스레드
+     * 하나를 세워 보내고 잠깐만 기다린다. 못 보내도 상대는 4초 뒤 타임아웃으로
+     * 알게 되지만, 그 4초 동안 남은 사람들 화면에 유령이 서 있다. (계획서 §37)
+     */
+    private fun closeRoomOffMainThread() {
+        val driver = netDriver
+        netDriver = null
+        scene = null
+        if (driver == null) return
+        val farewell = Thread({ runCatching { driver.close() } }, "battlecity-farewell")
+        farewell.start()
+        runCatching { farewell.join(FAREWELL_WAIT_MS) }
+    }
+
     /** 메뉴에 있는 동안만 같은 망을 살핀다. 방에 들어가면 소켓을 놓아준다. */
     private fun openScanner() {
         if (scanner != null) return
@@ -659,6 +708,9 @@ class GameHost(
 
     override fun onUpdate(tickIndex: Long, tickSeconds: Float) {
         tick++
+        // 손가락이 쌓아 둔 일감을 먼저 비운다. 설정판이 덮여 있어도 비워야 한다 —
+        // 그 판을 닫는 일 자체가 여기 쌓여 있다.
+        touchWork.drain()
         if (overlay != Overlay.NONE) {
             // 설정판이 덮여 있어도 방은 살아 있어야 한다. 세션을 굴리지 않으면
             // 알림이 끊겨 참가자 화면에서 방장이 사라진다. (계획서 §37)
@@ -851,7 +903,11 @@ class GameHost(
                 resizeScenes(command.width, command.height)
             }
             SurfaceCommand.Detach -> {
-                closeRoom()
+                // 갈 곳 없는 일감을 먼저 버린다. 씬을 지운 뒤에 돌면 빈 화면을 만진다.
+                touchWork.clear()
+                // Detach 는 루프가 멈춘 뒤 메인 스레드가 소비할 수도 있다. 인사만
+                // 딴 스레드로 보낸다.
+                closeRoomOffMainThread()
                 scanner?.close()
                 scanner = null
                 controlsRenderer = null
@@ -951,6 +1007,9 @@ class GameHost(
 
     private companion object {
         const val TAG = "BattleCity"
+
+        /** 마지막 인사를 보낼 짬. 이보다 길게 붙잡으면 화면 전환이 굼떠 보인다. */
+        const val FAREWELL_WAIT_MS = 150L
         const val DEFAULT_LOGICAL = 832f
         const val DEFAULT_PLAYERS = 4
         const val DEFAULT_NAME = "P1"
