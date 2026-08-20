@@ -12,11 +12,14 @@ import com.kophas.battlecity.render.TextLayout
  *          BATTLE CITY: LOCAL ASSAULT
  *               [ CREATE GAME ]
  *               [  JOIN GAME  ]
- *  [프로필]                        [설정]
+ *  [프로필]                        [소리]
  * ```
  *
  * 방을 열거나 남의 방에 들어간다. 혼자 하는 판은 여기 없다. 최소 인원이 두 명이라
  * (계획서 §28) 혼자서는 시작할 수 없기 때문이다.
+ *
+ * 오른쪽 아래 단추는 **사운드 설정**을 연다. 방 규칙은 방장이 로비에서 정하므로
+ * (→ [GameSettingsScene]) 여기 남는 설정은 이 기기의 소리 크기뿐이다.
  */
 class MainMenuScene(private val catalog: SpriteCatalog) {
 
@@ -24,7 +27,9 @@ class MainMenuScene(private val catalog: SpriteCatalog) {
         data object None : Action
         data object CreateGame : Action
         data object JoinGame : Action
-        data object OpenSettings : Action
+
+        /** 이 기기의 소리 크기를 고친다. (→ [SoundSettingsScene]) */
+        data object OpenSound : Action
     }
 
     private val ui = ScreenUi(catalog)
@@ -42,7 +47,7 @@ class MainMenuScene(private val catalog: SpriteCatalog) {
         pressed = when {
             ui.hits(createRect(), x, y) -> Action.CreateGame
             ui.hits(joinRect(), x, y) -> Action.JoinGame
-            ui.hits(settingsRect(), x, y) -> Action.OpenSettings
+            ui.hits(soundRect(), x, y) -> Action.OpenSound
             else -> Action.None
         }
         return pressed
@@ -67,7 +72,7 @@ class MainMenuScene(private val catalog: SpriteCatalog) {
         drawButton(batch, joinRect(), Action.JoinGame, "JOIN GAME", ScreenUi.CYAN)
 
         drawProfile(batch, unit)
-        drawSettingsButton(batch)
+        drawSoundButton(batch)
     }
 
     private fun drawButton(
@@ -105,14 +110,22 @@ class MainMenuScene(private val catalog: SpriteCatalog) {
         )
     }
 
-    /** 같은 망에 방이 있는지 알려 준다. 없는데 JOIN 을 눌러 기다리는 일을 줄인다. */
-    private fun drawSettingsButton(batch: SpriteBatch) {
-        val rect = settingsRect()
+    /**
+     * 사운드 설정 단추와 그 옆의 망 상태.
+     *
+     * 단추 그림은 설정판의 스피커(`set_speaker_on`)를 그대로 쓴다. 톱니바퀴는
+     * "설정 전부" 로 읽히는데 여기서 열리는 것은 소리뿐이다.
+     *
+     * 망 상태는 같은 망에 방이 있는지 알려 준다. 없는데 JOIN 을 눌러 기다리는 일을
+     * 줄인다.
+     */
+    private fun drawSoundButton(batch: SpriteBatch) {
+        val rect = soundRect()
         ui.panel(
             batch,
-            catalog.menu.settings,
+            catalog.menu.sound,
             rect,
-            alpha = if (pressed == Action.OpenSettings) PRESSED_ALPHA else 1f,
+            alpha = if (pressed == Action.OpenSound) PRESSED_ALPHA else 1f,
         )
 
         val found = roomsFound
@@ -156,7 +169,7 @@ class MainMenuScene(private val catalog: SpriteCatalog) {
 
     private fun joinRect() = ui.fitByWidth(catalog.menu.secondary, BUTTON_WIDTH, JOIN_TOP)
 
-    private fun settingsRect() = ui.fitByHeight(catalog.menu.settings, 1.7f, 0.83f, 0.93f)
+    private fun soundRect() = ui.fitByHeight(catalog.menu.sound, 1.7f, 0.83f, 0.93f)
 
     private companion object {
         const val TITLE_TOP = 0.05f

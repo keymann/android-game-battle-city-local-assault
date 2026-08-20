@@ -7,10 +7,11 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * 방 설정과 기기 설정. (계획서 §44.2)
+ * 방 규칙과 기기 설정. (계획서 §44.2)
  *
  * 두 가지가 섞이기 쉬운 자리다. 방 규칙은 모두에게 같아야 하고 소리 크기는
- * 기기마다 달라야 한다. 여기서 그 경계를 못 박아 둔다.
+ * 기기마다 달라야 한다. 화면도 그렇게 갈라 두었다 — 방 규칙은 [GameSettingsScene],
+ * 소리 크기는 [SoundSettingsScene]. 여기서 그 경계를 못 박아 둔다.
  */
 class RoomSettingsTest {
 
@@ -37,28 +38,28 @@ class RoomSettingsTest {
 
     @Test
     fun `슬라이더는 5 단위로 끊는다`() {
-        assertEquals(0, SettingsScene.quantizeVolume(0f))
-        assertEquals(100, SettingsScene.quantizeVolume(1f))
-        assertEquals(50, SettingsScene.quantizeVolume(0.5f))
+        assertEquals(0, SoundSettingsScene.quantizeVolume(0f))
+        assertEquals(100, SoundSettingsScene.quantizeVolume(1f))
+        assertEquals(50, SoundSettingsScene.quantizeVolume(0.5f))
         // 52.3 은 50 으로 내려붙는다. 같은 자리를 다시 짚으면 같은 값이 나와야 한다.
-        assertEquals(50, SettingsScene.quantizeVolume(0.523f))
-        assertEquals(55, SettingsScene.quantizeVolume(0.54f))
+        assertEquals(50, SoundSettingsScene.quantizeVolume(0.523f))
+        assertEquals(55, SoundSettingsScene.quantizeVolume(0.54f))
     }
 
     @Test
     fun `슬라이더가 범위를 벗어나도 값은 안전하다`() {
-        assertEquals(0, SettingsScene.quantizeVolume(-3f))
-        assertEquals(100, SettingsScene.quantizeVolume(9f))
+        assertEquals(0, SoundSettingsScene.quantizeVolume(-3f))
+        assertEquals(100, SoundSettingsScene.quantizeVolume(9f))
     }
 
     @Test
     fun `동시 COM 슬라이더는 AUTO 와 8에서 12 사이만 고른다`() {
         // 맨 왼쪽 한 칸은 AUTO 다. 손으로 정하고 나서 되돌릴 길이 있어야 한다.
-        assertEquals(RoomSettings.ACTIVE_ENEMIES_AUTO, SettingsScene.activeEnemiesAt(0f))
-        assertEquals(RoomSettings.MAX_ACTIVE_ENEMIES, SettingsScene.activeEnemiesAt(1f))
+        assertEquals(RoomSettings.ACTIVE_ENEMIES_AUTO, GameSettingsScene.activeEnemiesAt(0f))
+        assertEquals(RoomSettings.MAX_ACTIVE_ENEMIES, GameSettingsScene.activeEnemiesAt(1f))
         // 계획서 §44.2 가 정한 폭 밖으로는 나가지 않는다.
         for (step in 0..20) {
-            val value = SettingsScene.activeEnemiesAt(step / 20f)
+            val value = GameSettingsScene.activeEnemiesAt(step / 20f)
             assertTrue(
                 "범위 밖 값 $value",
                 value == RoomSettings.ACTIVE_ENEMIES_AUTO ||
@@ -75,7 +76,7 @@ class RoomSettingsTest {
             assertEquals(
                 "자리로 옮겼다 돌아오면 같은 값이어야 한다",
                 value,
-                SettingsScene.activeEnemiesAt(SettingsScene.activeEnemiesFraction(value)),
+                GameSettingsScene.activeEnemiesAt(GameSettingsScene.activeEnemiesFraction(value)),
             )
         }
     }

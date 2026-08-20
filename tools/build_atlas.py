@@ -149,17 +149,20 @@ def build_effects(entries):
 
 #: 쓰지 않는 아이콘.
 #:  - 쿨타임은 SPECIAL 버튼 자체에 표현하므로 따로 둘 것이 없다.
-#:  - speaker_on 은 BGM / SFX 아이콘이 이미 켜짐 상태를 말한다. 같은 자리에 둘을
-#:    겹칠 수 없어 아틀라스에 넣지 않는다.
 #:  - create_room_icon / join_room_icon 은 버튼 글자 옆에 붙여 뒀다가 걷어냈다.
 #:    "CREATE GAME" 이라고 쓰여 있는데 그림을 하나 더 얹으니 어색했다.
 #:  - *_button_pressed 는 눌린 모습이 따로 그려진 것인데, 낱장마다 다듬긴 여백이
 #:    달라 같은 자리에 그려도 판이 한 번 튀었다 돌아온다. 눌림은 흐리기로 말한다.
 #:    (secondary_button_pressed 만 남긴다 — 방 목록에서 잠긴 줄의 바탕이다.)
+#:  - settings_button_normal(메뉴의 톱니) 은 그 자리가 사운드 설정 단추가 되면서
+#:    쓰이지 않는다. 톱니는 "설정 전부" 로 읽히는데 열리는 것은 소리뿐이다.
+#: speaker_on 은 여기 있었다. 설정판에서는 BGM / SFX 아이콘이 이미 켜짐 상태를
+#: 말하므로 쓸 자리가 없었는데, 메인 메뉴에서 사운드 설정을 여는 단추가 되었다.
 #: 원본은 모두 assets 에 그대로 있다.
-SKIP_ICONS = {"cooldown_25", "cooldown_75", "speaker_on",
+SKIP_ICONS = {"cooldown_25", "cooldown_75",
               "create_room_icon", "join_room_icon",
-              "primary_button_pressed", "settings_button_pressed"}
+              "primary_button_pressed",
+              "settings_button_normal", "settings_button_pressed"}
 
 
 def build_icons(entries, src, prefix, size):

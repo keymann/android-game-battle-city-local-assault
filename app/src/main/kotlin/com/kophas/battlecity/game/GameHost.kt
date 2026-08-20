@@ -51,6 +51,9 @@ class GameHost(
     /** 지금 보고 있는 화면. */
     enum class Screen { MENU, ROOMS, LOBBY, BATTLE, RESULT }
 
+    /** 화면 위에 덮이는 판. 게임 설정과 사운드 설정이 서로 다른 화면에서 열린다. */
+    enum class Overlay { NONE, GAME_SETTINGS, SOUND }
+
     private sealed interface SurfaceCommand {
         data class Attach(val surface: Surface, val width: Int, val height: Int) : SurfaceCommand
         data class Resize(val width: Int, val height: Int) : SurfaceCommand
@@ -72,7 +75,8 @@ class GameHost(
     private var lobbyScene: LobbyScene? = null
     private var menuScene: MainMenuScene? = null
     private var roomListScene: RoomListScene? = null
-    private var settingsScene: SettingsScene? = null
+    private var gameSettingsScene: GameSettingsScene? = null
+    private var soundSettingsScene: SoundSettingsScene? = null
     private var resultScene: ResultScene? = null
     private var audio: AudioDirector? = null
     private var playback: AndroidPlayback? = null
@@ -88,11 +92,23 @@ class GameHost(
     private var insets = Viewport.Insets.NONE
 
     private var screen: Screen = Screen.MENU
-    private var settingsOpen = false
+
+    /**
+     * 화면 위에 덮인 설정판. 두 장이 함께 열리는 일은 없다.
+     *
+     * 게임 설정은 로비에서 방장만, 사운드 설정은 메인 메뉴에서 연다. 열려 있는
+     * 동안에는 손가락과 그림이 모두 이 판으로만 간다.
+     */
+    private var overlay: Overlay = Overlay.NONE
     private var surfaceWidth = 0
     private var surfaceHeight = 0
 
-    /** 방을 열 때 쓸 규칙. 설정 화면에서 고치고 CREATE GAME 이 그대로 쓴다. */
+    /**
+     * 이 방의 규칙. 로비에서 방장이 게임 설정 화면으로 고친다.
+     *
+     * 방이 닫혀도 남겨 둔다. 다음에 여는 방이 같은 규칙으로 시작하므로 판마다
+     * 다시 맞출 일이 없다.
+     */
     private var roomSettings = RoomSettings()
 
     /** 이 기기의 소리 크기. 방과 무관하게 여기에만 걸린다. */
@@ -177,7 +193,8 @@ class GameHost(
         lobbyScene?.resize(width, height)
         menuScene?.resize(width, height)
         roomListScene?.resize(width, height)
-        settingsScene?.resize(width, height)
+        gameSettingsScene?.resize(width, height)
+        soundSettingsScene?.resize(width, height)
         resultScene?.resize(width, height)
     }
 
@@ -190,9 +207,16 @@ class GameHost(
     // -----------------------------------------------------------------------
 
     fun onTouchDown(pointerId: Int, x: Float, y: Float) {
-        if (settingsOpen) {
-            settingsScene?.onDown(x, y)
-            return
+        when (overlay) {
+            Overlay.GAME_SETTINGS -> {
+                gameSettingsScene?.onDown(x, y)
+                return
+            }
+            Overlay.SOUND -> {
+                soundSettingsScene?.onDown(x, y)
+                return
+            }
+            Overlay.NONE -> Unit
         }
         when (screen) {
             Screen.MENU -> menuScene?.onTap(x, y)
@@ -204,17 +228,31 @@ class GameHost(
     }
 
     fun onTouchMove(pointerId: Int, x: Float, y: Float) {
-        if (settingsOpen) {
-            settingsScene?.onMove(x, y)
-            return
+        when (overlay) {
+            Overlay.GAME_SETTINGS -> {
+                gameSettingsScene?.onMove(x, y)
+                return
+            }
+            Overlay.SOUND -> {
+                soundSettingsScene?.onMove(x, y)
+                return
+            }
+            Overlay.NONE -> Unit
         }
         if (screen == Screen.BATTLE) touch.onMove(pointerId, x, y)
     }
 
     fun onTouchUp(pointerId: Int, x: Float, y: Float) {
-        if (settingsOpen) {
-            settingsScene?.onUp(x, y)?.let { applySettingsAction(it) }
-            return
+        when (overlay) {
+            Overlay.GAME_SETTINGS -> {
+                gameSettingsScene?.onUp(x, y)?.let { applyGameSettingsAction(it) }
+                return
+            }
+            Overlay.SOUND -> {
+                soundSettingsScene?.onUp(x, y)?.let { applySoundSettingsAction(it) }
+                return
+            }
+            Overlay.NONE -> Unit
         }
         when (screen) {
             Screen.MENU -> {
@@ -233,7 +271,8 @@ class GameHost(
     }
 
     fun onTouchCancel() {
-        settingsScene?.onCancelTouch()
+        gameSettingsScene?.onCancelTouch()
+        soundSettingsScene?.onCancelTouch()
         resultScene?.onCancelTouch()
         roomListScene?.onCancelTouch()
         menuScene?.onRelease()
@@ -258,9 +297,9 @@ class GameHost(
                 screen = Screen.ROOMS
             }
 
-            MainMenuScene.Action.OpenSettings -> {
+            MainMenuScene.Action.OpenSound -> {
                 tap()
-                openSettings()
+                openSoundSettings()
             }
 
             MainMenuScene.Action.None -> Unit
@@ -282,7 +321,7 @@ class GameHost(
             }
             LobbyScene.Action.CycleType -> driver.cycleTankType()
             LobbyScene.Action.CycleColor -> driver.cycleColor()
-            LobbyScene.Action.OpenSettings -> openSettings()
+            LobbyScene.Action.OpenGameSettings -> openGameSettings()
             LobbyScene.Action.Back -> returnToMenu()
             is LobbyScene.Action.SetName -> {
                 driver.setName(action.name)
@@ -410,7 +449,7 @@ class GameHost(
     /** 방을 닫고 메인 메뉴로. 로비와 결과 화면이 함께 쓴다. */
     private fun returnToMenu() {
         closeRoom()
-        settingsOpen = false
+        overlay = Overlay.NONE
         screen = Screen.MENU
         openScanner()
         audio?.stopAllLoops()
@@ -421,34 +460,58 @@ class GameHost(
     // 화면 전환
     // -----------------------------------------------------------------------
 
-    private fun openSettings() {
-        val settings = settingsScene ?: return
-        // 방 규칙은 방장 것이다. 이미 방에 들어가 있는 참가자에게는 잠근다.
+    /** 게임 설정. 방 규칙은 방장 것이라 방장이 아니면 열지 않는다. (계획서 §44.2) */
+    private fun openGameSettings() {
+        val settings = gameSettingsScene ?: return
         val driver = netDriver
-        val editable = driver == null || driver.role == NetRole.HOST
-        settings.open(roomSettings, deviceSettings, editable)
-        settingsOpen = true
+        if (driver != null && driver.role != NetRole.HOST) return
+        settings.open(roomSettings)
+        overlay = Overlay.GAME_SETTINGS
     }
 
-    private fun applySettingsAction(action: SettingsScene.Action) {
+    private fun openSoundSettings() {
+        val settings = soundSettingsScene ?: return
+        settings.open(deviceSettings)
+        overlay = Overlay.SOUND
+    }
+
+    private fun applyGameSettingsAction(action: GameSettingsScene.Action) {
         when (action) {
-            is SettingsScene.Action.Apply -> {
+            is GameSettingsScene.Action.Apply -> {
                 roomSettings = action.room
+                // 방장이 바꾼 규칙은 로비 현황에 바로 실린다. START 를 기다리지 않는다.
+                netDriver?.roomSettings = roomSettings
+                overlay = Overlay.NONE
+                tap()
+            }
+
+            GameSettingsScene.Action.Cancel -> {
+                overlay = Overlay.NONE
+                tap()
+            }
+
+            GameSettingsScene.Action.None -> Unit
+        }
+    }
+
+    private fun applySoundSettingsAction(action: SoundSettingsScene.Action) {
+        when (action) {
+            is SoundSettingsScene.Action.Apply -> {
                 deviceSettings = action.device
                 store?.saveDevice(action.device)
                 applyVolumes()
-                netDriver?.roomSettings = roomSettings
-                settingsOpen = false
+                overlay = Overlay.NONE
                 tap()
             }
 
-            SettingsScene.Action.Cancel -> {
+            SoundSettingsScene.Action.Cancel -> {
+                // 취소하면 씬이 열었을 때 값을 되돌려 준다. 그 값으로 다시 맞춘다.
                 applyVolumes()
-                settingsOpen = false
+                overlay = Overlay.NONE
                 tap()
             }
 
-            SettingsScene.Action.None -> Unit
+            SoundSettingsScene.Action.None -> Unit
         }
     }
 
@@ -596,7 +659,15 @@ class GameHost(
 
     override fun onUpdate(tickIndex: Long, tickSeconds: Float) {
         tick++
-        if (settingsOpen) return
+        if (overlay != Overlay.NONE) {
+            // 설정판이 덮여 있어도 방은 살아 있어야 한다. 세션을 굴리지 않으면
+            // 알림이 끊겨 참가자 화면에서 방장이 사라진다. (계획서 §37)
+            //
+            // 게임 설정은 로비에 있는 방장만 열 수 있어 이 사이에 판이 시작될 일은
+            // 없다. START 를 누를 손이 판에 덮여 있다.
+            if (screen == Screen.LOBBY) netDriver?.onTick()
+            return
+        }
 
         when (screen) {
             Screen.MENU -> {
@@ -703,8 +774,12 @@ class GameHost(
         batch.begin()
         // 설정은 혼자 화면을 다 쓴다. 뒤에 메뉴가 비쳐 보이면 어느 쪽을 누르는
         // 것인지 헷갈리고, 판 밖으로 삐져나온 글자가 설정의 일부처럼 읽힌다.
-        if (settingsOpen) {
-            settingsScene?.render(batch)
+        if (overlay != Overlay.NONE) {
+            when (overlay) {
+                Overlay.GAME_SETTINGS -> gameSettingsScene?.render(batch)
+                Overlay.SOUND -> soundSettingsScene?.render(batch)
+                Overlay.NONE -> Unit
+            }
             batch.end()
             finishFrame()
             return
@@ -783,7 +858,8 @@ class GameHost(
                 lobbyScene = null
                 menuScene = null
                 roomListScene = null
-                settingsScene = null
+                gameSettingsScene = null
+                soundSettingsScene = null
                 resultScene = null
                 audio?.stopAllLoops()
                 playback?.release()
@@ -829,7 +905,8 @@ class GameHost(
         menuScene = MainMenuScene(art)
         roomListScene = RoomListScene(art)
         resultScene = ResultScene(art)
-        settingsScene = SettingsScene(art).apply {
+        gameSettingsScene = GameSettingsScene(art)
+        soundSettingsScene = SoundSettingsScene(art).apply {
             // 슬라이더를 끄는 동안 바로 들려야 고른 값이 맞는지 알 수 있다.
             onDeviceChanged = { device ->
                 deviceSettings = device
