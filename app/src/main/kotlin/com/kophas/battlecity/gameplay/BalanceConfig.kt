@@ -93,6 +93,12 @@ class BalanceConfig(val root: JsonValue) {
          */
         val enemyMoveSpeedScale: Float,
         val enemyFireCooldownScale: Float,
+        /**
+         * 사람 탱크 쿨타임에 곱하는 계수. 1 보다 작으면 연사가 빨라진다.
+         *
+         * 등급을 올리면 한 칸이 0.18초라 너무 크게 뛴다. 조금만 손보려면 여기가 맞다.
+         */
+        val playerFireCooldownScale: Float,
     ) {
         /** 이동속도 등급(1~4) -> 논리 px/초. [scale] 이 작으면 느려진다. */
         fun moveSpeedOf(rank: Int, scale: Float = 1f): Float =
@@ -119,6 +125,7 @@ class BalanceConfig(val root: JsonValue) {
             piercingProjectileSpeed = node?.get("piercingProjectileSpeedPxPerSecond")?.asFloat ?: 560f,
             enemyMoveSpeedScale = node?.get("enemyMoveSpeedScale")?.asFloat ?: 1f,
             enemyFireCooldownScale = node?.get("enemyFireCooldownScale")?.asFloat ?: 1f,
+            playerFireCooldownScale = node?.get("playerFireCooldownScale")?.asFloat ?: 1f,
         )
     }
 
@@ -158,12 +165,13 @@ class BalanceConfig(val root: JsonValue) {
     fun fireCooldownFor(faction: Tank.Faction, type: Tank.Type): Float =
         units.fireCooldownOf(statsFor(faction, type).fireRateRank, fireScaleOf(faction))
 
-    /** COM 만 무디게 하는 계수. 사람 탱크는 1 이다. */
+    /** 이동 계수. COM 만 무디게 한다. 사람 탱크는 등급값 그대로다. */
     private fun moveScaleOf(faction: Tank.Faction): Float =
         if (faction == Tank.Faction.ENEMY) units.enemyMoveSpeedScale else 1f
 
+    /** 쿨타임 계수. COM 은 길게, 사람은 짧게 — 두 쪽을 반대로 민다. */
     private fun fireScaleOf(faction: Tank.Faction): Float =
-        if (faction == Tank.Faction.ENEMY) units.enemyFireCooldownScale else 1f
+        if (faction == Tank.Faction.ENEMY) units.enemyFireCooldownScale else units.playerFireCooldownScale
 
     private fun parseTanks(node: JsonValue?): Map<Tank.Type, TankStats> =
         (node?.asObject ?: emptyMap()).mapNotNull { (key, value) ->

@@ -64,11 +64,21 @@ class BalanceConfigTest {
     }
 
     @Test
-    fun `COM 3종 능력치도 계획서와 같다`() {
-        // 계획서 §8 - COM 도 플레이어와 같은 등급표를 쓴다.
+    fun `COM 공격력과 방어력은 계획서와 같다`() {
+        // 계획서 §8 - 공격력과 방어력은 사람과 같은 표를 쓴다.
         assertEquals(3, balance.enemyTanks.getValue(Tank.Type.ATTACK).attackPower)
         assertEquals(3, balance.enemyTanks.getValue(Tank.Type.DEFENSE).defensePower)
-        assertEquals(4, balance.enemyTanks.getValue(Tank.Type.SPEED).moveSpeedRank)
+    }
+
+    @Test
+    fun `COM 은 이동도 연사도 3등급을 넘지 않는다`() {
+        // 사람은 한 대인데 COM 은 여덟에서 열두 대다. 4등급(224px/s) COM 은 뒤를
+        // 잡으면 떨어뜨릴 수 없었다. 사람 탱크의 등급표는 계획서 그대로 둔다.
+        for ((type, stats) in balance.enemyTanks) {
+            assertTrue("$type 이동 등급 ${stats.moveSpeedRank}", stats.moveSpeedRank <= 3)
+            assertTrue("$type 연사 등급 ${stats.fireRateRank}", stats.fireRateRank <= 3)
+        }
+        assertEquals(4, balance.playerTanks.getValue(Tank.Type.SPEED).moveSpeedRank)
     }
 
     @Test
@@ -113,7 +123,8 @@ class BalanceConfigTest {
     }
 
     @Test
-    fun `사람 탱크에는 COM 계수가 묻지 않는다`() {
+    fun `사람 탱크 이동에는 계수가 묻지 않는다`() {
+        // 사람 이동은 등급값 그대로다. 손끝 감각이 바뀌면 조작을 다시 익혀야 한다.
         for (type in Tank.Type.entries) {
             val stats = balance.playerTanks.getValue(type)
             assertEquals(
@@ -121,20 +132,34 @@ class BalanceConfigTest {
                 balance.moveSpeedFor(Tank.Faction.PLAYER, type),
                 1e-4f,
             )
-            assertEquals(
-                balance.units.fireCooldownOf(stats.fireRateRank),
-                balance.fireCooldownFor(Tank.Faction.PLAYER, type),
-                1e-4f,
-            )
         }
+    }
+
+    @Test
+    fun `사람 탱크는 등급값보다 연사가 빠르다`() {
+        // 쿨타임 계수를 사람 쪽에도 두었다. 등급을 올리면 한 칸이 0.18초라 너무 크다.
+        for (type in Tank.Type.entries) {
+            val stats = balance.playerTanks.getValue(type)
+            val raw = balance.units.fireCooldownOf(stats.fireRateRank)
+            val actual = balance.fireCooldownFor(Tank.Faction.PLAYER, type)
+            assertTrue("$type 쿨타임이 등급값보다 길다 (등급 $raw, 실제 $actual)", actual < raw)
+            assertEquals(raw * balance.units.playerFireCooldownScale, actual, 1e-4f)
+        }
+    }
+
+    @Test
+    fun `사람 연사 계수는 소폭이다`() {
+        // 조금 빠르게 하려는 것이지 기관총을 주려는 것이 아니다.
+        assertTrue(balance.units.playerFireCooldownScale in 0.8f..1f)
     }
 
     // --- 본진 내구도 -------------------------------------------------------
 
     @Test
-    fun `본진은 두 발을 버틴다`() {
-        // 한 발에 끝나면 COM 이 본진에 닿는 순간 손 쓸 도리가 없다.
-        assertEquals(2, balance.rules.baseHits)
+    fun `본진은 네 발을 버틴다`() {
+        // 한 발 -> 두 발 -> 네 발로 올려 왔다. COM 이 본진 앞에 서면 두 발은 1초
+        // 남짓이라 달려갈 짬이 없었다.
+        assertEquals(4, balance.rules.baseHits)
     }
 
     // --- 등급 -> 실제 단위 -------------------------------------------------

@@ -1,13 +1,13 @@
 {
-  "version": 3,
+  "version": 4,
   "comment": "게임 규칙과 밸런스 값. 코드에 하드코딩하지 않는다 (계획서 §7 중요 구현 원칙, §41-19).",
 
   "rules": {
     "livesPerPlayer": 3,
     "maxHp": 100,
 
-    "comment_base": "본진이 견디는 발수. 보호막(방 설정)은 그 위에 한 발을 더 막는다. 한 발에 끝나던 것을 두 발로 올렸다 — COM 이 본진에 닿는 순간 판이 끝나 손 쓸 도리가 없었다.",
-    "baseHits": 2,
+    "comment_base": "본진이 견디는 발수. 보호막(방 설정)은 그 위에 한 발을 더 막는다. 한 발 -> 두 발 -> 네 발로 올려 왔다. COM 이 본진 앞에 서면 두 발은 1초 남짓이라 달려갈 짬이 없었다.",
+    "baseHits": 4,
 
     "respawnDelaySeconds": 2.0,
     "spawnGuardSeconds": 1.5,
@@ -37,9 +37,10 @@
     "projectileSpeedPxPerSecond": 448.0,
     "piercingProjectileSpeedPxPerSecond": 560.0,
 
-    "comment_enemyScale": "COM 에만 곱하는 계수. 등급표와 사람 탱크는 그대로 두고 COM 만 무디게 한다. 이동은 10% 느리게, 발사 쿨타임은 15% 길게.",
+    "comment_scale": "갈래별 계수. 등급표는 그대로 두고 여기만 조정한다. COM 은 이동 10% 느리게 · 쿨타임 15% 길게, 사람은 쿨타임 10% 짧게(연사가 그만큼 빨라진다).",
     "enemyMoveSpeedScale": 0.9,
-    "enemyFireCooldownScale": 1.15
+    "enemyFireCooldownScale": 1.15,
+    "playerFireCooldownScale": 0.9
   },
 
   "comment_special": "특수기 쿨타임은 예전 값에서 20% 줄인 것이다 (8.0 -> 6.4, 10.0 -> 8.0, 6.0 -> 4.8).",
@@ -79,10 +80,12 @@
     }
   },
 
+  "comment_enemyRank": "COM 등급은 3을 넘지 않는다. 사람은 한 대인데 COM 은 여덟에서 열두 대라, 4등급(224px/s) COM 은 뒤를 잡으면 떨어뜨릴 수 없었다. 사람 탱크의 등급표는 계획서 §7 그대로 둔다.",
+
   "enemyTanks": {
     "ATTACK": { "label": "공격형 COM", "attackPower": 3, "defensePower": 1, "moveSpeed": 2, "fireRate": 2 },
     "DEFENSE": { "label": "방어형 COM", "attackPower": 2, "defensePower": 3, "moveSpeed": 1, "fireRate": 2 },
-    "SPEED": { "label": "스피드형 COM", "attackPower": 1, "defensePower": 1, "moveSpeed": 4, "fireRate": 3 }
+    "SPEED": { "label": "스피드형 COM", "attackPower": 1, "defensePower": 1, "moveSpeed": 3, "fireRate": 3 }
   },
 
   "enemyMix": {
