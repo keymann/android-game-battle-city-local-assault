@@ -1,10 +1,14 @@
 {
-  "version": 2,
+  "version": 3,
   "comment": "게임 규칙과 밸런스 값. 코드에 하드코딩하지 않는다 (계획서 §7 중요 구현 원칙, §41-19).",
 
   "rules": {
     "livesPerPlayer": 3,
     "maxHp": 100,
+
+    "comment_base": "본진이 견디는 발수. 보호막(방 설정)은 그 위에 한 발을 더 막는다. 한 발에 끝나던 것을 두 발로 올렸다 — COM 이 본진에 닿는 순간 판이 끝나 손 쓸 도리가 없었다.",
+    "baseHits": 2,
+
     "respawnDelaySeconds": 2.0,
     "spawnGuardSeconds": 1.5,
 
@@ -31,8 +35,14 @@
     "fireCooldownPerRankSeconds": 0.18,
     "fireCooldownMinSeconds": 0.15,
     "projectileSpeedPxPerSecond": 448.0,
-    "piercingProjectileSpeedPxPerSecond": 560.0
+    "piercingProjectileSpeedPxPerSecond": 560.0,
+
+    "comment_enemyScale": "COM 에만 곱하는 계수. 등급표와 사람 탱크는 그대로 두고 COM 만 무디게 한다. 이동은 10% 느리게, 발사 쿨타임은 15% 길게.",
+    "enemyMoveSpeedScale": 0.9,
+    "enemyFireCooldownScale": 1.15
   },
+
+  "comment_special": "특수기 쿨타임은 예전 값에서 20% 줄인 것이다 (8.0 -> 6.4, 10.0 -> 8.0, 6.0 -> 4.8).",
 
   "playerTanks": {
     "ATTACK": {
@@ -42,7 +52,7 @@
       "moveSpeed": 2,
       "fireRate": 2,
       "special": "PIERCING",
-      "specialCooldownSeconds": 8.0,
+      "specialCooldownSeconds": 6.4,
       "specialDurationSeconds": 0.0
     },
     "DEFENSE": {
@@ -52,7 +62,7 @@
       "moveSpeed": 1,
       "fireRate": 2,
       "special": "SHIELD",
-      "specialCooldownSeconds": 10.0,
+      "specialCooldownSeconds": 8.0,
       "specialDurationSeconds": 3.0,
       "damageReduction": 0.5
     },
@@ -63,7 +73,7 @@
       "moveSpeed": 4,
       "fireRate": 3,
       "special": "DASH",
-      "specialCooldownSeconds": 6.0,
+      "specialCooldownSeconds": 4.8,
       "specialDurationSeconds": 1.0,
       "speedMultiplier": 2.0
     }

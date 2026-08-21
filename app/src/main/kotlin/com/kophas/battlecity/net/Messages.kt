@@ -287,6 +287,13 @@ object Messages {
         val phase: Int,
         val enemiesRemaining: Int,
         val baseDestroyed: Boolean,
+        /**
+         * 본진에 남은 발수. 0 이면 부서졌다.
+         *
+         * Client 는 규칙을 굴리지 않아 몇 발 남았는지 스스로 알 수 없다. 알려 주지
+         * 않으면 멀쩡한 본진을 그리다가 갑자기 파괴로 건너뛴다.
+         */
+        val baseHits: Int = 1,
         val tanks: List<TankState>,
         val projectiles: List<ProjectileState>,
         val scores: List<ScoreState>,
@@ -302,6 +309,7 @@ object Messages {
             .byte(value.phase)
             .short(value.enemiesRemaining)
             .byte(flags(value.baseDestroyed, value.baseShielded, false))
+            .byte(value.baseHits.coerceIn(0, 255))
             .byte(value.tanks.size)
         for (tank in value.tanks) {
             writer.short(tank.id)
@@ -334,6 +342,7 @@ object Messages {
         val phase = reader.byte()
         val enemies = reader.short()
         val baseFlags = reader.byte()
+        val baseHits = reader.byte()
 
         val tankCount = reader.byte()
         val tanks = ArrayList<TankState>(tankCount)
@@ -384,6 +393,7 @@ object Messages {
             phase = phase,
             enemiesRemaining = enemies,
             baseDestroyed = baseFlags and 1 != 0,
+            baseHits = baseHits,
             tanks = tanks,
             projectiles = projectiles,
             scores = scores,

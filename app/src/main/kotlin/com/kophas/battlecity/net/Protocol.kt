@@ -26,8 +26,9 @@ object Protocol {
      * 프로토콜이 바뀌면 올린다. 다르면 접속을 거절한다.
      *
      * 2: 스냅샷에 바뀐 셀과 본진 보호막을 싣는다. START 에 이번 판 맵 해시를 싣는다.
+     * 3: 스냅샷에 본진 남은 발수와 탱크가 고른 색을 싣는다.
      */
-    const val VERSION: Int = 2
+    const val VERSION: Int = 3
 
     /** 호스트가 여는 포트. */
     const val PORT: Int = 47654

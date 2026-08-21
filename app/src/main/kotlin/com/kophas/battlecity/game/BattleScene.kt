@@ -142,7 +142,8 @@ class BattleScene(
         val stage = takeStage(seed, stageIndex, playerCount)
         match = MatchState(playerCount, balance, profiles, room.maxActiveEnemies)
         world = GameWorld(stage, balance, GameWorld.Config(friendlyFire = room.friendlyFire))
-        world.map.enableBaseShield(room.baseProtection)
+        // 본진 내구도는 balance.json, 보호막은 방 설정이 정한다.
+        world.map.configureBase(balance.rules.baseHits, room.baseProtection)
         world.listener = MatchBridge()
 
         resultAnnounced = false
@@ -251,7 +252,11 @@ class BattleScene(
 
     /** Host 가 보낸 상태를 그대로 얹는다. 규칙은 굴리지 않는다. */
     fun applySnapshot(latest: Messages.Snapshot, previous: Messages.Snapshot?, alpha: Float) {
-        SnapshotBridge.apply(world, latest, previous, alpha)
+        // 색은 패킷에 없다. START 로 받은 프로필에서 되짚는다. 자리 번호를 색으로 쓰면
+        // 로비에서 색을 바꾼 사람이 남의 색으로 보인다.
+        SnapshotBridge.apply(world, latest, previous, alpha) { slot ->
+            match.players.getOrNull(slot)?.colorIndex ?: -1
+        }
         match.applyRemote(
             phaseOrdinal = latest.phase,
             enemiesRemaining = latest.enemiesRemaining,
@@ -489,6 +494,13 @@ class BattleScene(
         override fun onBaseShieldHit() {
             // 막아 냈다는 것을 알려야 한다. 조용하면 그냥 빗나간 줄 안다.
             audio?.play(AudioDirector.Event.BULLET_HIT_STEEL)
+            audio?.vibrate(AudioDirector.Haptic.TAKE_DAMAGE)
+        }
+
+        override fun onBaseDamaged(hitsRemaining: Int) {
+            // 본진이 깎였다는 것은 판이 기울었다는 뜻이다. 조용히 넘기면 모르고 지나간다.
+            // 파괴음(BASE_DESTROY)은 쓰지 않는다. 아직 끝난 것이 아니다.
+            audio?.play(AudioDirector.Event.BRICK_DESTROY)
             audio?.vibrate(AudioDirector.Haptic.TAKE_DAMAGE)
         }
 

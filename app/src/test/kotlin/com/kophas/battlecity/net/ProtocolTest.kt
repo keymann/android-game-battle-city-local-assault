@@ -141,7 +141,16 @@ class ProtocolTest {
         val scores = (0 until 4).map { Messages.ScoreState(it, 20, 3, false) }
         val packet = Messages.writeSnapshot(
             writer(),
-            Messages.Snapshot(1L, 0, 80, false, tanks, projectiles, scores),
+            Messages.Snapshot(
+                tick = 1L,
+                phase = 0,
+                enemiesRemaining = 80,
+                baseDestroyed = false,
+                baseHits = 2,
+                tanks = tanks,
+                projectiles = projectiles,
+                scores = scores,
+            ),
         )
         assertTrue("스냅샷이 ${packet.length}바이트다", packet.length <= Protocol.MAX_PACKET)
     }

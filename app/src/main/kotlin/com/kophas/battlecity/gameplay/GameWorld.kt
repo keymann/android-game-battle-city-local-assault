@@ -70,6 +70,9 @@ class GameWorld(
         /** 본진 보호막이 한 발을 막아 냈다. */
         fun onBaseShieldHit() = Unit
 
+        /** 본진이 맞았지만 아직 버틴다. 남은 발수를 함께 넘긴다. */
+        fun onBaseDamaged(hitsRemaining: Int) = Unit
+
         fun onBaseDestroyed() = Unit
     }
 
@@ -85,7 +88,14 @@ class GameWorld(
     var gameOver: Boolean = false
         private set
 
-    private var nextTankId = 0
+    /**
+     * 탱크 번호는 **풀 자리 번호**다. 새 번호를 세지 않는다.
+     *
+     * Client 가 Host 가 부른 번호로 같은 자리를 꺼낼 수 있어야 하기 때문이다
+     * ([ObjectPool.obtainAt]). 그래서 번호는 **돌려 쓴다** — 부서진 탱크의 번호를
+     * 다음에 나오는 탱크가 물려받는다. 번호만 보고 같은 탱크라고 믿으면 안 된다.
+     * (→ [com.kophas.battlecity.net.SnapshotBridge])
+     */
     private val tankPool = ObjectPool(config.maxTanks) { Tank(it) }
 
     // -----------------------------------------------------------------------
@@ -115,8 +125,9 @@ class GameWorld(
         tank.attackPower = stats.attackPower
         tank.defensePower = stats.defensePower
         tank.maxHp = balance.rules.maxHp
-        tank.moveSpeed = balance.units.moveSpeedOf(stats.moveSpeedRank)
-        tank.fireCooldown = balance.units.fireCooldownOf(stats.fireRateRank)
+        // 갈래별 계수를 함께 먹인 값이다. COM 은 사람 탱크보다 조금 무디다.
+        tank.moveSpeed = balance.moveSpeedFor(faction, type)
+        tank.fireCooldown = balance.fireCooldownFor(faction, type)
         tank.special = stats.special
         tank.specialCooldown = stats.specialCooldownSeconds
         tank.specialDuration = stats.specialDurationSeconds
@@ -126,7 +137,6 @@ class GameWorld(
         tank.spawnGuardRemaining = balance.rules.spawnGuardSeconds
 
         tanks += tank
-        nextTankId++
         spawnExplosion(Explosion.Kind.SPAWN, tank.centerX, tank.centerY, Tank.SIZE)
         listener?.onTankSpawned(tank)
         return tank
@@ -144,6 +154,8 @@ class GameWorld(
         faction: Tank.Faction,
         type: Tank.Type,
         ownerSlot: Int,
+        /** 로비에서 고른 색. 자리 번호와 다를 수 있다. COM 은 -1. */
+        colorSlot: Int,
         x: Float,
         y: Float,
         direction: Direction,
@@ -152,7 +164,7 @@ class GameWorld(
         if (tank !in tanks) tanks += tank
         tank.faction = faction
         tank.type = type
-        tank.colorSlot = ownerSlot
+        tank.colorSlot = colorSlot
         tank.ownerSlot = ownerSlot
         tank.maxHp = balance.rules.maxHp
         tank.spawnAt(x, y, direction)
@@ -521,6 +533,18 @@ class GameWorld(
                     )
                 }
 
+                // 아직 버틴다. 부서지는 것보다 작게 터뜨려 둘을 구별한다.
+                TileMap.DamageResult.BASE_DAMAGED -> {
+                    stopped = true
+                    listener?.onBaseDamaged(map.baseHitsRemaining)
+                    spawnExplosion(
+                        Explosion.Kind.BRICK_BREAK,
+                        (ix + 0.5f) * Constants.CELL_PX,
+                        (iy + 0.5f) * Constants.CELL_PX,
+                        Constants.BLOCK_PX,
+                    )
+                }
+
                 TileMap.DamageResult.BASE_HIT -> {
                     stopped = true
                     spawnExplosion(
@@ -541,6 +565,7 @@ class GameWorld(
                 TileMap.DamageResult.NONE -> Unit
             }
             if (result == TileMap.DamageResult.BASE_HIT ||
+                result == TileMap.DamageResult.BASE_DAMAGED ||
                 result == TileMap.DamageResult.BASE_SHIELDED
             ) {
                 break

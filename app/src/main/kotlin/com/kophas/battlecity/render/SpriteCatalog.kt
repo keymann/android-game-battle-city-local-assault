@@ -51,6 +51,14 @@ class SpriteCatalog(private val assets: GameAssets) {
     /** 보호막이 남아 있는 동안의 본진. (계획서 §14 protected) */
     val baseShielded: TextureRegion = assets[base?.get("shielded")?.asString ?: "base_shielded"]
 
+    /**
+     * 한 발 맞고도 버티는 본진.
+     *
+     * 내구도가 두 발이 되면서 필요해졌다. 멀쩡한 그림을 그대로 두면 몇 발 남았는지
+     * 알 수 없고, 다음 한 발에 판이 끝나는 것을 모르고 지나간다.
+     */
+    val baseDamaged: TextureRegion = assets[base?.get("damaged")?.asString ?: "base_damage_1"]
+
     /** 본진이 위험할 때 번갈아 그린다. */
     val baseWarnFrames: List<TextureRegion> =
         regions("tiles", "BASE", "warnFrames").ifEmpty { listOf(baseIntact) }

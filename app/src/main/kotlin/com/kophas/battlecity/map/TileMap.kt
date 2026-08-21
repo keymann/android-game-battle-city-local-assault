@@ -34,9 +34,28 @@ class TileMap(val stage: StageData) {
     var baseShielded: Boolean = false
         private set
 
-    /** 판을 열 때 보호막을 켠다. 방 설정이 정한다. */
-    fun enableBaseShield(enabled: Boolean) {
-        baseShielded = enabled
+    /**
+     * 본진이 견디는 발수. balance.json 이 정한다. (`rules.baseHits`)
+     *
+     * 한 발에 판이 끝나면 COM 이 본진에 닿는 순간 손 쓸 도리가 없다. 보호막은 이
+     * 발수와 별개로 그 위에 한 발을 더 막는다.
+     */
+    var baseMaxHits: Int = 1
+        private set
+
+    /** 본진에 남은 발수. 0 이면 부서진다. */
+    var baseHitsRemaining: Int = 1
+        private set
+
+    /** 맞은 흔적이 있는가. 그림을 손상된 것으로 갈아 끼운다. */
+    val baseDamaged: Boolean get() = !baseDestroyed && baseHitsRemaining < baseMaxHits
+
+    /** 판을 열 때 본진 내구도와 보호막을 정한다. 방 설정과 balance.json 이 함께 정한다. */
+    fun configureBase(hits: Int, shielded: Boolean) {
+        baseMaxHits = hits.coerceAtLeast(1)
+        baseHitsRemaining = baseMaxHits
+        baseShielded = shielded
+        baseDestroyed = false
     }
 
     /**
@@ -79,15 +98,17 @@ class TileMap(val stage: StageData) {
     }
 
     /** Host 가 알려 준 본진 상태를 그대로 놓는다. Client 만 쓴다. */
-    fun applyRemoteBase(destroyed: Boolean, shielded: Boolean) {
+    fun applyRemoteBase(destroyed: Boolean, shielded: Boolean, hitsRemaining: Int) {
         baseDestroyed = destroyed
         baseShielded = shielded
+        baseHitsRemaining = hitsRemaining.coerceIn(0, baseMaxHits)
     }
 
     fun reset() {
         stage.cells.copyInto(cells)
         stage.cellSprite.copyInto(sprites)
         baseDestroyed = false
+        baseHitsRemaining = baseMaxHits
         changedAt.clear()
         changeSerial = 0
     }
@@ -217,16 +238,7 @@ class TileMap(val stage: StageData) {
                 }
             }
 
-            TileType.BASE -> {
-                if (baseShielded) {
-                    // 보호막이 한 발을 먹는다. 다음 발부터는 그대로 들어간다.
-                    baseShielded = false
-                    DamageResult.BASE_SHIELDED
-                } else {
-                    baseDestroyed = true
-                    DamageResult.BASE_HIT
-                }
-            }
+            TileType.BASE -> hitBase()
 
             else -> if (type.blocksBullet) DamageResult.BLOCKED else DamageResult.NONE
         }
@@ -250,13 +262,32 @@ class TileMap(val stage: StageData) {
                         if (isExplosive(tx, ty)) chained += ty * cellsX + tx
                         setType(tx, ty, TileType.EMPTY)
                     }
-                    // 본진은 폭발에도 파괴된다. 아군 폭발물이라도 마찬가지다. (계획서 §15)
-                    TileType.BASE -> if (baseShielded) baseShielded = false else baseDestroyed = true
+                    // 본진은 폭발에도 상한다. 아군 폭발물이라도 마찬가지다. (계획서 §15)
+                    TileType.BASE -> hitBase()
                     else -> Unit
                 }
             }
         }
         return chained
+    }
+
+    /**
+     * 본진이 한 발 맞았다.
+     *
+     * 보호막이 먼저 먹고, 그다음부터 내구도가 깎인다. 남은 발수가 0 이 되는 발만
+     * 판을 끝낸다. 그 전까지는 [DamageResult.BASE_DAMAGED] 로 알려 흔적만 남긴다.
+     */
+    private fun hitBase(): DamageResult {
+        if (baseDestroyed) return DamageResult.NONE
+        if (baseShielded) {
+            // 보호막이 한 발을 먹는다. 다음 발부터는 내구도가 깎인다.
+            baseShielded = false
+            return DamageResult.BASE_SHIELDED
+        }
+        baseHitsRemaining = (baseHitsRemaining - 1).coerceAtLeast(0)
+        if (baseHitsRemaining > 0) return DamageResult.BASE_DAMAGED
+        baseDestroyed = true
+        return DamageResult.BASE_HIT
     }
 
     enum class DamageResult {
@@ -268,6 +299,9 @@ class TileMap(val stage: StageData) {
 
         /** 파괴했다. */
         DESTROYED,
+
+        /** 본진을 맞혔지만 아직 버틴다. 내구도만 깎였다. */
+        BASE_DAMAGED,
 
         /** 폭발성 프롭을 터뜨렸다. */
         EXPLODED,
