@@ -10,6 +10,8 @@ import com.kophas.battlecity.audio.AudioDirector
 import com.kophas.battlecity.audio.AudioSettings
 import com.kophas.battlecity.core.GameLoop
 import com.kophas.battlecity.gameplay.BalanceConfig
+import com.kophas.battlecity.gameplay.PlayerProfile
+import com.kophas.battlecity.gameplay.Tank
 import com.kophas.battlecity.input.TouchControls
 import com.kophas.battlecity.map.Rng
 import com.kophas.battlecity.net.Messages
@@ -353,6 +355,7 @@ class GameHost(
             LobbyScene.Action.CycleType -> driver.cycleTankType()
             LobbyScene.Action.CycleColor -> driver.cycleColor()
             LobbyScene.Action.OpenGameSettings -> openGameSettings()
+            LobbyScene.Action.StartSolo -> startSoloMatch()
             LobbyScene.Action.Back -> returnToMenu()
             is LobbyScene.Action.SetName -> {
                 driver.setName(action.name)
@@ -473,6 +476,9 @@ class GameHost(
         roomListScene?.joining = null
         scanner?.close()
         scanner = null
+        // 로비를 떠날 때 누르고 있던 것이 남아 있으면, 돌아온 뒤 손도 대지 않았는데
+        // 붙들기가 이어진다. (→ [LobbyScene.Action.StartSolo])
+        lobbyScene?.onRelease()
         screen = Screen.LOBBY
         audio?.setTrack(AudioDirector.Track.LOBBY)
     }
@@ -550,8 +556,52 @@ class GameHost(
         audio?.setVolumes(deviceSettings.bgmScale, deviceSettings.sfxScale)
     }
 
+    /**
+     * 혼자 판을 연다. 화면에 적혀 있지 않은 길이다. (→ [LobbyScene.Action.StartSolo])
+     *
+     * 밸런스를 눈으로 확인하려면 사람을 둘 모아야 했다. 그러느라 확인이 미뤄지고,
+     * 미뤄진 만큼 어려운 판을 그대로 두게 됐다. 방은 닫는다 — 혼자 하는 판에 방이
+     * 남아 있으면 남이 들어와 빈 로비를 보게 된다.
+     *
+     * 판마다 새 seed 를 쓴다. 같은 맵을 거듭 보려고 여는 것이 아니다.
+     */
+    private fun startSoloMatch() {
+        lobbyScene?.onRelease()
+        // 방을 닫기 전에 고른 것을 챙긴다. 닫고 나면 로비 현황이 사라진다.
+        val profile = localProfile()
+        Log.i(TAG, "혼자 판을 연다 (히든): $profile")
+        audio?.play(AudioDirector.Event.UI_READY)
+        openRoom(
+            NetRole.LOCAL,
+            players = SOLO_PLAYERS,
+            seed = Rng.advanceSeed(System.currentTimeMillis()),
+            profiles = listOfNotNull(profile),
+        )
+    }
+
+    /** 지금 로비에서 내가 고른 것. 방이 없으면 null. */
+    private fun localProfile(): PlayerProfile? {
+        val driver = netDriver ?: return null
+        val view = LobbyScene.View().also { driver.fillLobbyView(it) }
+        val slot = view.slots.getOrNull(view.localSlot)?.takeIf { it.connected } ?: return null
+        return PlayerProfile(
+            name = PlayerProfile.sanitize(slot.name, slot.index),
+            type = Tank.Type.entries.getOrElse(slot.tankType) { Tank.Type.ATTACK },
+            colorIndex = slot.colorIndex,
+        )
+    }
+
     /** 방을 연다(HOST) 또는 방에 붙는다(CLIENT). */
-    private fun openRoom(role: NetRole, keepScanner: Boolean = false) {
+    private fun openRoom(
+        role: NetRole,
+        keepScanner: Boolean = false,
+        /** 이 판에 설 사람 수. 혼자 하는 판은 1 이다. */
+        players: Int = DEFAULT_PLAYERS,
+        /** 이 판의 seed. null 이면 씬의 기본값을 쓴다. */
+        seed: Long? = null,
+        /** 만들 때부터 아는 프로필. 혼자 하는 판만 넘긴다. */
+        profiles: List<PlayerProfile> = emptyList(),
+    ) {
         val loaded = assets ?: return
         val rules = balance ?: return
         val art = catalog ?: return
@@ -570,8 +620,11 @@ class GameHost(
         val newScene = BattleScene(
             assets = loaded,
             balance = rules,
+            playerCount = players,
+            startSeed = seed ?: BattleScene.DEFAULT_SEED,
             role = role,
             humanSlots = driver.humanSlots,
+            profiles = profiles,
         )
         newScene.room = roomSettings
         newScene.audio = audio
@@ -635,6 +688,7 @@ class GameHost(
         val current = scene ?: return
         val driver = netDriver
         val solo = driver == null || driver.role == NetRole.LOCAL
+        resultScene?.solo = solo
         resultScene?.showPresence = !solo && driver?.role == NetRole.HOST
         resultScene?.presenceOf = { slot -> driver?.isPresentInResult(slot) ?: true }
         resultScene?.show(
@@ -689,15 +743,21 @@ class GameHost(
     }
 
     private fun enterBattle() {
+        lobbyScene?.onRelease()
         screen = Screen.BATTLE
         lastCountdownSecond = -1
         audio?.setTrack(AudioDirector.Track.BATTLE)
     }
 
-    /** 혼자 하는 판을 다시 연다. 씨앗만 바꾸면 새 맵이 나온다. */
+    /**
+     * 혼자 하는 판을 다시 시작한다. 결과 화면의 RESTART 다.
+     *
+     * 스테이지 번호와 인원을 그대로 둔다. 밸런스를 보려고 여는 판이라 난이도가
+     * 같아야 견줄 수 있다. seed 만 새로 뽑아 맵은 다른 것이 나온다.
+     */
     private fun replaySolo() {
         val current = scene ?: return
-        current.beginStage(Rng.advanceSeed(System.currentTimeMillis()), current.stage + 1, DEFAULT_PLAYERS)
+        current.beginStage(Rng.advanceSeed(System.currentTimeMillis()), current.stage, current.players)
         screen = Screen.BATTLE
         audio?.setTrack(AudioDirector.Track.BATTLE)
     }
@@ -744,6 +804,8 @@ class GameHost(
 
             Screen.LOBBY -> {
                 netDriver?.onTick()
+                // 붙들기는 시간을 세는 일이라 루프가 굴린다. 다 누르면 혼자 판이 열린다.
+                lobbyScene?.update(tickSeconds)?.let { applyLobbyAction(it) }
                 // 판이 열리면 세션이 알려 준다. 화면은 그 신호를 따라간다.
                 updateCountdownAudio()
                 return
@@ -1010,6 +1072,9 @@ class GameHost(
 
         /** 마지막 인사를 보낼 짬. 이보다 길게 붙잡으면 화면 전환이 굼떠 보인다. */
         const val FAREWELL_WAIT_MS = 150L
+
+        /** 혼자 하는 판의 인원. COM 총수와 동시 COM 수가 여기서 나온다. */
+        const val SOLO_PLAYERS = 1
         const val DEFAULT_LOGICAL = 832f
         const val DEFAULT_PLAYERS = 4
         const val DEFAULT_NAME = "P1"

@@ -60,9 +60,19 @@ class ResultScene(private val catalog: SpriteCatalog) {
     /** 재석 등을 그릴지. 혼자 하는 판이나 참가자 화면에서는 알 길이 없다. */
     var showPresence: Boolean = false
 
+    /**
+     * 혼자 하는 판인가. (→ [LobbyScene.Action.StartSolo])
+     *
+     * 혼자 하는 판에는 돌아갈 로비가 없다. 그래서 왼쪽 큰 단추는 "다시 하기" 가
+     * 아니라 **RESTART** 이고, 로비 단추는 잠근다. 눌러 봐야 갈 곳이 없다.
+     */
+    var solo: Boolean = false
+
     private var pressed = -1
 
     val playAgainEnabled: Boolean get() = !hostLost && playAgainAllowed(isHost, peersPresent)
+
+    val lobbyEnabled: Boolean get() = lobbyAllowed(hostLost, solo)
 
     fun resize(width: Int, height: Int) = ui.resize(width, height)
 
@@ -85,6 +95,8 @@ class ResultScene(private val catalog: SpriteCatalog) {
     /** Host 를 잃었다. 마지막으로 받은 성적표만 남기고 결과는 확정하지 않는다. */
     fun showHostLost(match: MatchState, stageIndex: Int, localSlot: Int) {
         show(match, stageIndex, localSlot, isHost = false, peersPresent = 0)
+        // 방이 있었던 판이다. 앞서 혼자 하던 판의 표시가 남아 있으면 안 된다.
+        solo = false
         hostLost = true
         victory = false
         winners = emptyList()
@@ -102,7 +114,7 @@ class ResultScene(private val catalog: SpriteCatalog) {
         if (button < 0 || button != buttonAt(x, y)) return Action.None
         return when (button) {
             BTN_AGAIN -> if (playAgainEnabled) Action.PlayAgain else Action.None
-            BTN_LOBBY -> if (hostLost) Action.None else Action.ReturnToLobby
+            BTN_LOBBY -> if (lobbyEnabled) Action.ReturnToLobby else Action.None
             BTN_HOME -> Action.MainMenu
             else -> Action.None
         }
@@ -327,9 +339,9 @@ class ResultScene(private val catalog: SpriteCatalog) {
 
     private fun drawButtons(batch: SpriteBatch) {
         val art = catalog.result
-        drawButton(batch, 0, art.primary, BTN_AGAIN, "PLAY AGAIN", playAgainEnabled)
-        // 방이 사라졌으면 돌아갈 로비도 없다.
-        drawButton(batch, 1, art.secondary, BTN_LOBBY, "LOBBY", !hostLost)
+        drawButton(batch, 0, art.primary, BTN_AGAIN, primaryLabel(solo), playAgainEnabled)
+        // 방이 사라졌거나 혼자 하는 판이면 돌아갈 로비가 없다.
+        drawButton(batch, 1, art.secondary, BTN_LOBBY, "LOBBY", lobbyEnabled)
         drawButton(batch, 2, art.home, BTN_HOME, "MAIN MENU", true)
     }
 
@@ -375,6 +387,17 @@ class ResultScene(private val catalog: SpriteCatalog) {
          * 열린다. 방장이라도 결과 화면에 남은 사람이 없으면 못 누른다. 다시 열어야
          * 최소 인원(두 명)을 못 채운다.
          */
+        /**
+         * 왼쪽 큰 단추에 쓰는 말.
+         *
+         * 혼자 하는 판에서 "PLAY AGAIN" 은 다음 판으로 넘어가는 것처럼 읽힌다.
+         * 여기서 하는 일은 같은 난이도를 다시 여는 것이라 RESTART 라고 쓴다.
+         */
+        fun primaryLabel(solo: Boolean): String = if (solo) "RESTART" else "PLAY AGAIN"
+
+        /** 로비로 돌아갈 수 있는가. 방이 사라졌거나 혼자 하는 판이면 갈 곳이 없다. */
+        fun lobbyAllowed(hostLost: Boolean, solo: Boolean): Boolean = !hostLost && !solo
+
         fun playAgainAllowed(isHost: Boolean, peersPresent: Int): Boolean =
             isHost && peersPresent > 0
 
