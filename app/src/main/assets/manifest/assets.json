@@ -93,6 +93,7 @@
       "renderLayer": "object",
       "intact": "base_intact",
       "shielded": "base_shielded",
+      "damaged": "base_damage_1",
       "warnFrames": ["base_warning_1", "base_warning_2"],
       "warnFps": 4,
       "destroyFrames": ["base_damage_1", "base_damage_2", "base_destroyed"],

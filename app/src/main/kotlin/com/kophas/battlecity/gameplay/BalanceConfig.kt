@@ -23,6 +23,12 @@ class BalanceConfig(val root: JsonValue) {
     data class Rules(
         val livesPerPlayer: Int,
         val maxHp: Int,
+        /**
+         * 본진이 견디는 발수. 보호막(방 설정)은 그 위에 한 발을 더 막는다.
+         *
+         * 한 발에 판이 끝나면 COM 이 본진에 닿는 순간 손 쓸 도리가 없다.
+         */
+        val baseHits: Int,
         val respawnDelaySeconds: Float,
         val spawnGuardSeconds: Float,
         val defenseCoefficient: Float,
@@ -49,6 +55,7 @@ class BalanceConfig(val root: JsonValue) {
         Rules(
             livesPerPlayer = node?.get("livesPerPlayer")?.asInt ?: 3,
             maxHp = node?.get("maxHp")?.asInt ?: 100,
+            baseHits = (node?.get("baseHits")?.asInt ?: 1).coerceAtLeast(1),
             respawnDelaySeconds = node?.get("respawnDelaySeconds")?.asFloat ?: 2f,
             spawnGuardSeconds = node?.get("spawnGuardSeconds")?.asFloat ?: 1.5f,
             defenseCoefficient = node?.get("defenseCoefficient")?.asFloat ?: 0.5f,
@@ -78,13 +85,27 @@ class BalanceConfig(val root: JsonValue) {
         val fireCooldownMin: Float,
         val projectileSpeed: Float,
         val piercingProjectileSpeed: Float,
+        /**
+         * COM 에만 곱하는 계수. 등급표와 사람 탱크는 그대로 두고 COM 만 무디게 한다.
+         *
+         * 등급을 내리는 방법도 있지만 한 등급이 너무 크다 — 이동은 48px/s, 쿨타임은
+         * 0.18초씩 움직인다. 살짝 무디게 하려면 계수 쪽이 맞다.
+         */
+        val enemyMoveSpeedScale: Float,
+        val enemyFireCooldownScale: Float,
     ) {
-        /** 이동속도 등급(1~4) -> 논리 px/초 */
-        fun moveSpeedOf(rank: Int): Float = moveSpeedBase + moveSpeedPerRank * rank
+        /** 이동속도 등급(1~4) -> 논리 px/초. [scale] 이 작으면 느려진다. */
+        fun moveSpeedOf(rank: Int, scale: Float = 1f): Float =
+            (moveSpeedBase + moveSpeedPerRank * rank) * scale
 
-        /** 연사속도 등급(1~4) -> 발사 쿨타임(초). 등급이 높을수록 짧아진다. */
-        fun fireCooldownOf(rank: Int): Float =
-            max(fireCooldownMin, fireCooldownBase - fireCooldownPerRank * rank)
+        /**
+         * 연사속도 등급(1~4) -> 발사 쿨타임(초). 등급이 높을수록 짧아진다.
+         *
+         * [scale] 이 1 보다 크면 쿨타임이 길어져 연사가 느려진다. 계수를 먼저 곱하고
+         * 하한을 본다. 하한을 먼저 보면 계수가 묻힌다.
+         */
+        fun fireCooldownOf(rank: Int, scale: Float = 1f): Float =
+            max(fireCooldownMin, (fireCooldownBase - fireCooldownPerRank * rank) * scale)
     }
 
     val units: Units = root["units"].let { node ->
@@ -96,6 +117,8 @@ class BalanceConfig(val root: JsonValue) {
             fireCooldownMin = node?.get("fireCooldownMinSeconds")?.asFloat ?: 0.15f,
             projectileSpeed = node?.get("projectileSpeedPxPerSecond")?.asFloat ?: 448f,
             piercingProjectileSpeed = node?.get("piercingProjectileSpeedPxPerSecond")?.asFloat ?: 560f,
+            enemyMoveSpeedScale = node?.get("enemyMoveSpeedScale")?.asFloat ?: 1f,
+            enemyFireCooldownScale = node?.get("enemyFireCooldownScale")?.asFloat ?: 1f,
         )
     }
 
@@ -130,10 +153,17 @@ class BalanceConfig(val root: JsonValue) {
     }
 
     fun moveSpeedFor(faction: Tank.Faction, type: Tank.Type): Float =
-        units.moveSpeedOf(statsFor(faction, type).moveSpeedRank)
+        units.moveSpeedOf(statsFor(faction, type).moveSpeedRank, moveScaleOf(faction))
 
     fun fireCooldownFor(faction: Tank.Faction, type: Tank.Type): Float =
-        units.fireCooldownOf(statsFor(faction, type).fireRateRank)
+        units.fireCooldownOf(statsFor(faction, type).fireRateRank, fireScaleOf(faction))
+
+    /** COM 만 무디게 하는 계수. 사람 탱크는 1 이다. */
+    private fun moveScaleOf(faction: Tank.Faction): Float =
+        if (faction == Tank.Faction.ENEMY) units.enemyMoveSpeedScale else 1f
+
+    private fun fireScaleOf(faction: Tank.Faction): Float =
+        if (faction == Tank.Faction.ENEMY) units.enemyFireCooldownScale else 1f
 
     private fun parseTanks(node: JsonValue?): Map<Tank.Type, TankStats> =
         (node?.asObject ?: emptyMap()).mapNotNull { (key, value) ->

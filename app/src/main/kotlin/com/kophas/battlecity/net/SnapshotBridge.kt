@@ -24,6 +24,7 @@ object SnapshotBridge {
             phase = match.phase.ordinal,
             enemiesRemaining = match.enemiesRemaining,
             baseDestroyed = world.map.baseDestroyed,
+            baseHits = world.map.baseHitsRemaining,
             tanks = world.tanks.filter { it.alive }.map { tank ->
                 Messages.TankState(
                     id = tank.id,
@@ -69,6 +70,13 @@ object SnapshotBridge {
         latest: Messages.Snapshot,
         previous: Messages.Snapshot?,
         alpha: Float,
+        /**
+         * 자리 번호 -> 그 사람이 로비에서 고른 색.
+         *
+         * 색은 패킷에 실리지 않는다. START 로 이미 받은 것이라 여기서 되짚는다.
+         * 자리 번호를 그대로 색으로 쓰면 로비에서 색을 바꾼 사람이 남의 색으로 보인다.
+         */
+        colorOf: (Int) -> Int = { it },
     ) {
         applyTiles(world, latest)
 
@@ -78,9 +86,16 @@ object SnapshotBridge {
         for (state in latest.tanks) {
             seen += state.id
             val tank = world.tanks.firstOrNull { it.id == state.id }
-                ?: spawnGhost(world, state)
+                ?: spawnGhost(world, state, colorOf)
                 ?: continue
             val old = before[state.id]
+            // 겉모습도 매번 다시 맞춘다. 번호는 풀에서 돌려 쓰므로, 부서진 탱크가
+            // 쓰던 번호를 다음 탱크가 물려받는다. 자리와 갈래와 색을 갱신하지 않으면
+            // 다시 나온 탱크가 **앞사람 모습**으로 그려진다.
+            tank.faction = factionOf(state)
+            tank.type = typeOf(state)
+            tank.ownerSlot = state.slot
+            tank.colorSlot = colorSlotOf(state, colorOf)
             tank.x = blend(old?.x, state.x, alpha)
             tank.y = blend(old?.y, state.y, alpha)
             tank.direction = Direction.VALUES[state.direction.coerceIn(0, 3)]
@@ -106,7 +121,7 @@ object SnapshotBridge {
         for (tile in latest.tiles) {
             world.map.applyRemoteCell(tile.index, TileType.fromId(tile.type.toByte()))
         }
-        world.map.applyRemoteBase(latest.baseDestroyed, latest.baseShielded)
+        world.map.applyRemoteBase(latest.baseDestroyed, latest.baseShielded, latest.baseHits)
     }
 
     private fun applyProjectiles(
@@ -138,17 +153,28 @@ object SnapshotBridge {
     private fun blend(from: Float?, to: Float, alpha: Float): Float =
         if (from == null) to else from + (to - from) * alpha.coerceIn(0f, 1f)
 
-    private fun spawnGhost(world: GameWorld, state: Messages.TankState): Tank? {
-        val faction = Tank.Faction.entries[state.faction.coerceIn(0, 1)]
-        val type = Tank.Type.entries[state.type.coerceIn(0, Tank.Type.entries.lastIndex)]
-        return world.adoptRemoteTank(
-            id = state.id,
-            faction = faction,
-            type = type,
-            ownerSlot = state.slot,
-            x = state.x,
-            y = state.y,
-            direction = Direction.VALUES[state.direction.coerceIn(0, 3)],
-        )
-    }
+    private fun spawnGhost(
+        world: GameWorld,
+        state: Messages.TankState,
+        colorOf: (Int) -> Int,
+    ): Tank? = world.adoptRemoteTank(
+        id = state.id,
+        faction = factionOf(state),
+        type = typeOf(state),
+        ownerSlot = state.slot,
+        colorSlot = colorSlotOf(state, colorOf),
+        x = state.x,
+        y = state.y,
+        direction = Direction.VALUES[state.direction.coerceIn(0, 3)],
+    )
+
+    private fun factionOf(state: Messages.TankState): Tank.Faction =
+        Tank.Faction.entries[state.faction.coerceIn(0, 1)]
+
+    private fun typeOf(state: Messages.TankState): Tank.Type =
+        Tank.Type.entries[state.type.coerceIn(0, Tank.Type.entries.lastIndex)]
+
+    /** COM 은 자리가 없다(-1). 그때는 COM 색을 쓰라는 뜻으로 -1 을 그대로 넘긴다. */
+    private fun colorSlotOf(state: Messages.TankState, colorOf: (Int) -> Int): Int =
+        if (state.slot < 0) -1 else colorOf(state.slot)
 }

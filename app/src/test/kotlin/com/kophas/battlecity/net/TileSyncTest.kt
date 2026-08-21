@@ -149,8 +149,8 @@ class TileSyncTest {
     fun `본진 파괴와 보호막이 Client 에 닿는다`() {
         val host = world()
         val client = world()
-        host.map.enableBaseShield(true)
-        client.map.enableBaseShield(true)
+        host.map.configureBase(hits = 1, shielded = true)
+        client.map.configureBase(hits = 1, shielded = true)
 
         val (cellX, cellY) = host.stage.blockToCell(host.stage.baseBlock)
         host.map.setType(cellX, cellY, TileType.BASE)

@@ -74,7 +74,8 @@ class RoomRuleTest {
         val map = TileMap(stage)
         val (cellX, cellY) = stage.blockToCell(stage.baseBlock)
         map.setType(cellX, cellY, TileType.BASE)
-        map.enableBaseShield(shielded)
+        // 내구도 한 발이 예전 규칙이다. 여기서 보려는 것은 보호막 판정뿐이다.
+        map.configureBase(hits = 1, shielded = shielded)
         return Triple(map, cellX, cellY)
     }
 

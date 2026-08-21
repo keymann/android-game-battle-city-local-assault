@@ -35,7 +35,8 @@ class BalanceConfigTest {
         assertEquals(2, stats.moveSpeedRank)
         assertEquals(2, stats.fireRateRank)
         assertEquals(BalanceConfig.Special.PIERCING, stats.special)
-        assertEquals(8f, stats.specialCooldownSeconds, 1e-4f)
+        // 특수기 쿨타임은 예전 8초에서 20% 줄였다.
+        assertEquals(6.4f, stats.specialCooldownSeconds, 1e-4f)
     }
 
     @Test
@@ -45,7 +46,7 @@ class BalanceConfigTest {
         assertEquals(3, stats.defensePower)
         assertEquals(1, stats.moveSpeedRank)
         assertEquals(BalanceConfig.Special.SHIELD, stats.special)
-        assertEquals(10f, stats.specialCooldownSeconds, 1e-4f)
+        assertEquals(8f, stats.specialCooldownSeconds, 1e-4f)
         assertEquals(3f, stats.specialDurationSeconds, 1e-4f)
         assertEquals(0.5f, stats.damageReduction, 1e-4f)
     }
@@ -58,7 +59,7 @@ class BalanceConfigTest {
         assertEquals(4, stats.moveSpeedRank)
         assertEquals(3, stats.fireRateRank)
         assertEquals(BalanceConfig.Special.DASH, stats.special)
-        assertEquals(6f, stats.specialCooldownSeconds, 1e-4f)
+        assertEquals(4.8f, stats.specialCooldownSeconds, 1e-4f)
         assertEquals(2f, stats.speedMultiplier, 1e-4f)
     }
 
@@ -68,6 +69,72 @@ class BalanceConfigTest {
         assertEquals(3, balance.enemyTanks.getValue(Tank.Type.ATTACK).attackPower)
         assertEquals(3, balance.enemyTanks.getValue(Tank.Type.DEFENSE).defensePower)
         assertEquals(4, balance.enemyTanks.getValue(Tank.Type.SPEED).moveSpeedRank)
+    }
+
+    @Test
+    fun `특수기 쿨타임은 예전 값의 80퍼센트다`() {
+        // "비율로 20% 감소" 를 값마다 따로 적어 두면 한 곳을 고치고 다른 곳을 잊는다.
+        val before = mapOf(Tank.Type.ATTACK to 8f, Tank.Type.DEFENSE to 10f, Tank.Type.SPEED to 6f)
+        for ((type, old) in before) {
+            assertEquals(
+                "$type 특수기 쿨타임",
+                old * 0.8f,
+                balance.playerTanks.getValue(type).specialCooldownSeconds,
+                1e-4f,
+            )
+        }
+    }
+
+    // --- COM 은 사람 탱크보다 무디다 --------------------------------------
+
+    @Test
+    fun `COM 은 같은 등급이어도 사람보다 느리다`() {
+        for (type in Tank.Type.entries) {
+            val player = balance.moveSpeedFor(Tank.Faction.PLAYER, type)
+            val enemy = balance.moveSpeedFor(Tank.Faction.ENEMY, type)
+            assertTrue("$type COM 이 사람보다 빠르다 (COM $enemy, 사람 $player)", enemy < player)
+        }
+    }
+
+    @Test
+    fun `COM 은 같은 등급이어도 사람보다 연사가 느리다`() {
+        for (type in Tank.Type.entries) {
+            val player = balance.fireCooldownFor(Tank.Faction.PLAYER, type)
+            val enemy = balance.fireCooldownFor(Tank.Faction.ENEMY, type)
+            assertTrue("$type COM 쿨타임이 사람보다 짧다 (COM $enemy, 사람 $player)", enemy > player)
+        }
+    }
+
+    @Test
+    fun `COM 계수는 소폭이다`() {
+        // 무디게 하려는 것이지 무력하게 만들려는 것이 아니다. 20% 안쪽으로 둔다.
+        assertTrue(balance.units.enemyMoveSpeedScale in 0.8f..1f)
+        assertTrue(balance.units.enemyFireCooldownScale in 1f..1.2f)
+    }
+
+    @Test
+    fun `사람 탱크에는 COM 계수가 묻지 않는다`() {
+        for (type in Tank.Type.entries) {
+            val stats = balance.playerTanks.getValue(type)
+            assertEquals(
+                balance.units.moveSpeedOf(stats.moveSpeedRank),
+                balance.moveSpeedFor(Tank.Faction.PLAYER, type),
+                1e-4f,
+            )
+            assertEquals(
+                balance.units.fireCooldownOf(stats.fireRateRank),
+                balance.fireCooldownFor(Tank.Faction.PLAYER, type),
+                1e-4f,
+            )
+        }
+    }
+
+    // --- 본진 내구도 -------------------------------------------------------
+
+    @Test
+    fun `본진은 두 발을 버틴다`() {
+        // 한 발에 끝나면 COM 이 본진에 닿는 순간 손 쓸 도리가 없다.
+        assertEquals(2, balance.rules.baseHits)
     }
 
     // --- 등급 -> 실제 단위 -------------------------------------------------

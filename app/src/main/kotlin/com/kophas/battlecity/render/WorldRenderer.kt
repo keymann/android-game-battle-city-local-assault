@@ -271,6 +271,9 @@ class WorldRenderer(
             // 보호막이 남아 있으면 한눈에 보여야 한다. 한 발을 견딜 수 있다는 뜻이다.
             world.map.baseShielded -> catalog.baseShielded
 
+            // 이미 맞았다면 그것부터 보여 준다. 다음 한 발이 마지막일 수 있다.
+            world.map.baseDamaged -> catalog.baseDamaged
+
             // 적이 코앞이면 깜빡여 경고한다.
             baseInDanger(world) -> {
                 val frames = catalog.baseWarnFrames
