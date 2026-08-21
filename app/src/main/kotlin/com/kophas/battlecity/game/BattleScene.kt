@@ -52,13 +52,21 @@ class BattleScene(
     private val role: NetRole = NetRole.LOCAL,
     /** 사람이 조종하는 자리. 여기에는 AI 를 붙이지 않는다. */
     private val humanSlots: Set<Int> = emptySet(),
+    /**
+     * 만들 때부터 아는 프로필. 혼자 하는 판이 쓴다.
+     *
+     * 방을 거쳐 열리는 판은 START 를 받고서야 프로필을 알게 되므로 [profiles] 에
+     * 나중에 넣는다. 혼자 하는 판은 로비에서 고른 것을 그대로 들고 들어오므로
+     * 처음부터 알고 있다.
+     */
+    profiles: List<PlayerProfile> = emptyList(),
 ) {
     /**
      * 로비에서 고른 이름 · 탱크 · 색. 판을 열기 전에 채워 넣는다.
      *
      * 비어 있으면 자리 번호로 기본값을 만든다. 혼자 하는 판에는 로비가 없기 때문이다.
      */
-    var profiles: List<PlayerProfile> = emptyList()
+    var profiles: List<PlayerProfile> = profiles
 
     /** 방장이 정한 규칙. 판을 열 때 반영한다. */
     var room: RoomSettings = RoomSettings()
@@ -316,6 +324,9 @@ class BattleScene(
     /** 지금 스테이지 번호. 0부터 센다. */
     val stage: Int get() = stageIndex
 
+    /** 이 판에 선 사람 수. 다시 시작할 때 같은 인원으로 열어야 난이도가 같다. */
+    val players: Int get() = playerCount
+
     /**
      * 이어지는 소리와 배경음. (계획서 §34)
      *
@@ -511,10 +522,12 @@ class BattleScene(
         }
     }
 
-    private companion object {
-        const val TAG = "BattleCity"
-        const val DEFAULT_PLAYERS = 4
+    companion object {
+        /** 혼자 하는 판의 기본 seed. 밖에서 다른 seed 를 넘길 수 있다. */
         const val DEFAULT_SEED = 20260819L
+
+        private const val TAG = "BattleCity"
+        private const val DEFAULT_PLAYERS = 4
 
         /** 승패가 갈린 뒤 결과 화면으로 넘어가기까지 기다리는 시간. */
         const val RESULT_HOLD_SECONDS = 2.5f

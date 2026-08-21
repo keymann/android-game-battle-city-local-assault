@@ -50,6 +50,14 @@ class LobbyScene(private val catalog: SpriteCatalog) {
         /** 게임 설정(방 규칙)을 연다. 방장만 누를 수 있다. (계획서 §44.2) */
         data object OpenGameSettings : Action
 
+        /**
+         * 혼자 판을 연다. 화면에 적혀 있지 않은 길이다.
+         *
+         * 내 자리 카드를 [SOLO_HOLD_SECONDS] 초 넘게 누르고 있으면 나온다. 밸런스를
+         * 눈으로 확인하려면 사람을 둘 모아야 했는데, 그러느라 확인이 미뤄졌다.
+         */
+        data object StartSolo : Action
+
         /** 방을 나가 메인 메뉴로 돌아간다. (계획서 §27) */
         data object Back : Action
     }
@@ -72,6 +80,18 @@ class LobbyScene(private val catalog: SpriteCatalog) {
     /** 이름을 고치는 중인가. 그동안은 글자판이 화면을 덮는다. */
     private var editingName = false
     private var draft = ""
+
+    /**
+     * 내 자리 카드를 누르고 있는가. 손가락 스레드가 쓰고 루프 스레드가 읽는다.
+     *
+     * 누르기 시작한 시각을 재지 않고 흐른 시간을 루프에서 더한다. 두 스레드가 같은
+     * 시계를 봐야 할 이유가 없고, 화면이 멈춘 동안(일시정지) 시간이 흐르지도 않는다.
+     */
+    @Volatile
+    private var holdingOwnCard = false
+
+    @Volatile
+    private var holdSeconds = 0f
 
     fun resize(width: Int, height: Int) {
         box = StageBox.fit(width.toFloat(), height.toFloat())
@@ -105,12 +125,45 @@ class LobbyScene(private val catalog: SpriteCatalog) {
 
         // 자기 자리를 누르면 준비 상태가 바뀐다. 남의 자리는 눌러도 소용없다.
         val slot = slotAt(x, y)
-        return if (slot >= 0 && slot == view.localSlot) Action.ToggleReady else Action.None
+        if (slot < 0 || slot != view.localSlot) return Action.None
+        // 같은 자리를 오래 누르고 있으면 혼자 판이 열린다. (→ [Action.StartSolo])
+        // 세는 중에는 받지 않는다. 곧 판이 열리는데 다른 판을 열 이유가 없다.
+        if (view.countdownTicks == 0) {
+            holdingOwnCard = true
+            holdSeconds = 0f
+        }
+        return Action.ToggleReady
     }
 
     fun onRelease() {
         startPressed = false
         backPressed = false
+        holdingOwnCard = false
+        holdSeconds = 0f
+    }
+
+    /**
+     * 흐른 시간을 붙들기에 더한다. 게임 루프가 부른다.
+     *
+     * @return 다 눌렀으면 [Action.StartSolo], 아니면 [Action.None]
+     */
+    fun update(tickSeconds: Float): Action {
+        if (!holdingOwnCard) return Action.None
+        if (view.countdownTicks > 0) {
+            // 그새 판이 열리기 시작했다. 붙들기는 없던 일로 한다.
+            onRelease()
+            return Action.None
+        }
+        holdSeconds += tickSeconds
+        if (holdSeconds < SOLO_HOLD_SECONDS) return Action.None
+        onRelease()
+        return Action.StartSolo
+    }
+
+    /** 얼마나 눌렀는가. 0 이면 누르지 않았거나 아직 보여 줄 때가 아니다. */
+    private fun holdProgress(): Float {
+        if (!holdingOwnCard || holdSeconds < SOLO_HOLD_REVEAL_SECONDS) return 0f
+        return (holdSeconds / SOLO_HOLD_SECONDS).coerceIn(0f, 1f)
     }
 
     // -----------------------------------------------------------------------
@@ -221,6 +274,11 @@ class LobbyScene(private val catalog: SpriteCatalog) {
                 alpha = if (connected) 1f else EMPTY_ALPHA,
             )
 
+            // 내 카드를 오래 누르고 있으면 얼마나 눌렀는지 카드 밑에 눈금으로 보여 준다.
+            if (index == view.localSlot) {
+                drawHoldGauge(batch, x, top + cardHeight, cardWidth, unit)
+            }
+
             // 방을 연 사람에게만 왕관을 붙인다. START 는 이 사람만 누를 수 있다.
             if (slot?.host == true) {
                 batch.draw(
@@ -233,6 +291,43 @@ class LobbyScene(private val catalog: SpriteCatalog) {
                 )
             }
         }
+    }
+
+    /**
+     * 붙들기 눈금. 카드 아래에 얇게 깐다.
+     *
+     * 화면에 적혀 있지 않은 길이라 이름표를 붙이지 않는다. 대신 눌린 만큼이 차오르게
+     * 해서, 아는 사람이 눌러 두고 되는지 확인할 수 있게 한다.
+     */
+    private fun drawHoldGauge(batch: SpriteBatch, left: Float, top: Float, width: Float, unit: Float) {
+        val progress = holdProgress()
+        if (progress <= 0f) return
+        val height = unit * HOLD_GAUGE_HEIGHT
+        val y = top + unit * 0.15f
+        // 빈 눈금을 먼저 깔아 어디까지 차는지 보이게 한다.
+        batch.draw(
+            region = catalog.settings.sliderTrack,
+            x = box.x + left,
+            y = box.y + y,
+            width = width,
+            height = height,
+            layer = Constants.Layer.HUD,
+            red = red(LABEL_COLOR),
+            green = green(LABEL_COLOR),
+            blue = blue(LABEL_COLOR),
+            alpha = 0.5f,
+        )
+        batch.draw(
+            region = catalog.settings.sliderTrack,
+            x = box.x + left,
+            y = box.y + y,
+            width = width * progress,
+            height = height,
+            layer = Constants.Layer.HUD,
+            red = red(READY_COLOR),
+            green = green(READY_COLOR),
+            blue = blue(READY_COLOR),
+        )
     }
 
     /** 자기 자리를 고치는 줄. 이름 · 탱크 · 색을 눌러서 바꾼다. (계획서 §29) */
@@ -667,12 +762,30 @@ class LobbyScene(private val catalog: SpriteCatalog) {
         private const val COLOR_COLUMN = 2
 
         /** 글자판. 대문자와 숫자만 있으면 세 글자 이름에는 충분하다. */
+        /**
+         * 내 카드를 이만큼 누르고 있으면 혼자 판이 열린다.
+         *
+         * 열 초는 길다. 그래야 카드를 눌러 준비를 뒤집는 손짓과 섞이지 않는다.
+         */
+        const val SOLO_HOLD_SECONDS = 10f
+
+        /**
+         * 이때부터 눌린 만큼을 보여 준다.
+         *
+         * 처음부터 보여 주면 카드를 누를 때마다 눈금이 번쩍여 화면에 적힌 길처럼
+         * 읽힌다. 반대로 끝까지 아무것도 없으면 눌러 두고 되는지 알 수 없어 손을 뗀다.
+         */
+        const val SOLO_HOLD_REVEAL_SECONDS = 2f
+
         private const val KEYS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
         private const val KEY_COLUMNS = 12
         private const val KEY_SIZE = 0.045f
         private const val KEYBOARD_TOP = 0.36f
 
         private const val GLYPH_ADVANCE = TextLayout.ADVANCE
+        /** 붙들기 눈금 두께. 카드 아래에 얇게 깐다. */
+        private const val HOLD_GAUGE_HEIGHT = 0.22f
+
         private const val EMPTY_ALPHA = 0.35f
         private const val DIM = 0.5f
         private const val LABEL_COLOR = 0x9AA3AE
